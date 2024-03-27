@@ -27,8 +27,8 @@ function M.config()
     button("n", icons.ui.NewFile .. " New file", ":ene <BAR> startinsert <CR>"),
     button("p", icons.git.Repo .. " Find project", ":lua require('telescope').extensions.projects.projects()<CR>"),
     button("r", icons.ui.History .. " Recent files", ":Telescope oldfiles <CR>"),
-    button("t", icons.ui.Text .. " Find text", ":Telescope live_grep <CR>"),
-    button("c", icons.ui.Gear .. " Config", ":e ~/.config/nvim/init.lua <CR>"),
+    button("g", icons.ui.Text .. " Find grep", ":Telescope live_grep <CR>"),
+    button("c", icons.ui.Gear .. " Config", ":e ~/Appdata/Local/nvim/init.lua <CR>"),
     button("q", icons.ui.SignOut .. " Quit", ":qa<CR>"),
   }
   local function footer()
