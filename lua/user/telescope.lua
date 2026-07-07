@@ -1,6 +1,11 @@
 local M = {
   "nvim-telescope/telescope.nvim",
-  dependencies = { { "nvim-telescope/telescope-fzf-native.nvim", build = "make", lazy = true } },
+  dependencies = {
+    { "nvim-telescope/telescope-fzf-native.nvim", build = "make", lazy = true },
+    "nvim-lua/plenary.nvim",
+  },
+  -- lazy = true,
+  cmd = "Telescope",
 }
 
 function M.config()
@@ -19,7 +24,6 @@ function M.config()
 
   local icons = require "user.icons"
   local actions = require "telescope.actions"
-
 
   require("telescope").setup {
     defaults = {
