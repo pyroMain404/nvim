@@ -24,25 +24,9 @@ Guida per sessioni future di Claude Code su questa config.
 - I tool none-ls (stylua, black) si auto-installano tramite l'hook mason-registry in `user/mason.lua`.
 - nvim-tree: `filesystem_watchers.ignore_dirs` include `/Temp/rust-analyzer` (rust-analyzer inonda %TEMP% di eventi); l'opzione SOSTITUISCE i default, quindi i default sono ripetuti nella lista.
 
-## Come testare (headless)
+## Come testare
 
-File di prova già pronti in `C:\Users\gaeesp\nvim-test\` (lua, py, sh, json, yaml, ts, c, md + progetto cargo in `rust\`).
-
-```powershell
-# startup: deve essere completamente silenzioso
-nvim --headless "+lua vim.defer_fn(function() vim.cmd('qa!') end, 5000)"
-
-# health di un plugin
-nvim --headless -c "checkhealth which-key" -c "w! out.txt" -c "qa!"
-```
-
-Trappole della modalità headless (verificate, non supposizioni):
-
-- **`ensure_installed` di mason-lspconfig NON gira in headless** (guardia `platform.is_headless` nel plugin). Per installare server headless: `nvim --headless "+MasonInstall <pacchetti>" +qa` (bloccante, fatto apposta).
-- **L'evento VeryLazy non scatta in headless** (niente UIEnter): i plugin VeryLazy si testano forzando `require("<modulo>")`.
-- Parser treesitter headless: `+TSInstallSync <lingue>` (l'output async di `TSUpdate` può mentire).
-- Per verificare l'attach LSP: aprire un file e fare polling con `vim.wait(..., function() return #vim.lsp.get_clients{bufnr=...} > 0 end)`. Il primo attach può richiedere 10-20s.
-- NON testare in percorsi profondi (es. sandbox in %TEMP% annidata): si supera MAX_PATH e compaiono falsi errori (checkout git falliti, ENOENT della cache luac).
+Usa la skill di progetto **verifying-nvim-config** (in `.claude/skills/`): contiene la procedura headless completa e le trappole verificate (ensure_installed saltato in headless, VeryLazy che non scatta, TSUpdate che mente, exit code sempre 0, MAX_PATH). File di prova in `C:\Users\gaeesp\nvim-test\`.
 
 ## Routine di fine lavoro
 
