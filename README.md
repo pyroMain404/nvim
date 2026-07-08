@@ -1,95 +1,51 @@
+# Neovim Config — Windows
+
+Personal Neovim configuration for Windows, based on [Launch.nvim](https://github.com/LunarVim/Launch.nvim) and modernized for **Neovim 0.11+** (native `vim.lsp.config`, mason-lspconfig v2, which-key v3).
+
+> **Branch layout of this repo**: this configuration lives on the `windows` branch.
+> The `master` branch contains a different, unrelated config targeting WSL2.
+
+## Prerequisites
+
+Everything below must be available on `PATH` before the first launch.
+
+| Dependency | Used for | Install (winget) |
+|---|---|---|
+| Neovim ≥ 0.11 | — | `winget install Neovim.Neovim` |
+| Git | plugin manager, gitsigns, neogit | `winget install Git.Git` |
+| zig (or gcc/clang) | compiling treesitter parsers | `winget install zig.zig` |
+| Node.js | LSP servers installed via Mason (ts_ls, eslint, jsonls, yamlls, bashls, cssls, html, pyright) | `winget install Schniz.fnm` + `fnm install --lts` |
+| Python 3 | `black` formatter (Mason installs it via pip) | `winget install Python.Python.3.12` |
+| ripgrep | Telescope live grep | `winget install BurntSushi.ripgrep.GNU` |
+| A [Nerd Font](https://www.nerdfonts.com/) | icons in statusline, tree, telescope | `winget install DEVCOM.JetBrainsMonoNerdFont` (then set it in your terminal) |
+
+> **Note on fnm**: Node installed through fnm is only on `PATH` inside shells that run the fnm env hook. If you launch Neovim from a GUI shortcut, make sure Node is reachable there too (or install Node system-wide), otherwise Mason cannot install the npm-based language servers.
+
+## Installation
+
+```powershell
+git clone -b windows https://github.com/pyroMain404/nvim "$env:LOCALAPPDATA\nvim"
+nvim
 ```
-    ✯                              .°•    |    
-    __     °    •                __      / \   
-   / /   ____ ___  ______  _____/ /_    | O |  
-  / /   / __ `/ / / / __ \/ ___/ __ \   | O |  
- / /___/ /_/ / /_/ / / / / /__/ / / /  /| | |\ 
-/_____/\__,_/\__,_/_/ /_/\___/_/ /_/  /_(.|.)_\
-```
 
-This config will provide a modular starting point for anyone looking to use Neovim as their IDE. It is meant to be simple and easy to understand and extend. Use it as a base for your own config or just take individual pieces.
+On the first launch, everything is installed automatically:
 
-All the included plugins are pinned to a version that ensures they are compatible and will not update potentially introducing errors into your config. For every Neovim release I will update this repo along with the community to keep it up to date with the newest versions.
+1. **lazy.nvim** bootstraps itself and installs every plugin at the exact versions pinned in `lazy-lock.json`.
+2. **mason-lspconfig** installs the language servers (`ensure_installed` in `lua/user/mason.lua`) and enables them.
+3. **Mason** also installs the none-ls tools (`stylua`, `black`).
+4. **nvim-treesitter** compiles the parsers listed in `lua/user/treesitter.lua` when the first file is opened (this is where the C compiler is needed).
 
-As I mentioned, this config is meant as a starting point for people new to Neovim who want a familiar IDE experience. The config has a very simple structure that makes it easy to add new plugins.
-
-## Install Neovim 0.9
-
-You can install Neovim with your package manager e.g. brew, apt, pacman etc.. bus remember that when you update your packages Neovim may be upgraded to a newer version.
-
-If you would like to make sure Neovim only updates when you want it to than I recommend installing from source: [instructions](https://github.com/neovim/neovim/wiki/Installing-Neovim#install-from-source)
-
-## Install the config
-
-Make sure to remove or backup your current `nvim` directory
-
-```sh
-git clone https://github.com/LunarVim/Launch.nvim.git ~/.config/nvim
-```
-
-Run `nvim` and wait for the plugins to be installed
-
-**NOTE** (You will notice treesitter pulling in a bunch of parsers the next time you open Neovim)
-
-## Get healthy
-
-Open `nvim` and enter the following:
+Give the first launch a couple of minutes, then restart Neovim and run:
 
 ```
 :checkhealth
+:Lazy
+:Mason
 ```
 
-You'll probably notice you don't have support for copy/paste also that python and node haven't been setup
+## Notes
 
-So let's fix that
-
-First we'll fix copy/paste
-
-- On mac `pbcopy` should be builtin
-
-- On Ubuntu
-
-  ```sh
-  sudo apt install xsel # for X11
-  sudo apt install wl-clipboard # for wayland
-  ```
-
-Next we need to install python support (node is optional)
-
-- Neovim python support
-
-  ```sh
-  pip install pynvim
-  ```
-
-- Neovim node support
-
-  ```sh
-  npm i -g neovim
-  ```
-
-We will also need `ripgrep` for Telescope to work:
-
-- Ripgrep
-
-  ```sh
-  sudo apt install ripgrep
-  ```
-
----
-
-**NOTE** make sure you have [node](https://nodejs.org/en/) installed, I recommend a node manager like [fnm](https://github.com/Schniz/fnm).
-
-## Fonts
-
-I recommend using the following repo to get a "Nerd Font" (Font that supports icons)
-
-[getnf](https://github.com/ronniedroid/getnf)
-
-**NOTE** Some are already setup as examples, remove them if you want
-
----
-
-> The computing scientist's main challenge is not to get confused by the complexities of his own making.
-
-\- Edsger W. Dijkstra
+- `<leader>` is `Space`; press it and wait to see the which-key popup with all mappings.
+- Plugin versions are pinned in `lazy-lock.json` (committed). Use `:Lazy update` to update and re-pin, `:Lazy restore` to go back to the lockfile.
+- nvim-treesitter is pinned to the `master` branch: the `main` branch is a rewrite with a different API, incompatible with this config.
+- Optional extras live in `lua/user/extras/` and are not loaded by default; add a `spec "user.extras.<name>"` line in `init.lua` to enable one.
