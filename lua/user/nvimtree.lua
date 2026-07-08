@@ -74,6 +74,19 @@ function M.config()
       ignore_list = {},
     },
 
+    filesystem_watchers = {
+      enable = true,
+      debounce_delay = 50,
+      -- sostituisce i default: vanno ripetuti oltre alle aggiunte
+      ignore_dirs = {
+        "/.ccls-cache",
+        "/build",
+        "/node_modules",
+        "/target",
+        "/Temp/rust-analyzer", -- dir temporanee di rust-analyzer in %TEMP%
+      },
+    },
+
     diagnostics = {
       enable = true,
       show_on_dirs = false,
