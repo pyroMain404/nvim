@@ -74,7 +74,14 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 -- filetype è già stato assegnato). vim.filetype.add ha priorità sui matcher di
 -- default e Neovim normalizza sempre il path con '/' anche su Windows, quindi
 -- qui funziona in modo affidabile.
+-- Grafana Alloy (.alloy): nessun LSP disponibile e nessun parser treesitter
+-- dedicato. La sintassi deriva da HCL/River, quindi mappiamo al filetype "hcl"
+-- per un'evidenziazione approssimativa (il parser hcl è in treesitter.lua).
+-- Non è semantica: niente diagnostica/completion, solo highlight.
 vim.filetype.add {
+  extension = {
+    alloy = "hcl",
+  },
   pattern = {
     [".*docker%-compose.*%.ya?ml"] = "yaml.docker-compose",
     [".*compose%.ya?ml"] = "yaml.docker-compose",

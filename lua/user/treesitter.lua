@@ -26,6 +26,7 @@ function M.config()
       "cpp",
       "go",
       "dockerfile",
+      "hcl", -- usato anche per i file .alloy (Grafana Alloy), evidenziazione approssimativa
     },
     highlight = { enable = true },
     indent = { enable = true },
