@@ -26,6 +26,10 @@ local all_servers = {
   { name = "dockerls", requires = "npm" },
   { name = "docker_compose_language_service", requires = "npm" },
   { name = "helm_ls" },
+  -- pacchetto Mason npm:@angular/language-server; si attacca solo dentro
+  -- workspace con angular.json/nx.json (root_markers in nvim-lspconfig),
+  -- quindi non interferisce con progetti TS/JS non Angular.
+  { name = "angularls", requires = "npm" },
 }
 
 --- @return string[] servers, string[] skipped (descrizioni leggibili)
