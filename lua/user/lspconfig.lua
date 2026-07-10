@@ -54,19 +54,9 @@ function M.config()
 
   local icons = require "user.icons"
 
-  local servers = {
-    "lua_ls",
-    "cssls",
-    "html",
-    "ts_ls",
-    "eslint",
-    "pyright",
-    "bashls",
-    "jsonls",
-    "yamlls",
-    "rust_analyzer",
-    "clangd",
-  }
+  local lsp_servers = require "user.lsp_servers"
+  local servers, skipped = lsp_servers.resolve()
+  lsp_servers.warn_skipped(skipped)
 
   local default_diagnostic_config = {
     signs = {

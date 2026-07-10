@@ -24,6 +24,8 @@ function M.config()
       "toml",
       "c",
       "cpp",
+      "go",
+      "dockerfile",
     },
     highlight = { enable = true },
     indent = { enable = true },

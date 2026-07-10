@@ -10,6 +10,9 @@ return {
       validate = true,
       hover = true,
       completion = true,
+      -- rilevamento automatico dei manifest Kubernetes (basato su apiVersion/kind,
+      -- non sul nome file) per validare deployment/service/configmap ecc.
+      kubernetes = true,
     },
   },
 }

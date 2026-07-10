@@ -6,19 +6,9 @@ local M = {
 }
 
 function M.config()
-  local servers = {
-    "lua_ls",
-    "cssls",
-    "html",
-    "ts_ls",
-    "eslint",
-    "pyright",
-    "bashls",
-    "jsonls",
-    "yamlls",
-    "rust_analyzer",
-    "clangd",
-  }
+  local lsp_servers = require "user.lsp_servers"
+  local servers, skipped = lsp_servers.resolve()
+  lsp_servers.warn_skipped(skipped)
 
   require("mason").setup {
     ui = {

@@ -61,6 +61,34 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
   end,
 })
 
+-- filetype "yaml.docker-compose": senza, sia yamlls (schema dedicato) sia
+-- docker_compose_language_service (che lo richiede esplicitamente) trattano
+-- il file come yaml generico.
+--
+-- filetype "helm" / "yaml.helm-values": necessari perché helm_ls (lspconfig.lua)
+-- si attacca solo a questi filetype. Il plugin towolf/vim-helm (usato per
+-- l'evidenziazione sintattica) fornisce anche un proprio ftdetect ma è
+-- inaffidabile qui: usa '/' come separatore e su Windows expand("%:p") ritorna
+-- '\', quindi "templates/*.yaml" non viene mai riconosciuto; per "values*.yaml"
+-- perde inoltre la race con il rilevamento nativo (setfiletype è no-op se il
+-- filetype è già stato assegnato). vim.filetype.add ha priorità sui matcher di
+-- default e Neovim normalizza sempre il path con '/' anche su Windows, quindi
+-- qui funziona in modo affidabile.
+vim.filetype.add {
+  pattern = {
+    [".*docker%-compose.*%.ya?ml"] = "yaml.docker-compose",
+    [".*compose%.ya?ml"] = "yaml.docker-compose",
+    [".*/templates/.*%.ya?ml"] = "helm",
+    [".*/templates/.*%.tpl"] = "helm",
+    [".*/values.*%.ya?ml"] = function(path)
+      local dir = vim.fs.dirname(path)
+      if vim.fs.find("Chart.yaml", { path = dir, upward = true, limit = 1 })[1] then
+        return "yaml.helm-values"
+      end
+    end,
+  },
+}
+
 vim.api.nvim_create_autocmd({ "CursorHold" }, {
   callback = function()
     local status_ok, luasnip = pcall(require, "luasnip")
