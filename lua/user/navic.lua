@@ -9,6 +9,7 @@ function M.config()
     highlight = true,
     lsp = {
       auto_attach = true,
+      preference = { "ts_ls" },
     },
     click = true,
     separator = " " .. icons.ui.ChevronRight .. " ",
