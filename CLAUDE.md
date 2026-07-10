@@ -5,6 +5,7 @@ Guida per sessioni future di Claude Code su questa config.
 ## Layout del repo
 
 - Questa config vive sul branch **`windows`** di `pyroMain404/nvim`. Il branch `master` remoto contiene una config **diversa e indipendente** (WSL2: lua/core + lua/plugins, snacks, blink-cmp): non mergiare mai i due branch.
+  - **Isolamento worktree**: il default branch del repo è `master`, quindi un worktree "fresh" (es. `EnterWorktree` senza specificare la base) parte da `master` = la config sbagliata e disgiunta. Per lavorare isolati su `windows`, crea il worktree a mano dalla base giusta: `git worktree add .claude/worktrees/<nome> -b <branch> origin/windows`. Verifica sempre con `git merge-base --is-ancestor origin/windows HEAD` (deve passare) e la presenza di `lua/user/launch.lua` (marker di windows; `lua/core/` sarebbe master). Le PR hanno base **windows**, mai master.
 - Remote `upstream` = `LunarVim/Launch.nvim` (la base originale). È fermo a dicembre 2024 ed è già stato mergiato: non c'è più niente da prendere.
 - La repo `~\pyro-resources` contiene questa config come **submodule `nvim`** (branch windows). Dopo ogni push qui, aggiornare anche lì: `git -C ~\pyro-resources\nvim pull --ff-only origin windows`, poi add/commit/push nel parent.
 - `%LOCALAPPDATA%\nvim` (`C:\Users\gaeesp\AppData\Local\nvim`) è un **symlink** a questo repo: editare i file qui = editare la config che nvim carica, nessuna copia da sincronizzare né da cercare. Testa headless con `nvim` normale, legge il symlink. La dir dati è invece **separata**: `%LOCALAPPDATA%\nvim-data`.
