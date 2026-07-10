@@ -55,9 +55,31 @@ vim.api.nvim_create_autocmd({ "TextYankPost" }, {
 
 vim.api.nvim_create_autocmd({ "FileType" }, {
   pattern = { "gitcommit", "markdown", "NeogitCommitMessage" },
-  callback = function()
+  callback = function(args)
     vim.opt_local.wrap = true
     vim.opt_local.spell = true
+    -- default sarebbe "en": senza questo ogni parola italiana risulta errata.
+    vim.opt_local.spelllang = { "it", "en" }
+
+    -- Etichette which-key per i comandi spell builtin, solo in questi buffer
+    -- (dove lo spell è attivo). Sono voci "solo desc": senza rhs which-key non
+    -- rimappa il tasto (vedi mappings.lua), aggiunge solo il nome nel popup.
+    -- Guard per-buffer: lazy.nvim ri-emette FileType quando carica un plugin
+    -- con ft= (markview su markdown), altrimenti registreremmo i doppioni.
+    local ok, wk = pcall(require, "which-key")
+    if ok and not vim.b[args.buf].spell_wk_labeled then
+      vim.b[args.buf].spell_wk_labeled = true
+      wk.add {
+        { "zg", desc = "Spell: aggiungi al dizionario", buffer = args.buf },
+        { "zw", desc = "Spell: marca come errata", buffer = args.buf },
+        { "zG", desc = "Spell: aggiungi (solo sessione)", buffer = args.buf },
+        { "zug", desc = "Spell: annulla aggiunta", buffer = args.buf },
+        { "zuw", desc = "Spell: annulla marcatura", buffer = args.buf },
+        { "z=", desc = "Spell: suggerimenti", buffer = args.buf },
+        { "]s", desc = "Spell: errore successivo", buffer = args.buf },
+        { "[s", desc = "Spell: errore precedente", buffer = args.buf },
+      }
+    end
   end,
 })
 
