@@ -9,7 +9,7 @@ function M.config()
   local wk = require "which-key"
   wk.add {
     { "<leader>e", "<cmd>NvimTreeToggle<CR>", desc = "Explorer" },
-    { "<leader>eg", pg.toggle_tree, desc = "Explorer (gruppo progetti)" },
+    { "<leader>E", pg.toggle_tree, desc = "Explorer (gruppo progetti)" },
   }
 
   local icons = require "user.icons"
