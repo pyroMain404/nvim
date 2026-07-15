@@ -4,9 +4,12 @@ local M = {
 }
 
 function M.config()
+  local pg = require "user.project_group"
+
   local wk = require "which-key"
   wk.add {
     { "<leader>e", "<cmd>NvimTreeToggle<CR>", desc = "Explorer" },
+    { "<leader>eg", pg.toggle_tree, desc = "Explorer (gruppo progetti)" },
   }
 
   local icons = require "user.icons"
@@ -16,6 +19,11 @@ function M.config()
     sync_root_with_cwd = true,
     view = {
       relativenumber = true,
+    },
+    -- Filtro attivo solo nella vista di gruppo (<leader>eg): nasconde i fratelli
+    -- non membri del gruppo. Inattivo (ritorna false) nel resto dei casi.
+    filters = {
+      custom = pg.filter,
     },
     renderer = {
       add_trailing = false,

@@ -23,11 +23,11 @@ function M.config()
   }
 
   dashboard.section.buttons.val = {
-    button("f", icons.ui.Files .. " Find file", ":Telescope find_files <CR>"),
+    button("f", icons.ui.Files .. " Find file", ":lua require('telescope.builtin').find_files({ search_dirs = require('user.project_group').dirs() })<CR>"),
     button("n", icons.ui.NewFile .. " New file", ":ene <BAR> startinsert <CR>"),
     button("p", icons.git.Repo .. " Find project", ":lua require('telescope').extensions.projects.projects()<CR>"),
     button("r", icons.ui.History .. " Recent files", ":Telescope oldfiles <CR>"),
-    button("t", icons.ui.Text .. " Find text", ":Telescope live_grep <CR>"),
+    button("t", icons.ui.Text .. " Find text", ":lua require('telescope.builtin').live_grep({ search_dirs = require('user.project_group').dirs() })<CR>"),
     button("c", icons.ui.Gear .. " Config", ":e ~/.config/nvim/init.lua <CR>"),
     button("q", icons.ui.SignOut .. " Quit", ":qa<CR>"),
   }
