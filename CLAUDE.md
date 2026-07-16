@@ -38,7 +38,7 @@ I path assoluti specifici della macchina NON compaiono in questo file né negli 
 
 ## Come testare
 
-Usa la skill di progetto **verifying-nvim-config** (in `.claude/skills/`): contiene la procedura headless completa e le trappole verificate (ensure_installed saltato in headless, VeryLazy che non scatta, TSUpdate che mente, exit code sempre 0, MAX_PATH). File di prova in `<test-dir>`.
+La procedura headless completa e le trappole verificate (ensure_installed saltato in headless, VeryLazy che non scatta, TSUpdate che mente, exit code sempre 0, MAX_PATH) stanno in `.claude/docs/verifica-headless.md` — **non è una skill** (non compare in `available_skills`, non si auto-attiva): è ciò che legge ed esegue lo Step 1 di `/fine-lavoro`. Per una verifica standalone (senza committare) leggi quel documento e segui i comandi. Non riconvertirlo in skill: la verifica deve restare un passo deliberato. File di prova in `<test-dir>`.
 
 ## Routine di fine lavoro
 

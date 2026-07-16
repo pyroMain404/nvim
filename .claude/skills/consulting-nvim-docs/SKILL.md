@@ -22,7 +22,7 @@ La dir del plugin in `lazy\` è l'**ultimo segmento** dello short-name: `folke/w
 1. **Feature → plugin**: se non sai quale plugin gestisce la feature, `grep` la config in `lua\user\` per un simbolo/keyword; il `require "..."` / short-name ti dà la dir.
 2. **Apri la doc del plugin**: preferisci `doc\<plugin>.txt`. Non leggerlo intero — `grep` per il simbolo dell'API (nome funzione, opzione).
 3. **API core Neovim** (`vim.lsp`, `vim.filetype.add`, autocmd, `vim.api.*`): usa i `.txt` in `runtime\doc`, non la memoria.
-4. Cita l'API trovata, **poi** scrivi il codice, **poi** verifica con la skill `verifying-nvim-config`.
+4. Cita l'API trovata, **poi** scrivi il codice.
 
 ```powershell
 $lazy = "$env:LOCALAPPDATA\nvim-data\lazy"
@@ -47,4 +47,4 @@ Select-String -Path "C:\Program Files\Neovim\share\nvim\runtime\doc\lsp.txt" -Pa
 - **context7** (MCP) dà doc aggiornata di molti plugin, ma per il rischio-versione **preferisci il locale**: riflette il lockfile, non l'upstream.
 - La doc dei plugin è reference **tecnica** (com'è l'API), non architetturale (come strutturare la config): quelle scelte restano in `CLAUDE.md` e nel codice esistente.
 
-**Riferimenti**: `CLAUDE.md` → "Decisioni prese (non regredire)"; skill `adding-language-support` (usa `lsp\<server>.lua` di nvim-lspconfig per i `filetypes`), `verifying-nvim-config` (verifica headless dopo aver applicato l'API).
+**Riferimenti**: `CLAUDE.md` → "Decisioni prese (non regredire)"; skill `adding-language-support` (usa `lsp\<server>.lua` di nvim-lspconfig per i `filetypes`).

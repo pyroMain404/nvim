@@ -1,9 +1,6 @@
----
-name: verifying-nvim-config
-description: Use when modifying, debugging, or testing this Neovim configuration — after editing plugin specs, LSP servers, treesitter parsers, or keymaps, and before claiming a change works or committing it.
----
-
 # Verifica della config Neovim (headless)
+
+> Documento di procedura — **non è una skill**: non compare in `available_skills` e non si auto-attiva. Lo legge ed esegue lo Step 1 di `/fine-lavoro`; puoi leggerlo e seguirne i comandi anche a mano per una verifica standalone. Non riconvertirlo in skill (`.claude/skills/`): la verifica deve restare un passo deliberato, non un trigger automatico.
 
 Procedura validata per verificare questa config senza aprire l'UI. File di prova già pronti in `<test-dir>` (lua, py, sh, json, yaml, ts, c, md + progetto cargo in `rust\`). `<test-dir>` è una terminologia sostitutiva: il path reale è nella memory (`path-conventions`) — risolvilo prima di lanciare i comandi.
 
@@ -11,7 +8,11 @@ Procedura validata per verificare questa config senza aprire l'UI. File di prova
 
 ```powershell
 # 1. startup: NON deve stampare nulla
-nvim --headless "+lua vim.defer_fn(function() vim.cmd('qa!') end, 5000)"
+# Gli errori di startup scattano DURANTE il require sincrono di init.lua, prima
+# che qualsiasi timer conti: 200 ms bastano per un giro di event loop (intercetta
+# anche un errore in una callback vim.schedule accodata all'avvio). Non alzarli a
+# secondi "per far caricare i lazy": in headless VeryLazy non scatta (vedi trappole).
+nvim --headless "+lua vim.defer_fn(function() vim.cmd('qa!') end, 200)"
 
 # 2. health di un plugin toccato
 nvim --headless -c "checkhealth which-key" -c "w! $env:TEMP\h.txt" -c "qa!"; Get-Content $env:TEMP\h.txt
