@@ -18,10 +18,19 @@ function M.config()
 
   require("mason-lspconfig").setup {
     ensure_installed = servers,
+    -- jdtls è gestito da nvim-jdtls (user/jdtls.lua), non da lspconfig: escluderlo
+    -- dall'abilitazione automatica evita un secondo client in conflitto sui buffer java.
+    automatic_enable = { exclude = { "jdtls" } },
   }
 
-  -- tool usati da none-ls, non gestiti da mason-lspconfig
+  -- tool usati da none-ls, non gestiti da mason-lspconfig, più il binario jdtls
+  -- (server LSP Java gestito da nvim-jdtls). jdtls si installa solo con una JDK nel
+  -- PATH: senza `java` il language server non parte comunque, quindi è spreco scaricarlo
+  -- (l'avvio effettivo richiede Java 21+, controllato in user/jdtls.lua).
   local tools = { "stylua", "black" }
+  if vim.fn.executable "java" == 1 then
+    table.insert(tools, "jdtls")
+  end
   local registry = require "mason-registry"
   registry.refresh(function()
     for _, name in ipairs(tools) do

@@ -25,6 +25,7 @@ function M.config()
       "c",
       "cpp",
       "go",
+      "java",
       "dockerfile",
       "hcl", -- usato anche per i file .alloy (Grafana Alloy), evidenziazione approssimativa
     },
