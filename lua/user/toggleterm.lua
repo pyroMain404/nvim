@@ -68,6 +68,10 @@ function M.config()
     add_exec(opts)
   end
 
+  -- TUI in terminale flottante sotto <leader>o (lazygit, lazydocker, ...):
+  -- lista e guardia in user/floatapps, stato via :checkhealth user.floatapps.
+  require("user.floatapps").setup_keymaps()
+
   require("toggleterm").setup {
     size = 20,
     open_mapping = [[<c-\>]],
