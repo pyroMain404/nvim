@@ -12,6 +12,20 @@ function M.config()
     { "<leader>E", pg.toggle_tree, desc = "Explorer (gruppo progetti)" },
   }
 
+  -- Al resize del terminale la funzione width NON viene rivalutata da sola per
+  -- un tree già aperto. L'API pubblica api.tree.resize() è rotta in questa
+  -- versione pinnata (chiama view.configure_width, che non esiste in nvim-tree.view),
+  -- quindi si richiama direttamente view.resize(): senza argomenti ricalcola la
+  -- width dalla funzione configurata (columns/3).
+  vim.api.nvim_create_autocmd("VimResized", {
+    callback = function()
+      local view = require "nvim-tree.view"
+      if view.is_visible() then
+        view.resize()
+      end
+    end,
+  })
+
   local icons = require "user.icons"
 
   require("nvim-tree").setup {
@@ -19,6 +33,10 @@ function M.config()
     sync_root_with_cwd = true,
     view = {
       relativenumber = true,
+      -- larghezza = 1/3 delle colonne del terminale (rivalutata a ogni apertura)
+      width = function()
+        return math.floor(vim.o.columns / 3)
+      end,
     },
     -- Filtro attivo solo nella vista di gruppo (<leader>eg): nasconde i fratelli
     -- non membri del gruppo. Inattivo (ritorna false) nel resto dei casi.
