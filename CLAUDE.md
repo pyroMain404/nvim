@@ -2,13 +2,21 @@
 
 Guida per sessioni future di Claude Code su questa config.
 
+## Convenzioni sui path
+
+I path assoluti specifici della macchina NON compaiono in questo file né negli altri documenti portabili (slash command, skill): si usano solo le terminologie sostitutive qui sotto. I valori reali per la macchina corrente stanno nella memory di Claude (`path-conventions`), che non viaggia col repo. Non dare mai per scontata la struttura delle directory: rileva i path a runtime.
+
+- **`<config-dir>`** — la cartella di questa config (il repo). **Sempre presente**: è la dir su cui gira Neovim (symlinkata dalla dir config standard). A runtime: `git rev-parse --show-toplevel`.
+- **`<superproject>`** — il repo contenitore che include la config come **submodule `nvim`**. **Può non esistere**: non darne per scontata la presenza. Rilevalo strutturalmente con `git rev-parse --show-superproject-working-tree` (output vuoto ⇒ assente).
+- **`<test-dir>`** — cartella dei file di prova per i test headless.
+
 ## Layout del repo
 
 - Questa config vive sul branch **`windows`** di `pyroMain404/nvim`. Il branch `master` remoto contiene una config **diversa e indipendente** (WSL2: lua/core + lua/plugins, snacks, blink-cmp): non mergiare mai i due branch.
   - **Isolamento worktree**: il default branch del repo è `master`, quindi un worktree "fresh" (es. `EnterWorktree` senza specificare la base) parte da `master` = la config sbagliata e disgiunta. Per lavorare isolati su `windows`, crea il worktree a mano dalla base giusta: `git worktree add .claude/worktrees/<nome> -b <branch> origin/windows`. Verifica sempre con `git merge-base --is-ancestor origin/windows HEAD` (deve passare) e la presenza di `lua/user/launch.lua` (marker di windows; `lua/core/` sarebbe master). Le PR hanno base **windows**, mai master.
 - Remote `upstream` = `LunarVim/Launch.nvim` (la base originale). È fermo a dicembre 2024 ed è già stato mergiato: non c'è più niente da prendere.
-- La repo `~\pyro-resources` contiene questa config come **submodule `nvim`** (branch windows). Dopo ogni push qui, aggiornare anche lì: `git -C ~\pyro-resources\nvim pull --ff-only origin windows`, poi add/commit/push nel parent.
-- `%LOCALAPPDATA%\nvim` (`C:\Users\gaeesp\AppData\Local\nvim`) è un **symlink** a questo repo: editare i file qui = editare la config che nvim carica, nessuna copia da sincronizzare né da cercare. Testa headless con `nvim` normale, legge il symlink. La dir dati è invece **separata**: `%LOCALAPPDATA%\nvim-data`.
+- Il **`<superproject>`** contiene questa config come **submodule `nvim`** (branch windows), quando presente. Dopo ogni push qui, se il `<superproject>` esiste aggiornarlo: dentro il submodule (`<config-dir>`) `git pull --ff-only origin windows`, poi nel `<superproject>` `git add nvim` + commit + push.
+- La dir config standard di Neovim (`%LOCALAPPDATA%\nvim` su Windows) è un **symlink** a `<config-dir>`: editare i file qui = editare la config che nvim carica, nessuna copia da sincronizzare né da cercare. Testa headless con `nvim` normale, legge il symlink. La dir dati (`stdpath("data")`, `%LOCALAPPDATA%\nvim-data`) è invece **separata** da `<config-dir>`.
 - `lazy-lock.json` è **versionato** (non rimetterlo nel gitignore): garantisce installazioni riproducibili.
 
 ## Architettura
@@ -30,10 +38,10 @@ Guida per sessioni future di Claude Code su questa config.
 
 ## Come testare
 
-Usa la skill di progetto **verifying-nvim-config** (in `.claude/skills/`): contiene la procedura headless completa e le trappole verificate (ensure_installed saltato in headless, VeryLazy che non scatta, TSUpdate che mente, exit code sempre 0, MAX_PATH). File di prova in `C:\Users\gaeesp\nvim-test\`.
+Usa la skill di progetto **verifying-nvim-config** (in `.claude/skills/`): contiene la procedura headless completa e le trappole verificate (ensure_installed saltato in headless, VeryLazy che non scatta, TSUpdate che mente, exit code sempre 0, MAX_PATH). File di prova in `<test-dir>`.
 
 ## Routine di fine lavoro
 
 1. Test headless di startup pulito.
 2. Commit sul branch `windows`, push.
-3. Bump del submodule in `~\pyro-resources` (vedi sopra).
+3. Bump del submodule nel `<superproject>`, se presente (vedi sopra).

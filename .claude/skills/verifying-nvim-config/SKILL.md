@@ -5,7 +5,7 @@ description: Use when modifying, debugging, or testing this Neovim configuration
 
 # Verifica della config Neovim (headless)
 
-Procedura validata per verificare questa config senza aprire l'UI. File di prova già pronti in `C:\Users\gaeesp\nvim-test\` (lua, py, sh, json, yaml, ts, c, md + progetto cargo in `rust\`).
+Procedura validata per verificare questa config senza aprire l'UI. File di prova già pronti in `<test-dir>` (lua, py, sh, json, yaml, ts, c, md + progetto cargo in `rust\`). `<test-dir>` è una terminologia sostitutiva: il path reale è nella memory (`path-conventions`) — risolvilo prima di lanciare i comandi.
 
 ## Verifica base (dopo ogni modifica)
 
@@ -20,7 +20,7 @@ nvim --headless -c "checkhealth which-key" -c "w! $env:TEMP\h.txt" -c "qa!"; Get
 ## Verifica attach LSP per linguaggio
 
 ```powershell
-nvim --headless C:\Users\gaeesp\nvim-test\test.py "+lua vim.defer_fn(function()
+nvim --headless <test-dir>\test.py "+lua vim.defer_fn(function()
   local ok = vim.wait(30000, function() return #vim.lsp.get_clients({bufnr=0}) > 0 end, 500)
   local names = {}
   for _, c in ipairs(vim.lsp.get_clients({bufnr=0})) do names[#names+1] = c.name end
@@ -60,4 +60,4 @@ Remove-Item Env:XDG_CONFIG_HOME,Env:XDG_DATA_HOME,Env:XDG_STATE_HOME,Env:XDG_CAC
 
 - Dichiarare "funziona" dopo il solo check di sintassi: l'attach LSP e il caricamento dei plugin VeryLazy vanno osservati davvero.
 - Testare le mappature which-key contando i keymap prima che il plugin che le registra sia caricato.
-- Dimenticare la routine di fine lavoro: commit su `windows` → push → bump del submodule `nvim` in `~\pyro-resources` (vedi CLAUDE.md).
+- Dimenticare la routine di fine lavoro: commit su `windows` → push → bump del submodule `nvim` nel `<superproject>` se presente (vedi CLAUDE.md).

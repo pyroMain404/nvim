@@ -43,3 +43,7 @@ luac.out
 plugin/packer_compiled.lua
 java-debug/
 vscode-java-test/
+
+# Claude Code: impostazioni locali per-macchina (permessi, additionalDirectories
+# con path assoluti). Non portabile: resta fuori dal repo.
+.claude/settings.local.json
