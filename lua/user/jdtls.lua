@@ -6,14 +6,17 @@
 -- buffer). Il binario dei jar è installato da Mason (vedi `mason.lua`).
 --
 -- Guardia JDK: il language server è esso stesso un processo Java. Non basta che
--- `java` sia nel PATH: eclipse.jdt.ls è compilato per Java 21+, quindi con una JDK
--- più vecchia il client crasha all'avvio (UnsupportedClassVersionError) senza dare
--- un errore comprensibile. Perciò controlliamo la *versione*, non solo la presenza,
--- e se è insufficiente non avviamo nulla e avvisiamo una sola volta, in modo pigro
--- (solo aprendo un file Java, perché il plugin è lazy su `ft = "java"`).
+-- `java` sia raggiungibile: eclipse.jdt.ls è compilato per Java 21+, quindi con una
+-- JDK più vecchia il client crasha all'avvio (UnsupportedClassVersionError) senza
+-- dare un errore comprensibile. Perciò controlliamo la *versione*, non solo la
+-- presenza, e se nessuna JDK adeguata è disponibile non avviamo nulla e avvisiamo
+-- una sola volta, in modo pigro (solo aprendo un file Java, `ft = "java"`).
 --
--- Nota: questa JDK serve solo a far girare il server; il progetto può essere
--- compilato con una JVM diversa configurata a parte (impostazione `java.configuration.runtimes`).
+-- Da dove prendiamo il `java`: prima `JAVA_HOME` (gli installer JDK — es. Temurin su
+-- Windows — spesso impostano JAVA_HOME su una versione più recente di quella lasciata
+-- nel PATH), poi `java` dal PATH. Usiamo la prima JDK >= 21 trovata. Questa JVM serve
+-- solo a far girare il server; il progetto può compilare con una JVM diversa
+-- configurata a parte (impostazione `java.configuration.runtimes`).
 --
 -- Avvio manuale con `java -jar` (non il launcher Python di Mason): così l'unica
 -- dipendenza è la JDK, non anche Python.
@@ -24,21 +27,52 @@ local M = {
 
 local REQUIRED_JDK = 21
 
--- Major di Java nel PATH (11, 17, 21...) o nil se `java` manca. Calcolato una volta.
-local jdk_major, jdk_checked
-local function java_major()
-  if jdk_checked then
-    return jdk_major
+-- Major version di una `java.exe` (11, 17, 21...) o nil se non eseguibile/parsabile.
+local function major_of(exe)
+  local res = vim.system({ exe, "-version" }, { text = true }):wait()
+  local out = (res.stderr or "") .. (res.stdout or "")
+  -- "1.8.0_x" (legacy, Java 8) vs "21.0.1" (moderno)
+  local major = out:match 'version "1%.(%d+)' or out:match 'version "(%d+)'
+  return tonumber(major)
+end
+
+-- Sceglie l'eseguibile java per il server. Ritorna (exe, major): exe è nil se nessuna
+-- JDK è raggiungibile; major è la migliore versione vista (per un messaggio sensato
+-- anche quando è troppo vecchia). Calcolato una volta per sessione.
+local jdk_exe, jdk_major, jdk_resolved
+local function resolve_jdk()
+  if jdk_resolved then
+    return jdk_exe, jdk_major
   end
-  jdk_checked = true
+  jdk_resolved = true
+
+  local candidates = {}
+  local home = vim.env.JAVA_HOME
+  if home and home ~= "" then
+    -- config solo-Windows: java.exe sotto JAVA_HOME\bin
+    local exe = (home:gsub("[/\\]$", "")) .. "\\bin\\java.exe"
+    if vim.uv.fs_stat(exe) then
+      table.insert(candidates, exe)
+    end
+  end
   if vim.fn.executable "java" == 1 then
-    local res = vim.system({ "java", "-version" }, { text = true }):wait()
-    local out = (res.stderr or "") .. (res.stdout or "")
-    -- "1.8.0_x" (legacy, Java 8) vs "21.0.1" (moderno)
-    local major = out:match 'version "1%.(%d+)' or out:match 'version "(%d+)'
-    jdk_major = tonumber(major)
+    table.insert(candidates, "java")
   end
-  return jdk_major
+
+  for _, exe in ipairs(candidates) do
+    local m = major_of(exe)
+    if m then
+      -- ricorda la versione più alta vista, per il warning se nessuna basta
+      if not jdk_major or m > jdk_major then
+        jdk_major = m
+      end
+      if m >= REQUIRED_JDK then
+        jdk_exe = exe
+        return jdk_exe, jdk_major
+      end
+    end
+  end
+  return nil, jdk_major
 end
 
 local function warn_once(msg)
@@ -50,18 +84,23 @@ local function warn_once(msg)
 end
 
 local function start()
-  local major = java_major()
-  if not major then
-    warn_once(("LSP Java (jdtls) non avviato: 'java' non è nel PATH.\nInstalla una JDK >= %d."):format(REQUIRED_JDK))
-    return
-  end
-  if major < REQUIRED_JDK then
-    warn_once(
-      ("LSP Java (jdtls) non avviato: richiede Java >= %d, trovato Java %d.\nAggiorna la JDK nel PATH (il progetto può usare un JDK diverso a parte)."):format(
-        REQUIRED_JDK,
-        major
+  local java, major = resolve_jdk()
+  if not java then
+    if not major then
+      warn_once(
+        ("LSP Java (jdtls) non avviato: nessuna JDK raggiungibile (né JAVA_HOME né 'java' nel PATH).\nInstalla una JDK >= %d."):format(
+          REQUIRED_JDK
+        )
       )
-    )
+    else
+      warn_once(
+        ("LSP Java (jdtls) non avviato: richiede Java >= %d, la migliore trovata è Java %d.\nImposta JAVA_HOME (o il PATH) su una JDK >= %d; il progetto può usare un JDK diverso a parte."):format(
+          REQUIRED_JDK,
+          major,
+          REQUIRED_JDK
+        )
+      )
+    end
     return
   end
 
@@ -79,7 +118,7 @@ local function start()
   local workspace_dir = vim.fn.stdpath "data" .. "/jdtls-workspace/" .. project_name
 
   local cmd = {
-    "java",
+    java,
     "-Declipse.application=org.eclipse.jdt.ls.core.id1",
     "-Dosgi.bundles.defaultStartLevel=4",
     "-Declipse.product=org.eclipse.jdt.ls.core.product",
