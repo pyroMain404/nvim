@@ -40,6 +40,8 @@ I path assoluti specifici della macchina NON compaiono in questo file né negli 
 
 La procedura headless completa e le trappole verificate (ensure_installed saltato in headless, VeryLazy che non scatta, TSUpdate che mente, exit code sempre 0, MAX_PATH) stanno in `.claude/docs/verifica-headless.md` — **non è una skill** (non compare in `available_skills`, non si auto-attiva): è ciò che legge ed esegue lo Step 1 di `/fine-lavoro`. Per una verifica standalone (senza committare) leggi quel documento e segui i comandi. Non riconvertirlo in skill: la verifica deve restare un passo deliberato. File di prova in `<test-dir>`.
 
+**Delega a Haiku (subagent `nvim-collector`).** `.claude/agents/nvim-collector.md` è un subagent read-only su modello Haiku per la sola fase di **raccolta** — retrieval della doc locale (skill `consulting-nvim-docs`, grep voluminosi) e lancio+cattura dell'output della verifica headless. Confine invalicabile: **raccoglie e riporta grezzo, non interpreta**. Il verdetto (doc → codice; headless pulito/abortisci) resta sempre all'agente principale. Non delegargli `adding-language-support` né gli step di commit/push/bump di `/fine-lavoro`: lì il costo di un errore supera il risparmio di token.
+
 ## Routine di fine lavoro
 
 1. Test headless di startup pulito.

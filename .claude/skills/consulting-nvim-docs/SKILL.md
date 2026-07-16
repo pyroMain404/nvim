@@ -24,6 +24,10 @@ La dir del plugin in `lazy\` è l'**ultimo segmento** dello short-name: `folke/w
 3. **API core Neovim** (`vim.lsp`, `vim.filetype.add`, autocmd, `vim.api.*`): usa i `.txt` in `runtime\doc`, non la memoria.
 4. Cita l'API trovata, **poi** scrivi il codice.
 
+## Delegare la raccolta (per grep voluminosi)
+
+Il *retrieval* qui è meccanico e read-only: per grep pesanti (più `.txt`, help enormi tipo `markview` con 22 file) delegalo al subagent Haiku **`nvim-collector`** (`.claude/agents/nvim-collector.md`), che torna l'API **citata letteralmente**; tu la usi per scrivere il codice (passo 4, che resta tuo). Per un grep di una-due righe fallo **inline**: spawnare un subagent parte a freddo (si ricarica CLAUDE.md + questa skill) e costerebbe più del risparmio.
+
 ```powershell
 $lazy = "$env:LOCALAPPDATA\nvim-data\lazy"
 # doc di un plugin, cercando un'API specifica

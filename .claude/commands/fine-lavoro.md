@@ -20,7 +20,7 @@ Messaggio di commit fornito dall'utente (può essere vuoto): `$ARGUMENTS`
 
 ## Step 1 — Test headless di startup pulito
 
-Leggi la procedura headless in `.claude/docs/verifica-headless.md` ed eseguila (almeno lo startup test; l'attach LSP per linguaggio se pertinente alle modifiche). Analizza l'output reale (l'exit code è sempre 0, non fidartene): se ci sono errori di startup, **ABORTISCI** la routine senza committare e riporta gli errori. Prosegui solo se lo startup è pulito.
+Leggi la procedura headless in `.claude/docs/verifica-headless.md` ed eseguila (almeno lo startup test; l'attach LSP per linguaggio se pertinente alle modifiche). Il *lancio dei comandi e la raccolta dell'output* puoi delegarli al subagent Haiku `nvim-collector`; l'**analisi** resta tua. Analizza l'output reale (l'exit code è sempre 0, non fidartene): se ci sono errori di startup, **ABORTISCI** la routine senza committare e riporta gli errori. Prosegui solo se lo startup è pulito.
 
 ## Step 2 — Commit + push su `windows`
 

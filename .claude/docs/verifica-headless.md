@@ -4,6 +4,8 @@
 
 Procedura validata per verificare questa config senza aprire l'UI. File di prova già pronti in `<test-dir>` (lua, py, sh, json, yaml, ts, c, md + progetto cargo in `rust\`). `<test-dir>` è una terminologia sostitutiva: il path reale è nella memory (`path-conventions`) — risolvilo prima di lanciare i comandi.
 
+> **Delega della raccolta.** Il *lancio* dei comandi qui sotto e la *cattura* dell'output grezzo (stdout+stderr, exit code, client LSP attaccati, `.so` dei parser) possono essere delegati al subagent Haiku **`nvim-collector`** (`.claude/agents/nvim-collector.md`) per risparmiare token. L'**interpretazione** — output pulito o no? errore vero o falso positivo da MAX_PATH? abortire? — **resta a chi ha invocato**: l'agent raccoglie e riporta grezzo, non emette verdetti (l'exit code qui è sempre 0, non è un segnale). Le trappole qui sotto servono proprio a te per giudicare i dati che l'agent ti riporta.
+
 ## Verifica base (dopo ogni modifica)
 
 ```powershell
