@@ -45,6 +45,7 @@ Primo attach: anche 10-20 s (rust_analyzer di più: indicizza il progetto cargo)
 | Output async di `TSUpdate` mente ("up-to-date" senza parser) | `+TSInstallSync <lingue>` e controllare i `.so` in `nvim-treesitter\parser\` |
 | Exit code 0 anche se un `config()` esplode | grep dello stderr per `Failed to run|Error executing`; nei check Lua usare `vim.cmd('cquit! 1')` |
 | Percorsi di test profondi superano MAX_PATH | falsi errori (checkout git falliti, ENOENT cache luac): testare in path corti tipo `$env:TEMP\nvim-ci` |
+| `nvim --headless -l script.lua` **non carica init.lua**: niente lazy, niente plugin, nessun autocmd della config (jdtls/LSP non si agganciano mai → attese che vanno sempre in timeout) | non usare `-l` per verificare la config; apri il file come argomento e inietta il codice con `-c "luafile ..."`. Per un t0 *prima* dello startup: `nvim --headless --cmd "lua _G.T0=vim.uv.hrtime()" file -c "luafile obs.lua"` |
 
 ## Installazione da zero simulata (per modifiche strutturali)
 
