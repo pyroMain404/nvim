@@ -83,6 +83,38 @@ local function warn_once(msg)
   vim.notify(msg, vim.log.levels.WARN, { title = "nvim-jdtls" })
 end
 
+-- eclipse.jdt.ls compila i progetti Java "plain" in una cartella `bin/` nella root.
+-- Non la mettiamo nel .gitignore globale (in altri progetti `bin/` può essere codice
+-- versionato): la ignoriamo solo qui, dove jdtls gira davvero, nel .git/info/exclude
+-- locale del repo — non versionato, invisibile al team. Idempotente. Git ignora solo
+-- i file untracked, quindi se `bin/` contiene sorgenti già tracciati restano tali.
+-- (I metadati Eclipse .project/.classpath/.factorypath/.settings/ sono invece coperti
+-- dal .gitignore globale, perché sono sempre artefatti rigenerabili.)
+local function exclude_bin_locally(root)
+  local git = vim.uv.fs_stat(root .. "/.git")
+  if not git or git.type ~= "directory" then
+    return -- nessun repo git standard (o worktree/submodule con .git file): niente da fare
+  end
+  local exclude_path = root .. "/.git/info/exclude"
+
+  local f = io.open(exclude_path, "r")
+  if f then
+    for line in f:lines() do
+      if line:match "^/?bin/?$" then
+        f:close()
+        return -- già escluso
+      end
+    end
+    f:close()
+  end
+
+  local out = io.open(exclude_path, "a")
+  if out then
+    out:write "/bin/\n"
+    out:close()
+  end
+end
+
 local function start()
   local java, major = resolve_jdk()
   if not java then
@@ -116,6 +148,8 @@ local function start()
     or vim.fn.getcwd()
   local project_name = vim.fn.fnamemodify(root, ":p:h:t")
   local workspace_dir = vim.fn.stdpath "data" .. "/jdtls-workspace/" .. project_name
+
+  exclude_bin_locally(root)
 
   local cmd = {
     java,
