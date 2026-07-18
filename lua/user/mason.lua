@@ -14,6 +14,14 @@ function M.config()
     ui = {
       border = "rounded",
     },
+    -- Registry aggiuntivo Crashdummyy: fornisce il pacchetto "roslyn" (server LSP C#
+    -- allineato alla versione vscode), assente dal registry ufficiale mason-org.
+    -- `registries` SOSTITUISCE il default, quindi mason-org va elencato esplicitamente:
+    -- ometterlo romperebbe tutti gli altri pacchetti (stylua, black, gli LSP...).
+    registries = {
+      "github:mason-org/mason-registry",
+      "github:Crashdummyy/mason-registry",
+    },
   }
 
   require("mason-lspconfig").setup {
@@ -33,6 +41,13 @@ function M.config()
   local tools = { "stylua", "black", "tree-sitter-cli" }
   if vim.fn.executable "java" == 1 then
     table.insert(tools, "jdtls")
+  end
+  -- roslyn: server LSP C# (registry Crashdummyy), gestito da roslyn.nvim
+  -- (user/roslyn.lua), NON da mason-lspconfig — perciò resta FUORI da
+  -- `automatic_enable`. È un processo .NET: senza `dotnet` nel PATH non parte,
+  -- quindi è spreco scaricarlo (stesso pattern di jdtls con `java`).
+  if vim.fn.executable "dotnet" == 1 then
+    table.insert(tools, "roslyn")
   end
   local registry = require "mason-registry"
   registry.refresh(function()

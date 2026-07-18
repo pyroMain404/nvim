@@ -100,9 +100,20 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 -- dedicato. La sintassi deriva da HCL/River, quindi mappiamo al filetype "hcl"
 -- per un'evidenziazione approssimativa (il parser hcl è in treesitter.lua).
 -- Non è semantica: niente diagnostica/completion, solo highlight.
+-- Shader Unity. HLSL puro (.hlsl/.hlsli) e gli include/compute di Unity (.cginc CG/HLSL,
+-- .compute compute shader): filetype "hlsl", highlight via il parser treesitter hlsl
+-- (treesitter.lua). ShaderLab (.shader) è il wrapper dichiarativo di Unity: il builtin
+-- lo rileva come "gdshader" (Godot, errato), qui lo forziamo a "shaderlab" (highlight
+-- approssimativo via grammatica hlsl, vedi treesitter.lua). vim.filetype.add ha priorità
+-- sul rilevamento di default.
 vim.filetype.add {
   extension = {
     alloy = "hcl",
+    hlsl = "hlsl",
+    hlsli = "hlsl",
+    cginc = "hlsl",
+    compute = "hlsl",
+    shader = "shaderlab",
   },
   pattern = {
     [".*docker%-compose.*%.ya?ml"] = "yaml.docker-compose",
@@ -117,6 +128,15 @@ vim.filetype.add {
     end,
   },
 }
+
+-- Nel runtime non esiste un ftplugin per hlsl/shaderlab: senza commentstring il
+-- commento C-style (gc / mini.comment) non funzionerebbe. Lo impostiamo a mano.
+vim.api.nvim_create_autocmd({ "FileType" }, {
+  pattern = { "hlsl", "shaderlab" },
+  callback = function()
+    vim.bo.commentstring = "// %s"
+  end,
+})
 
 vim.api.nvim_create_autocmd({ "CursorHold" }, {
   callback = function()

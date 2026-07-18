@@ -32,11 +32,20 @@ function M.config()
       "cpp",
       "go",
       "java",
+      "c_sharp", -- C#/Unity (il core 0.12 mappa già il filetype cs -> lang c_sharp)
+      "hlsl", -- shader Unity: .hlsl/.hlsli/.cginc/.compute (ftdetect in autocmds.lua)
       "dockerfile",
       "hcl", -- usato anche per i file .alloy (Grafana Alloy), evidenziazione approssimativa
     },
     highlight = true,
   }
+
+  -- ShaderLab (.shader) non ha un parser treesitter dedicato: usiamo la grammatica
+  -- HLSL come approssimazione (i file .shader di Unity incorporano blocchi HLSL/CG),
+  -- stesso principio di .alloy -> hcl. Le mappe cs -> c_sharp e hlsl -> hlsl sono già
+  -- builtin nel core 0.12, quindi non serve registrarle. L'highlight parte via
+  -- l'autocmd FileType di tree-sitter-manager (highlight = true).
+  vim.treesitter.language.register("hlsl", "shaderlab")
 end
 
 return M
