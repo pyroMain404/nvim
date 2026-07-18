@@ -6,7 +6,7 @@ local M = {
 }
 
 function M.config()
-  local pg = require "user.project_group"
+  local pg = require "user.projects.group"
   -- Cerca file/testo anche nei progetti "fratelli" col nome in comune (search_dirs).
   local function find_files_group()
     require("telescope.builtin").find_files { search_dirs = pg.dirs() }

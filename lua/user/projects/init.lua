@@ -2,7 +2,7 @@
 -- Due funzioni che il plugin dava e qui replichiamo senza dipendenze:
 --   1. auto-chdir alla root del progetto del buffer corrente (vim.fs.root sui pattern);
 --   2. history dei progetti visitati su file + picker telescope (M.pick).
--- project_group.lua (gruppi di progetti fratelli) è indipendente e resta invariato.
+-- projects/group.lua (gruppi di progetti fratelli) è indipendente e resta invariato.
 
 local M = {}
 

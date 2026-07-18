@@ -4,7 +4,7 @@ local M = {
 }
 
 function M.config()
-  local pg = require "user.project_group"
+  local pg = require "user.projects.group"
 
   local wk = require "which-key"
   wk.add {
