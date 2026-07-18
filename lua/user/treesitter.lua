@@ -1,12 +1,18 @@
+-- nvim-treesitter è stato archiviato (aprile 2026). Su nvim 0.12 il motore
+-- treesitter è nel core (vim.treesitter): qui usiamo tree-sitter-manager.nvim
+-- (mantenuto) solo per installare i parser e abilitare l'highlight.
+-- I parser finiscono in stdpath("data")/site/parser, sul runtimepath standard,
+-- così anche markview/neotest/vim-illuminate/nvim-autopairs li trovano via il
+-- core vim.treesitter senza dipendere più da nvim-treesitter.
+-- Nota: l'indent treesitter (indent={enable=true} del vecchio setup) non è
+-- coperto dal core/manager; si ricade sull'indent standard per filetype.
 local M = {
-  "nvim-treesitter/nvim-treesitter",
-  branch = "master", -- il branch "main" è il rewrite senza nvim-treesitter.configs
+  "romus204/tree-sitter-manager.nvim",
   event = { "BufReadPost", "BufNewFile" },
-  build = ":TSUpdate",
 }
 
 function M.config()
-  require("nvim-treesitter.configs").setup {
+  require("tree-sitter-manager").setup {
     ensure_installed = {
       "lua",
       "markdown",
@@ -29,8 +35,7 @@ function M.config()
       "dockerfile",
       "hcl", -- usato anche per i file .alloy (Grafana Alloy), evidenziazione approssimativa
     },
-    highlight = { enable = true },
-    indent = { enable = true },
+    highlight = true,
   }
 end
 

@@ -27,7 +27,10 @@ function M.config()
   -- (server LSP Java gestito da nvim-jdtls). jdtls si installa solo con una JDK nel
   -- PATH: senza `java` il language server non parte comunque, quindi è spreco scaricarlo
   -- (l'avvio effettivo richiede Java 21+, controllato in user/jdtls.lua).
-  local tools = { "stylua", "black" }
+  -- tree-sitter-cli: binario che tree-sitter-manager (user/treesitter.lua) usa per
+  -- compilare i parser; Mason lo scarica precompilato (github release) e lo mette in
+  -- mason/bin sul PATH. Su questa macchina il build dei parser usa zig (unico compiler).
+  local tools = { "stylua", "black", "tree-sitter-cli" }
   if vim.fn.executable "java" == 1 then
     table.insert(tools, "jdtls")
   end
