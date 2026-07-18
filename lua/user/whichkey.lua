@@ -15,7 +15,7 @@ function M.config()
       { "<leader>f", group = "Find" },
       { "<leader>g", group = "Git" },
       { "<leader>l", group = "LSP" },
-      { "<leader>o", group = "Open app" },
+      { "<leader>o", group = "Open / Job" },
       { "<leader>p", group = "Plugins" },
       { "<leader>t", group = "Test" },
       { "<leader>a", group = "Tab" },

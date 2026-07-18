@@ -72,6 +72,10 @@ function M.config()
   -- lista e guardia in user/floatapps, stato via :checkhealth user.floatapps.
   require("user.floatapps").setup_keymaps()
 
+  -- Job in background sotto <leader>o (web server, loop di build, avvio app):
+  -- terminali toggleterm `hidden`, gestione in user/jobs, :checkhealth user.jobs.
+  require("user.jobs").setup()
+
   require("toggleterm").setup {
     size = 20,
     open_mapping = [[<c-\>]],
