@@ -2,6 +2,7 @@ require "user.launch"
 require "user.options"
 require "user.keymaps"
 require "user.autocmds"
+require "user.node" -- fissa la Node per gli LSP npm (PATH-prepend), prima degli LSP
 spec "user.colorscheme"
 spec "user.devicons"
 spec "user.treesitter"
