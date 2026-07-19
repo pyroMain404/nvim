@@ -11,7 +11,7 @@ function M.config()
   local opts = { noremap = true, silent = true }
 
   keymap("n", "<s-m>", "<cmd>lua require('user.harpoon').mark_file()<cr>", opts)
-  keymap("n", "<C-e>", "<cmd>lua require('harpoon.ui').toggle_quick_menu()<cr>", opts)
+  keymap("n", "<M-e>", "<cmd>lua require('harpoon.ui').toggle_quick_menu()<cr>", opts)
 end
 
 function M.mark_file()
