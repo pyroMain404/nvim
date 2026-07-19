@@ -23,11 +23,11 @@ function M.config()
   }
 
   dashboard.section.buttons.val = {
-    button("f", icons.ui.Files .. " Find file", ":lua require('telescope.builtin').find_files({ search_dirs = require('user.projects.group').dirs() })<CR>"),
+    button("f", icons.ui.Files .. " Find file", ":lua require('telescope.builtin').find_files({ search_dirs = require('user.projects.group').search_dirs() })<CR>"),
     button("n", icons.ui.NewFile .. " New file", ":ene <BAR> startinsert <CR>"),
     button("p", icons.git.Repo .. " Find project", ":lua require('user.projects').pick()<CR>"),
     button("r", icons.ui.History .. " Recent files", ":Telescope oldfiles <CR>"),
-    button("t", icons.ui.Text .. " Find text", ":lua require('telescope.builtin').live_grep({ search_dirs = require('user.projects.group').dirs() })<CR>"),
+    button("t", icons.ui.Text .. " Find text", ":lua require('telescope.builtin').live_grep({ search_dirs = require('user.projects.group').search_dirs() })<CR>"),
     button("c", icons.ui.Gear .. " Config", ":e $MYVIMRC <CR>"),
     button("q", icons.ui.SignOut .. " Quit", ":qa<CR>"),
   }

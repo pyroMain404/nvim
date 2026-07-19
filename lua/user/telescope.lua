@@ -8,11 +8,13 @@ local M = {
 function M.config()
   local pg = require "user.projects.group"
   -- Cerca file/testo anche nei progetti "fratelli" col nome in comune (search_dirs).
+  -- search_dirs() usa il separatore nativo: senza, su Windows i path escono come
+  -- 'C:/...' e telescope li tratta come URI, saltando filename_first (vedi group.lua).
   local function find_files_group()
-    require("telescope.builtin").find_files { search_dirs = pg.dirs() }
+    require("telescope.builtin").find_files { search_dirs = pg.search_dirs() }
   end
   local function live_grep_group()
-    require("telescope.builtin").live_grep { search_dirs = pg.dirs() }
+    require("telescope.builtin").live_grep { search_dirs = pg.search_dirs() }
   end
 
   local wk = require "which-key"
@@ -31,6 +33,20 @@ function M.config()
   local icons = require "user.icons"
   local actions = require "telescope.actions"
 
+  -- oldfiles puo' contenere path salvati con '/' (es. 'C:/...') che telescope vede
+  -- come URI (utils.is_uri), saltando path_display/filename_first. Normalizziamo al
+  -- separatore nativo prima di costruire la entry, cosi' agiscono su tutti i recenti.
+  local sep = package.config:sub(1, 1)
+  local oldfiles_maker = (function()
+    local base = require("telescope.make_entry").gen_from_file {}
+    if sep == "/" then
+      return base
+    end
+    return function(line)
+      return base((line:gsub("/", sep)))
+    end
+  end)()
+
   require("telescope").setup {
     defaults = {
       prompt_prefix = icons.ui.Telescope .. " ",
@@ -38,7 +54,7 @@ function M.config()
       entry_prefix = "   ",
       initial_mode = "insert",
       selection_strategy = "reset",
-      path_display = { "smart" },
+      path_display = { "filename_first" },
       color_devicons = true,
       vimgrep_arguments = {
         "rg",
@@ -80,6 +96,10 @@ function M.config()
       find_files = {
         theme = "dropdown",
         previewer = false,
+      },
+
+      oldfiles = {
+        entry_maker = oldfiles_maker,
       },
 
       buffers = {

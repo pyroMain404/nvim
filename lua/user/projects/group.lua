@@ -45,9 +45,26 @@ function M.group(dir)
 end
 
 -- Elenco di directory per telescope `search_dirs` (sempre >= 1 elemento).
+-- Path normalizzati a '/' (vim.fs.normalize).
 function M.dirs()
   local _, members = M.group()
   return members
+end
+
+-- Come dirs(), ma col separatore nativo dell'OS. Serve a telescope: su Windows rg
+-- ripete il separatore della dir base, e con '/' i risultati escono come 'C:/...'
+-- che telescope classifica come URI (utils.is_uri) saltando path_display
+-- (filename_first). Col separatore '\' i path restano 'C:\...' (non-URI) e agisce.
+-- Su OS con separatore '/' e' un no-op.
+function M.search_dirs()
+  local sep = package.config:sub(1, 1)
+  local dirs = M.dirs()
+  if sep ~= "/" then
+    for i, d in ipairs(dirs) do
+      dirs[i] = d:gsub("/", sep)
+    end
+  end
+  return dirs
 end
 
 -- Filtro custom di nvim-tree: ritorna true per NASCONDERE il path.
