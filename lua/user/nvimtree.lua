@@ -3,6 +3,30 @@ local M = {
   event = "VeryLazy",
 }
 
+-- Apri nvim-tree quando nvim viene lanciato su una directory (es. `nvim .` o
+-- `nvim <cartella>`). Registrato in `init` (che lazy esegue all'avvio) e NON in
+-- `config`: quest'ultimo gira su VeryLazy, cioè DOPO VimEnter, quindi l'autocmd
+-- non esisterebbe ancora allo scatto. Con `hijack_netrw = false` è netrw a
+-- renderizzare il buffer-directory: lo sostituiamo con un buffer vuoto e apriamo
+-- il tree, così il layout resta pulito (tree + buffer vuoto) senza il doppione
+-- netrw. `require("nvim-tree.api")` forza lazy a caricare il plugin (ed eseguire
+-- M.config/setup) prima dell'apertura.
+function M.init()
+  vim.api.nvim_create_autocmd("VimEnter", {
+    callback = function(data)
+      if vim.fn.isdirectory(data.file) ~= 1 then
+        return
+      end
+      vim.cmd.cd(vim.fn.fnameescape(data.file))
+      vim.cmd.enew()
+      if vim.api.nvim_buf_is_valid(data.buf) then
+        pcall(vim.api.nvim_buf_delete, data.buf, { force = true })
+      end
+      require("nvim-tree.api").tree.open()
+    end,
+  })
+end
+
 function M.config()
   local pg = require "user.projects.group"
 
