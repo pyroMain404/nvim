@@ -20,6 +20,22 @@ nvim --headless "+lua vim.defer_fn(function() vim.cmd('qa!') end, 200)"
 nvim --headless -c "checkhealth which-key" -c "w! $env:TEMP\h.txt" -c "qa!"; Get-Content $env:TEMP\h.txt
 ```
 
+### Se la modifica è in una feature lazy, caricala direttamente
+
+Lo startup test (defer 200 ms) intercetta gli errori **sincroni** di `init.lua`, ma NON esercita il codice di una feature caricata lazy: `config()`/setup di un plugin con trigger `VeryLazy`, `VimEnter`, `event`, `keys`, `cmd`, `ft` non gira in quella finestra (in headless `VeryLazy` non scatta — vedi trappole). Quindi "startup pulito" **non è** una verifica di una modifica che vive lì dentro.
+
+Se sai già che la parte toccata è lazy, **non** fare lo startup test, constatare che la feature non è caricata e poi forzarla in un secondo run: **caricala direttamente dall'inizio** ed esercita nello stesso comando il percorso modificato. Un solo run che forza il load + controlla il comportamento vale più dello startup test per quella modifica (lo startup test resta utile solo come check aggiuntivo che `init.lua` non esploda).
+
+```powershell
+# es. modifica nel config() di telescope (lazy): carica il plugin e verifica subito
+nvim --headless -c "Lazy load telescope.nvim" -c "lua
+  assert(require('telescope.config').values.path_display, 'setup non applicato')
+  -- ... asserzioni sul comportamento realmente cambiato ...
+" -c "qa!"
+```
+
+Regola pratica: prima di lanciare, chiediti **quando** carica ciò che hai toccato. Startup/sincrono ⇒ startup test. Lazy ⇒ `Lazy load <plugin>` (o `require "<modulo>"`) + asserzioni, senza passare dallo startup.
+
 ## Verifica attach LSP per linguaggio
 
 ```powershell
