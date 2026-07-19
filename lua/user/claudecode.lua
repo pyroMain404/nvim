@@ -45,7 +45,7 @@ function M.config()
     terminal = {
       provider = "native", -- niente snacks: split gestito dal plugin
       split_side = "right",
-      split_width_percentage = 0.35,
+      split_width_percentage = 0.45,
     },
   }
 end
