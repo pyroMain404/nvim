@@ -100,6 +100,7 @@ function M.config()
 
       oldfiles = {
         entry_maker = oldfiles_maker,
+        initial_mode = "normal",
       },
 
       buffers = {
