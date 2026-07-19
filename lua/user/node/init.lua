@@ -1,5 +1,6 @@
--- Node deterministica per gli LSP npm (ts_ls, eslint, pyright, cssls, html,
--- jsonls, yamlls, bashls, dockerls, docker_compose, angularls) e per prettier.
+-- Node deterministica per gli LSP npm (ts_ls, eslint, pyright, somesass_ls,
+-- tailwindcss, html, jsonls, yamlls, bashls, dockerls, docker_compose,
+-- angularls) e per prettier.
 --
 -- Perché: questi server sono processi che nvim lancia cercando `node` nel PATH.
 -- Con fnm la node "attiva" varia (default fnm, `.node-version` del progetto con

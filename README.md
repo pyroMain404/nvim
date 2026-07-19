@@ -14,7 +14,7 @@ Everything below must be available on `PATH` before the first launch.
 | Neovim ≥ 0.11 | — | `winget install Neovim.Neovim` |
 | Git | plugin manager, gitsigns, neogit | `winget install Git.Git` |
 | zig (or gcc/clang) | compiling treesitter parsers | `winget install zig.zig` |
-| Node.js | LSP servers installed via Mason (ts_ls, eslint, jsonls, yamlls, bashls, cssls, html, pyright) | `winget install Schniz.fnm` + `fnm install --lts` |
+| Node.js | LSP servers installed via Mason (ts_ls, eslint, jsonls, yamlls, bashls, somesass_ls, tailwindcss, html, pyright) | `winget install Schniz.fnm` + `fnm install --lts` |
 | Python 3 | `black` formatter (Mason installs it via pip) | `winget install Python.Python.3.12` |
 | ripgrep | Telescope live grep | `winget install BurntSushi.ripgrep.GNU` |
 | A [Nerd Font](https://www.nerdfonts.com/) | icons in statusline, tree, telescope | `winget install DEVCOM.JetBrainsMonoNerdFont` (then set it in your terminal) |

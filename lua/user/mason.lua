@@ -26,9 +26,16 @@ function M.config()
 
   require("mason-lspconfig").setup {
     ensure_installed = servers,
-    -- jdtls è gestito da nvim-jdtls (user/jdtls.lua), non da lspconfig: escluderlo
-    -- dall'abilitazione automatica evita un secondo client in conflitto sui buffer java.
-    automatic_enable = { exclude = { "jdtls" } },
+    -- automatic_enable abilita TUTTI i server già installati in Mason (itera su
+    -- registry.get_installed_package_names(), non su ensure_installed): toglierli
+    -- da ensure_installed NON basta a spegnerli finché il pacchetto resta installato.
+    -- - jdtls: gestito da nvim-jdtls (user/jdtls.lua); escluderlo evita un secondo
+    --   client in conflitto sui buffer java.
+    -- - cssls: sostituito da somesass_ls (gestisce css/scss/sass). Il pacchetto può
+    --   restare installato sulla macchina: senza questa esclusione verrebbe
+    --   riabilitato e si attaccherebbe ai .css insieme a somesass_ls, con doppia
+    --   diagnostica/hover.
+    automatic_enable = { exclude = { "jdtls", "cssls" } },
   }
 
   -- tool usati da none-ls, non gestiti da mason-lspconfig, più il binario jdtls

@@ -26,7 +26,19 @@ local M = {}
 --                 angularls su typescript/html) per non avvisare ovunque.
 local all_servers = {
   { name = "lua_ls" },
-  { name = "cssls" },
+  -- somesass_ls (Some Sass) SOSTITUISCE cssls: gestisce scss/sass E css con lo
+  -- stesso feature set di vscode-css-language-server (completion, hover,
+  -- diagnostica, colori — "Its feature set matches that of vscode-css-language-server"),
+  -- aggiungendoci la navigazione workspace-wide su variabili/mixin/@use/@forward.
+  -- Il default nvim-lspconfig registra solo scss/sass: il css va aggiunto ai
+  -- filetypes (lspsettings/somesass_ls.lua). NON copre less (cssls sì): se un
+  -- domani serve, reintrodurre cssls ristretto a filetypes = { "less" }.
+  { name = "somesass_ls" },
+  -- tailwindcss: hover/completion/color-swatch sulle utility class. Il default
+  -- root_dir usa `.git` come fallback (Tailwind v4) → si attaccherebbe in OGNI
+  -- repo git; lspsettings/tailwindcss.lua lo restringe ai progetti Tailwind veri
+  -- (config file o dipendenza tailwindcss in package.json), come il gating di angularls.
+  { name = "tailwindcss" },
   { name = "html" },
   { name = "ts_ls" },
   { name = "eslint" },
