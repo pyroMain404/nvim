@@ -11,6 +11,7 @@ function M.config()
       { "<leader>;", "<cmd>tabnew | terminal<CR>", desc = "Term" },
       { "<leader>v", "<cmd>vsplit<CR>", desc = "Split" },
       { "<leader>b", group = "Buffers" },
+      { "<leader>c", group = "Claude" },
       { "<leader>d", group = "Debug" },
       { "<leader>f", group = "Find" },
       { "<leader>g", group = "Git" },
