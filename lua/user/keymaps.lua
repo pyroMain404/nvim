@@ -40,4 +40,6 @@ keymap({ "n", "x" }, "j", "gj", opts)
 keymap({ "n", "x" }, "k", "gk", opts)
 keymap("n", "<leader>w", ":lua vim.wo.wrap = not vim.wo.wrap<CR>", opts)
 
-vim.api.nvim_set_keymap("t", "<C-;>", "<C-\\><C-n>", opts)
+-- <M-;> (non <C-;>): i terminali non trasmettono Ctrl+; come sequenza distinta
+-- (Ctrl con carattere non-alfabetico non e' codificabile nel protocollo legacy).
+vim.api.nvim_set_keymap("t", "<M-;>", "<C-\\><C-n>", opts)

@@ -111,21 +111,25 @@ function M.config()
   augroup end
   ]]
 
+  -- remap=true: dopo <C-\><C-n> siamo in normal, e la 2a parte (<m-hjkl>) va
+  -- risolta contro il keybind di navigazione finestre in keymaps.lua invece di
+  -- hardcodare <C-w>h qui. Cosi' il terminale segue quel keybind se cambia (es.
+  -- un plugin di split). <C-\><C-n> non ha mapping utente: resta l'uscita in normal.
+  local opts = { buffer = 0, silent = true, remap = true }
+  local function set_terminal_keymaps()
+    vim.keymap.set("t", "<m-h>", [[<C-\><C-n><m-h>]], opts)
+    vim.keymap.set("t", "<m-j>", [[<C-\><C-n><m-j>]], opts)
+    vim.keymap.set("t", "<m-k>", [[<C-\><C-n><m-k>]], opts)
+    vim.keymap.set("t", "<m-l>", [[<C-\><C-n><m-l>]], opts)
+  end
+
   vim.api.nvim_create_autocmd({ "TermEnter" }, {
     pattern = { "*" },
     callback = function()
       vim.cmd "startinsert"
-      _G.set_terminal_keymaps()
+      set_terminal_keymaps()
     end,
   })
-
-  local opts = { noremap = true, silent = true }
-  function _G.set_terminal_keymaps()
-    vim.api.nvim_buf_set_keymap(0, "t", "<m-h>", [[<C-\><C-n><C-W>h]], opts)
-    vim.api.nvim_buf_set_keymap(0, "t", "<m-j>", [[<C-\><C-n><C-W>j]], opts)
-    vim.api.nvim_buf_set_keymap(0, "t", "<m-k>", [[<C-\><C-n><C-W>k]], opts)
-    vim.api.nvim_buf_set_keymap(0, "t", "<m-l>", [[<C-\><C-n><C-W>l]], opts)
-  end
 end
 
 return M

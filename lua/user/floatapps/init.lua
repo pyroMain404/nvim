@@ -41,7 +41,10 @@ function M.setup_keymaps()
   for _, app in ipairs(M.apps) do
     local exe = app.cmd:match "%S+"
     if vim.fn.executable(exe) == 1 then
-      vim.keymap.set({ "n", "t" }, app.key, function()
+      -- Solo modalita' normale: registrarli anche in "t" (terminale) fa attendere
+      -- `timeoutlen` a ogni <Space> digitato in insert-terminal, perche' il leader
+      -- e' <Space> e nvim non sa se stai componendo <leader>o... — vedi keymap sotto <leader>o.
+      vim.keymap.set("n", app.key, function()
         M.toggle(app.cmd)
       end, { desc = app.desc, noremap = true, silent = true })
     end
