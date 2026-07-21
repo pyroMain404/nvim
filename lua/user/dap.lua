@@ -6,7 +6,7 @@
 --
 -- I dll dell'adapter NON sono ridistribuibili qui: arrivano dall'estensione VS Code
 -- "Visual Studio Tools for Unity" (id visualstudiotoolsforunity.vstuc). Li risolviamo
--- a runtime da posizioni note (o da vim.g.vstuc_dir); se non ci sono, l'adapter non
+-- a runtime da posizioni note (o da machine.vstuc_dir / vim.g.vstuc_dir); se non ci sono, l'adapter non
 -- viene registrato e l'attach avvisa in modo pigro invece di rompersi all'avvio.
 -- Prerequisito comune: `dotnet` nel PATH (lo stesso di roslyn, user/roslyn.lua).
 
@@ -26,10 +26,15 @@ local M = {
 
 -- Cerca la cartella `bin/` dell'estensione vstuc, che contiene sia
 -- "Visual Studio Tools for Unity.dll" (l'adapter) sia "UnityAttachProbe.dll".
--- Ordine: override esplicito -> estensioni VS Code (stable/insiders/server).
+-- Ordine: override runtime `vim.g.vstuc_dir` -> pin macchina-specifico
+-- `machine.vstuc_dir` (user/machine.lua) -> estensioni VS Code (stable/insiders/server).
 local function find_vstuc_dir()
   if vim.g.vstuc_dir and vim.uv.fs_stat(vim.g.vstuc_dir) then
     return vim.g.vstuc_dir
+  end
+  local machine = pcall(require, "user.machine") and require "user.machine" or {}
+  if machine.vstuc_dir and vim.uv.fs_stat(machine.vstuc_dir) then
+    return machine.vstuc_dir
   end
   local home = vim.uv.os_homedir()
   local ext_roots = {
@@ -185,8 +190,8 @@ function M.config()
           vim.notify(
             "Attach Unity non disponibile: serve `dotnet` nel PATH e l'estensione "
               .. "VS Code 'Visual Studio Tools for Unity' (id visualstudiotoolsforunity.vstuc).\n"
-              .. "In alternativa imposta vim.g.vstuc_dir alla cartella bin/ che contiene "
-              .. "'Visual Studio Tools for Unity.dll'.",
+              .. "In alternativa imposta `vstuc_dir` in lua/user/machine.lua (o vim.g.vstuc_dir) "
+              .. "alla cartella bin/ che contiene 'Visual Studio Tools for Unity.dll'.",
             vim.log.levels.WARN,
             { title = "nvim-dap (Unity)" }
           )

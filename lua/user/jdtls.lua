@@ -12,11 +12,13 @@
 -- presenza, e se nessuna JDK adeguata è disponibile non avviamo nulla e avvisiamo
 -- una sola volta, in modo pigro (solo aprendo un file Java, `ft = "java"`).
 --
--- Da dove prendiamo il `java`: prima `JAVA_HOME` (gli installer JDK — es. Temurin su
--- Windows — spesso impostano JAVA_HOME su una versione più recente di quella lasciata
--- nel PATH), poi `java` dal PATH. Usiamo la prima JDK >= 21 trovata. Questa JVM serve
--- solo a far girare il server; il progetto può compilare con una JVM diversa
--- configurata a parte (impostazione `java.configuration.runtimes`).
+-- Da dove prendiamo il `java`, in ordine: (1) il pin macchina-specifico
+-- `machine.java_home` (vedi `user/machine.lua`), che vince a prescindere dall'ambiente;
+-- (2) `JAVA_HOME` (gli installer JDK — es. Temurin su Windows — spesso lo impostano su
+-- una versione più recente di quella lasciata nel PATH); (3) `java` dal PATH. Usiamo la
+-- prima JDK >= 21 trovata (il pin è comunque validato: se è < 21 o non eseguibile si
+-- scende ai fallback). Questa JVM serve solo a far girare il server; il progetto può
+-- compilare con una JVM diversa configurata a parte (`java.configuration.runtimes`).
 --
 -- Avvio manuale con `java -jar` (non il launcher Python di Mason): così l'unica
 -- dipendenza è la JDK, non anche Python.
@@ -46,14 +48,26 @@ local function resolve_jdk()
   end
   jdk_resolved = true
 
-  local candidates = {}
-  local home = vim.env.JAVA_HOME
-  if home and home ~= "" then
-    -- config solo-Windows: java.exe sotto JAVA_HOME\bin
-    local exe = (home:gsub("[/\\]$", "")) .. "\\bin\\java.exe"
-    if vim.uv.fs_stat(exe) then
-      table.insert(candidates, exe)
+  -- config solo-Windows: java.exe sotto <home>\bin
+  local function exe_of(home)
+    if not home or home == "" then
+      return nil
     end
+    local exe = (home:gsub("[/\\]$", "")) .. "\\bin\\java.exe"
+    return vim.uv.fs_stat(exe) and exe or nil
+  end
+
+  local candidates = {}
+  -- (1) pin macchina-specifico: vince sull'ambiente (comunque validato sotto).
+  local machine = pcall(require, "user.machine") and require "user.machine" or {}
+  local pinned = exe_of(machine.java_home)
+  if pinned then
+    table.insert(candidates, pinned)
+  end
+  -- (2) JAVA_HOME, (3) java nel PATH.
+  local from_env = exe_of(vim.env.JAVA_HOME)
+  if from_env then
+    table.insert(candidates, from_env)
   end
   if vim.fn.executable "java" == 1 then
     table.insert(candidates, "java")

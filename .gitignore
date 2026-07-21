@@ -47,3 +47,7 @@ vscode-java-test/
 # Claude Code: impostazioni locali per-macchina (permessi, additionalDirectories
 # con path assoluti). Non portabile: resta fuori dal repo.
 .claude/settings.local.json
+
+# Override macchina-specifici della config nvim (path JDK, ecc.). Vedi
+# machine.lua.example per il template. Non portabile: resta fuori dal repo.
+lua/user/machine.lua

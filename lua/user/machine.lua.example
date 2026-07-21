@@ -1,0 +1,22 @@
+-- Override macchina-specifici (TEMPLATE versionato).
+--
+-- Copia questo file in `machine.lua` (git-ignorato) e adatta i valori alla macchina.
+-- Ogni chiave è opzionale: senza `machine.lua`, o senza una chiave, i consumatori
+-- degradano al rilevamento a runtime (comportamento di default).
+--
+-- Gemello lato-nvim di `.claude/settings.local.json`: qui stanno i valori che
+-- dipendono da DOVE gira la config (path assoluti, versioni installate) e che perciò
+-- NON vanno versionati.
+return {
+  -- Home della JDK (>= 21) per il language server Java (jdtls). jdtls ne deriva
+  -- `\bin\java.exe` e la usa a prescindere da JAVA_HOME/PATH. Vedi `user/jdtls.lua`.
+  -- java_home = [[C:\Program Files\Eclipse Adoptium\jdk-21.x.y-hotspot]],
+
+  -- Versione fnm della Node fissata per gli LSP npm (prepend al PATH di nvim). Se
+  -- assente/non installata, si degrada al node globale. Vedi `user/node/`.
+  -- node_version = "v22.x.y",
+
+  -- Cartella `bin/` dell'estensione VS Code vstuc (adapter DAP per Unity/C#), se non
+  -- rilevata automaticamente dalle dir estensioni note. Vedi `user/dap.lua`.
+  -- vstuc_dir = [[C:\Users\...\.vscode\extensions\visualstudiotoolsforunity.vstuc-1.x.y\bin]],
+}

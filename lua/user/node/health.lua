@@ -22,7 +22,11 @@ function M.check()
     })
   end
 
-  if s.pinned_installed then
+  if not s.pinned or s.pinned == "" then
+    h.warn("nessuna versione Node fissata: gli LSP npm useranno il node globale", {
+      "Imposta `node_version` in lua/user/machine.lua (vedi machine.lua.example)",
+    })
+  elseif s.pinned_installed then
     h.ok(("versione fissata %s installata e prepesa al PATH di nvim"):format(s.pinned))
   else
     h.warn(("versione fissata %s non installata: gli LSP npm useranno il node globale"):format(s.pinned), {
