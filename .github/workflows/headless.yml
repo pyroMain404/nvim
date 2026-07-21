@@ -1,0 +1,77 @@
+name: headless
+
+# Verifica di startup pulito su runner Windows, gemello in CI dello Step 1 di
+# /fine-lavoro (.claude/docs/verifica-headless.md, "Verifica base"): installa i
+# plugin dal lockfile versionato e lancia lo startup test headless, asserendo
+# che init.lua non stampi nulla. NON esercita LSP/treesitter (aprire un file
+# richiederebbe zig + tree-sitter CLI per compilare i parser): resta il check
+# sincrono di init.lua, l'unico che non dipende da toolchain esterni.
+
+on:
+  push:
+    branches: [windows]
+  pull_request:
+    branches: [windows]
+  workflow_dispatch:
+
+jobs:
+  startup:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installa Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          # Pin alla versione usata in locale (v0.12.x): la config assume 0.12 e
+          # ne dipende. Bumpalo quando aggiorni Neovim sulla macchina di sviluppo.
+          version: v0.12.4
+
+      - name: Prepara dir XDG isolate
+        shell: pwsh
+        run: |
+          # Config-dir standard di nvim = junction al checkout, come il symlink
+          # reale (%LOCALAPPDATA%\nvim -> repo). Data/state/cache in temp, così la
+          # cache dei plugin è isolata e cachabile e non sporca nulla.
+          $root  = "$env:RUNNER_TEMP\xdg"
+          $cfg   = "$root\config"
+          $data  = "$root\data"
+          $state = "$root\state"
+          $cache = "$root\cache"
+          New-Item -ItemType Directory -Force $cfg, $data, $state, $cache | Out-Null
+          New-Item -ItemType Junction -Path "$cfg\nvim" -Target $env:GITHUB_WORKSPACE | Out-Null
+          "XDG_CONFIG_HOME=$cfg"  | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "XDG_DATA_HOME=$data"   | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "XDG_STATE_HOME=$state" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "XDG_CACHE_HOME=$cache" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          # Espone il path della data-dir agli step successivi (per la cache).
+          "NVIM_DATA=$data\nvim" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
+      - name: Cache plugin lazy
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NVIM_DATA }}
+          key: nvim-data-${{ runner.os }}-${{ hashFiles('lazy-lock.json') }}
+          restore-keys: |
+            nvim-data-${{ runner.os }}-
+
+      - name: Installa i plugin dal lockfile
+        shell: pwsh
+        # In headless le operazioni di lazy sono bloccanti (by design): +Lazy!
+        # restore installa/allinea ai revision esatti di lazy-lock.json e poi +qa.
+        run: nvim --headless "+Lazy! restore" +qa
+
+      - name: Startup test (init.lua non deve stampare nulla)
+        shell: pwsh
+        run: |
+          # L'exit code di nvim headless e' sempre 0 (vedi trappole nel doc): il
+          # segnale reale e' l'output. Gli errori sincroni di init.lua scattano
+          # nel primo giro di event loop, 200 ms bastano.
+          $out = (& nvim --headless "+lua vim.defer_fn(function() vim.cmd('qa!') end, 200)" 2>&1 | Out-String).Trim()
+          if ($out) {
+            Write-Host "::error::Startup ha prodotto output (init.lua non e' pulito):"
+            Write-Host $out
+            exit 1
+          }
+          Write-Host "Startup pulito: nessun output."
