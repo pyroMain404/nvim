@@ -1,11 +1,15 @@
 name: headless
 
-# Verifica di startup pulito su runner Windows, gemello in CI dello Step 1 di
-# /fine-lavoro (.claude/docs/verifica-headless.md, "Verifica base"): installa i
-# plugin dal lockfile versionato e lancia lo startup test headless, asserendo
-# che init.lua non stampi nulla. NON esercita LSP/treesitter (aprire un file
-# richiederebbe zig + tree-sitter CLI per compilare i parser): resta il check
-# sincrono di init.lua, l'unico che non dipende da toolchain esterni.
+# Verifica di startup su runner Windows, gemello in CI dello Step 1 di
+# /fine-lavoro (.claude/docs/verifica-headless.md). Due gate:
+#  1) Startup test: init.lua non deve stampare nulla (errori SINCRONI del require
+#     chain). Non esercita i config() dei plugin lazy (VeryLazy/ft/event/keys non
+#     scattano headless senza aprire un file).
+#  2) Load-all: +Lazy! load all forza il caricamento di TUTTI i plugin, cosi'
+#     girano anche i config() lazy che il gate 1 non tocca, + checkhealth
+#     vim.deprecated per il drift di API deprecate. Non compila parser ne' avvia
+#     server LSP: il rumore degli installer async (mason/treesitter) abortiti da
+#     +qa e' benigno e i detector lo ignorano (pattern stretti).
 
 on:
   push:
@@ -84,3 +88,37 @@ jobs:
             exit 1
           }
           Write-Host "Startup pulito (esclusa la nota benigna di mason install)."
+
+      - name: Load-all + API deprecate (errori lazy / drift deprecato)
+        shell: pwsh
+        run: |
+          # Lo startup test sopra NON esercita i config() dei plugin lazy
+          # (VeryLazy/ft/event/keys non scattano headless senza aprire un file):
+          # un errore a runtime li' gli sfuggirebbe. +Lazy! load all forza il
+          # caricamento di TUTTI i plugin (config() inclusi), e checkhealth
+          # vim.deprecated vede le API deprecate chiamate nei loro setup.
+          $tmp = "$env:RUNNER_TEMP\health.txt"
+          $out = (& nvim --headless "+Lazy! load all" "+checkhealth vim.deprecated" "+w! $tmp" "+qa" 2>&1 | Out-String)
+          # Detector 1: firme d'errore di un config() esploso (lazy pcall-wrappa i
+          # config e riporta "Failed to run `config` for X" + stacktrace lua).
+          # NB: pattern STRETTI. +Lazy! load all riavvia gli installer async (mason
+          # tools, parser treesitter) che +qa aborta stampando "Error in command
+          # line:" / "Installation was aborted": rumore benigno, NON un errore di
+          # config. Si chiave solo su "Failed to run", stacktrace ed errori lua.
+          $errs = $out -split "`r?`n" | Where-Object {
+            $_ -match 'Failed to run|E51[0-9][0-9]|# stacktrace|attempt to (index|call|perform|compare|concatenate) '
+          }
+          if ($errs) {
+            Write-Host "::error::Errore a runtime nel config() di un plugin lazy:"
+            $errs | ForEach-Object { Write-Host $_ }
+            exit 1
+          }
+          # Detector 2: API deprecate (CLAUDE.md vuole checkhealth vim.deprecated pulito).
+          $health = if (Test-Path $tmp) { Get-Content $tmp -Raw } else { '' }
+          $dep = $health -split "`r?`n" | Where-Object { $_ -match '(WARNING|ERROR)' -and $_ -match 'deprecated' }
+          if ($dep) {
+            Write-Host "::error::API deprecate rilevate (checkhealth vim.deprecated):"
+            $dep | ForEach-Object { Write-Host $_ }
+            exit 1
+          }
+          Write-Host "Load-all pulito, nessuna API deprecata."
