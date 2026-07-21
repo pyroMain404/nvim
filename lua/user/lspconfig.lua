@@ -43,7 +43,7 @@ function M.config()
       "<cmd>lua vim.lsp.buf.format({async = true, filter = function(client) return client.name ~= 'typescript-tools' end})<cr>",
       desc = "Format",
     },
-    { "<leader>li", "<cmd>LspInfo<cr>", desc = "Info" },
+    { "<leader>li", "<cmd>checkhealth vim.lsp<cr>", desc = "Info" },
     { "<leader>lj", "<cmd>lua vim.diagnostic.jump({ count = 1, float = true })<cr>", desc = "Next Diagnostic" },
     { "<leader>lh", "<cmd>lua require('user.lspconfig').toggle_inlay_hints()<cr>", desc = "Hints" },
     { "<leader>lk", "<cmd>lua vim.diagnostic.jump({ count = -1, float = true })<cr>", desc = "Prev Diagnostic" },
