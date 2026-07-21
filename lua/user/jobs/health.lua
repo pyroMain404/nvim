@@ -13,6 +13,15 @@ function M.check()
   local root = providers.root()
   vim.health.info("Root progetto: " .. root)
 
+  -- Gruppo di progetti fratelli (job condivisi), se più di uno.
+  local roots = providers.roots()
+  if #roots > 1 then
+    vim.health.info(("Gruppo di %d progetti fratelli — job condivisi:"):format(#roots))
+    for _, r in ipairs(roots) do
+      vim.health.info("  · " .. r)
+    end
+  end
+
   -- File di config per-progetto rilevati.
   local files = {
     { cfg.local_file, "il nostro formato" },
@@ -29,8 +38,8 @@ function M.check()
     end
   end
 
-  -- Task effettivamente scoperti (dopo merge e dedup).
-  local tasks = providers.collect(root)
+  -- Task effettivamente scoperti (dopo merge e dedup), su tutto il gruppo.
+  local tasks = providers.collect()
   if #tasks == 0 then
     vim.health.warn("Nessun task scoperto", { "Crea .nvim/tasks.json (pannello <leader>oo → tasto 'e')." })
   else

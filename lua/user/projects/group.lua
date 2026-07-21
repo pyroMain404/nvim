@@ -1,7 +1,11 @@
--- Raggruppa i progetti "fratelli" con nome in comune nella directory padre.
--- Es: dalla cwd 'piano-privacy-fe' ricava il prefisso 'piano-privacy' e include
--- tutti i fratelli 'piano-privacy-*' (be, db, ...), escludendo 'riesame-privacy-*'.
--- Usato da telescope (search_dirs) e da nvim-tree (vista di gruppo a richiesta).
+-- Raggruppa i progetti "fratelli" della directory padre. Due criteri, in ordine:
+--   1. un file <nome>.code-workspace / <nome>.workspace (formato VSCode) nella dir
+--      padre che elenca `dir` tra le sue "folders" → gruppo = quelle cartelle
+--      (copre anche fratelli con nomi non correlati, es. agent-docs + iet-ng-lib);
+--   2. altrimenti l'euristica del prefisso: dalla cwd 'piano-privacy-fe' ricava
+--      'piano-privacy' e include tutti i 'piano-privacy-*' (be, db, ...).
+-- Usato da telescope (search_dirs), da nvim-tree (vista di gruppo a richiesta) e da
+-- user/jobs (job condivisi tra i membri del gruppo).
 
 local M = {}
 
@@ -14,11 +18,89 @@ local function prefix_of(name)
   return name:match "^(.+)%-[^%-]+$"
 end
 
+local function read_file(path)
+  local fd = io.open(path, "r")
+  if not fd then
+    return nil
+  end
+  local data = fd:read "*a"
+  fd:close()
+  return data
+end
+
+local function is_absolute(p)
+  return p:match "^%a:[/\\]" ~= nil or p:match "^[/\\]" ~= nil
+end
+
+-- Un file di workspace stile VSCode: <nome>.code-workspace o <nome>.workspace.
+local function is_workspace_file(name)
+  return name:match "%.code%-workspace$" ~= nil or name:match "%.workspace$" ~= nil
+end
+
+-- Cartelle membro dichiarate in un file workspace (formato VSCode:
+-- { "folders": [ { "path": "..." }, ... ] }, JSONC). I path sono relativi a `base`
+-- (la dir del file). Ritorna lista di path assoluti normalizzati (solo esistenti).
+local function workspace_members(file, base)
+  local decoded = require("user.util.jsonc").decode(read_file(file))
+  if type(decoded) ~= "table" or type(decoded.folders) ~= "table" then
+    return {}
+  end
+  local members = {}
+  for _, f in ipairs(decoded.folders) do
+    local p = type(f) == "table" and f.path or nil
+    if type(p) == "string" and p ~= "" then
+      local full = is_absolute(p) and vim.fs.normalize(p) or vim.fs.normalize(base .. "/" .. p)
+      if vim.fn.isdirectory(full) == 1 then
+        members[#members + 1] = full
+      end
+    end
+  end
+  return members
+end
+
+-- Gruppo definito da un file *.code-workspace/*.workspace nella dir padre che elenca
+-- `dir` tra le sue cartelle. Ritorna parent, membri, set — o nil se nessun file
+-- pertinente (si ricade sull'euristica del prefisso). Ha priorità sul prefisso:
+-- copre anche fratelli con nomi non correlati (es. agent-docs + iet-ng-lib).
+local function workspace_group(dir, parent)
+  local ok, iter = pcall(vim.fs.dir, parent)
+  if not ok then
+    return nil
+  end
+  local files = {}
+  for entry, typ in iter do
+    if typ == "file" and is_workspace_file(entry) then
+      files[#files + 1] = entry
+    end
+  end
+  table.sort(files) -- determinismo se più file workspace nella stessa dir
+  for _, entry in ipairs(files) do
+    local members = workspace_members(parent .. "/" .. entry, parent)
+    local set = {}
+    for _, m in ipairs(members) do
+      set[m] = true
+    end
+    if set[dir] then
+      table.sort(members)
+      return parent, members, set
+    end
+  end
+  return nil
+end
+
 -- Ritorna: parent (assoluto normalizzato), lista membri (assoluti), set membri.
--- Se la cartella non ha un -suffisso o non ha fratelli, il gruppo è la sola cwd.
+-- Priorità: un file workspace che elenca `dir`; altrimenti l'euristica del prefisso
+-- (fratelli con lo stesso nome meno l'ultimo -segmento). Se nessuna delle due dà
+-- fratelli, il gruppo è la sola cwd.
 function M.group(dir)
   dir = vim.fs.normalize(dir or vim.fn.getcwd())
   local parent = vim.fs.dirname(dir)
+  if parent and parent ~= dir then
+    local wp, wm, ws = workspace_group(dir, parent)
+    if wp then
+      return wp, wm, ws
+    end
+  end
   local name = vim.fs.basename(dir)
   local prefix = prefix_of(name)
   if not prefix or not parent or parent == dir then

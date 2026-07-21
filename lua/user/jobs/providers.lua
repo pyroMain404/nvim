@@ -57,54 +57,15 @@ local function has_file(rel)
   end
 end
 
--- Rimuove commenti // e /* */ e virgole finali da un JSONC, rispettando le stringhe
--- (un "http://" dentro una stringa non viene toccato). Serve per i .vscode/tasks.json.
-local function strip_jsonc(s)
-  local out, i, n = {}, 1, #s
-  local in_str, esc = false, false
-  while i <= n do
-    local c = s:sub(i, i)
-    if in_str then
-      out[#out + 1] = c
-      if esc then
-        esc = false
-      elseif c == "\\" then
-        esc = true
-      elseif c == '"' then
-        in_str = false
-      end
-      i = i + 1
-    else
-      local c2 = s:sub(i, i + 1)
-      if c == '"' then
-        in_str = true
-        out[#out + 1] = c
-        i = i + 1
-      elseif c2 == "//" then
-        while i <= n and s:sub(i, i) ~= "\n" do
-          i = i + 1
-        end
-      elseif c2 == "/*" then
-        i = i + 2
-        while i <= n and s:sub(i, i + 1) ~= "*/" do
-          i = i + 1
-        end
-        i = i + 2
-      else
-        out[#out + 1] = c
-        i = i + 1
-      end
-    end
-  end
-  return (table.concat(out):gsub(",%s*([%]}])", "%1"))
-end
+-- JSONC (commenti + virgole finali): stripper condiviso con user/projects (workspace).
+local jsonc = require "user.util.jsonc"
 
-local function decode_json(data, jsonc)
+local function decode_json(data, is_jsonc)
   if not data then
     return nil
   end
-  if jsonc then
-    data = strip_jsonc(data)
+  if is_jsonc then
+    return jsonc.decode(data)
   end
   local ok, decoded = pcall(vim.json.decode, data)
   if not ok then
@@ -241,6 +202,7 @@ end
 local function tasks_maven(root)
   local mvn = maven_cmd(root)
   local tasks = {
+    { name = "mvn clean", cmd = mvn .. " clean" },
     { name = "mvn compile", cmd = mvn .. " compile" },
     { name = "mvn test", cmd = mvn .. " test" },
     { name = "mvn package", cmd = mvn .. " package -DskipTests" },
@@ -263,9 +225,8 @@ local DETECTORS = {
   { source = "maven", when = has_file "pom.xml", tasks = tasks_maven },
 }
 
---- Tutti i task del progetto, uniti e deduplicati per nome (prima sorgente vince).
-function M.collect(root)
-  root = root or M.root()
+-- Task di UN singolo progetto (root), uniti e deduplicati per nome (prima sorgente vince).
+local function collect_one(root)
   local seen, result = {}, {}
   for _, d in ipairs(DETECTORS) do
     if cfg.providers[d.source] ~= false and (not d.when or d.when(root)) then
@@ -278,6 +239,52 @@ function M.collect(root)
           seen[task.name] = true
           result[#result + 1] = task
         end
+      end
+    end
+  end
+  return result
+end
+
+--- Le root del "gruppo": i progetti fratelli della cwd (stesso prefisso di nome, o
+--- elencati in un file *.code-workspace/*.workspace). Vedi user/projects/group.lua.
+--- Con un solo membro (o senza projects.group) è la sola root corrente.
+function M.roots()
+  local root = M.root()
+  local ok, group = pcall(require, "user.projects.group")
+  if not ok then
+    return { root }
+  end
+  local _, members = group.group(root)
+  if type(members) ~= "table" or #members == 0 then
+    return { root }
+  end
+  return members
+end
+
+--- Tutti i task del progetto — o del gruppo di progetti fratelli — uniti e dedup.
+--- Con più membri i nomi sono prefissati da `[nome-membro]` (job CONDIVISI tra
+--- fratelli) e la cwd è risolta assoluta contro il rispettivo membro, così ogni
+--- job parte nella propria cartella. Passando `root` esplicita si forza il singolo
+--- progetto (usato da :checkhealth).
+function M.collect(root)
+  if root then
+    return collect_one(root)
+  end
+  local roots = M.roots()
+  if #roots <= 1 then
+    return collect_one(roots[1] or M.root())
+  end
+  local seen, result = {}, {}
+  for _, r in ipairs(roots) do
+    local label = vim.fs.basename(r)
+    for _, task in ipairs(collect_one(r)) do
+      local name = ("[%s] %s"):format(label, task.name)
+      if not seen[name] then
+        seen[name] = true
+        task.name = name
+        task.cwd = M.resolve_cwd(task.cwd, r) -- assoluta: il job parte nel suo membro
+        task.root = r
+        result[#result + 1] = task
       end
     end
   end
