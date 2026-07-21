@@ -24,6 +24,7 @@ I path assoluti specifici della macchina NON compaiono in questo file né negli 
 - `init.lua` carica i moduli con `spec "user.<nome>"` (helper in `user/launch.lua` che accumula in `LAZY_PLUGIN_SPEC`); un file per plugin in `lua/user/`.
 - `lua/user/extras/` NON è caricato: sono opzionali, si attivano aggiungendo `spec "user.extras.<nome>"` in init.lua. Non contarli nei controlli di coerenza.
 - Impostazioni per-server LSP in `lua/user/lspsettings/<server>.lua` (caricate con pcall da lspconfig.lua).
+- **Helper puri in `lua/user/util/`**: quando una funzione è **idempotente, stateless e riutilizzabile** (nessuno stato di modulo, nessuna dipendenza dal dominio del chiamante — es. parsing, path, I/O di file), va estratta in un modulo `user/util/<nome>.lua` come sorgente unica, non duplicata nei consumatori. Regola operativa: se lo stesso helper compare (o comparirebbe) in due file, spostalo qui. Moduli attuali: `jsonc.lua` (strip/decode JSONC, usato da jobs+projects), `fs.lua` (`read_file`, `is_absolute`, usati da jobs+projects). NON metterci logica specifica di un dominio (es. `has_file`/`subst`/detector dei task in `jobs/providers.lua`, `resolve_cwd` finché ha un solo consumatore): resta nel modulo che la possiede.
 
 ## Decisioni prese (non regredire)
 

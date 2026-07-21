@@ -7,6 +7,8 @@
 -- Usato da telescope (search_dirs), da nvim-tree (vista di gruppo a richiesta) e da
 -- user/jobs (job condivisi tra i membri del gruppo).
 
+local fs = require "user.util.fs"
+
 local M = {}
 
 -- Stato della vista di gruppo di nvim-tree; nil = disattiva (comportamento normale).
@@ -18,20 +20,6 @@ local function prefix_of(name)
   return name:match "^(.+)%-[^%-]+$"
 end
 
-local function read_file(path)
-  local fd = io.open(path, "r")
-  if not fd then
-    return nil
-  end
-  local data = fd:read "*a"
-  fd:close()
-  return data
-end
-
-local function is_absolute(p)
-  return p:match "^%a:[/\\]" ~= nil or p:match "^[/\\]" ~= nil
-end
-
 -- Un file di workspace stile VSCode: <nome>.code-workspace o <nome>.workspace.
 local function is_workspace_file(name)
   return name:match "%.code%-workspace$" ~= nil or name:match "%.workspace$" ~= nil
@@ -41,7 +29,7 @@ end
 -- { "folders": [ { "path": "..." }, ... ] }, JSONC). I path sono relativi a `base`
 -- (la dir del file). Ritorna lista di path assoluti normalizzati (solo esistenti).
 local function workspace_members(file, base)
-  local decoded = require("user.util.jsonc").decode(read_file(file))
+  local decoded = require("user.util.jsonc").decode(fs.read_file(file))
   if type(decoded) ~= "table" or type(decoded.folders) ~= "table" then
     return {}
   end
@@ -49,7 +37,7 @@ local function workspace_members(file, base)
   for _, f in ipairs(decoded.folders) do
     local p = type(f) == "table" and f.path or nil
     if type(p) == "string" and p ~= "" then
-      local full = is_absolute(p) and vim.fs.normalize(p) or vim.fs.normalize(base .. "/" .. p)
+      local full = fs.is_absolute(p) and vim.fs.normalize(p) or vim.fs.normalize(base .. "/" .. p)
       if vim.fn.isdirectory(full) == 1 then
         members[#members + 1] = full
       end

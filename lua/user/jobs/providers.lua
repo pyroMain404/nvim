@@ -13,6 +13,7 @@
 
 local uv = vim.uv or vim.loop
 local cfg = require "user.jobs.config"
+local fs = require "user.util.fs"
 
 local M = {}
 
@@ -23,16 +24,12 @@ function M.root()
   return vim.fs.normalize(root or cwd)
 end
 
-local function is_absolute(p)
-  return p:match "^%a:[/\\]" ~= nil or p:match "^[/\\]" ~= nil
-end
-
 --- Risolve una cwd di task (eventualmente relativa) contro la root.
 function M.resolve_cwd(cwd, root)
   if not cwd or cwd == "" then
     return root
   end
-  if is_absolute(cwd) then
+  if fs.is_absolute(cwd) then
     return vim.fs.normalize(cwd)
   end
   return vim.fs.normalize(root .. "/" .. cwd)
@@ -40,15 +37,7 @@ end
 
 -- ── Helper di lettura ────────────────────────────────────────────────────────
 
-local function read_file(path)
-  local fd = io.open(path, "r")
-  if not fd then
-    return nil
-  end
-  local data = fd:read "*a"
-  fd:close()
-  return data
-end
+local read_file = fs.read_file
 
 -- Precondizione: il file (relativo alla root) esiste.
 local function has_file(rel)
