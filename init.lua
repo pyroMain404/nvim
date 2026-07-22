@@ -29,6 +29,7 @@ spec "user.dap"
 spec "user.autopairs"
 spec "user.neogit"
 spec "user.alpha"
+require "user.on_open" -- motore "azioni all'apertura di certi file"; prima di chi registra regole
 require "user.projects"
 spec "user.indentline"
 spec "user.toggleterm"

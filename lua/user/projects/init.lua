@@ -90,6 +90,42 @@ function M.setup()
     chdir_to_root(vim.api.nvim_get_current_buf())
   end)
   vim.keymap.set("n", "<c-p>", M.pick, { noremap = true, silent = true, desc = "Projects" })
+
+  -- Regola on_open: aprire un file *.workspace (formato VSCode) ATTIVA quel workspace.
+  -- Da lì ricerca file/testo (telescope + alpha, via group.search_dirs), nvim-tree e la
+  -- cwd vedono TUTTE le cartelle del workspace, non solo il progetto sotto la cwd.
+  -- Il motore generico sta in user/on_open.lua; lo stato/parse in projects/group.lua.
+  local ok_on_open, on_open = pcall(require, "user.on_open")
+  if ok_on_open then
+    on_open.add {
+      name = "workspace",
+      when = function(ev)
+        return require("user.projects.group").is_workspace_file(ev.name)
+      end,
+      action = function(ev)
+        local pg = require "user.projects.group"
+        local parent = pg.activate(ev.name)
+        if not parent then
+          vim.notify("Workspace senza cartelle valide: " .. vim.fs.basename(ev.name), vim.log.levels.WARN)
+          return
+        end
+        local n = #pg.active.members
+        -- cwd + nvim-tree sul workspace, dopo che gli altri handler d'apertura (es.
+        -- l'auto-chdir qui sopra) si sono assestati, così non vengono sovrascritti.
+        vim.schedule(function()
+          if vim.fn.isdirectory(parent) == 1 then
+            pcall(vim.cmd.cd, vim.fn.fnameescape(parent))
+            record(parent)
+          end
+          pg.focus_tree()
+          vim.notify(
+            ("Workspace %s: %d progetti visibili a ricerca/alpha"):format(vim.fs.basename(ev.name), n),
+            vim.log.levels.INFO
+          )
+        end)
+      end,
+    }
+  end
 end
 
 -- Picker telescope dei progetti recenti (rimpiazzo di extensions.projects.projects).

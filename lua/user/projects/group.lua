@@ -15,15 +15,22 @@ local M = {}
 M.tree_parent = nil ---@type string|nil
 M.tree_set = nil ---@type table<string, boolean>|nil
 
+-- Workspace attivato esplicitamente (es. aprendo un file *.workspace): fa da override
+-- del gruppo derivato dalla cwd per ricerca file/testo (telescope), alpha e nvim-tree.
+-- nil = nessun override → si ricade sul gruppo by-cwd (comportamento normale).
+M.active = nil ---@type { file:string, parent:string, members:string[], set:table<string, boolean> }|nil
+
 -- Prefisso comune: nome cartella senza l'ultimo -segmento, o nil se assente.
 local function prefix_of(name)
   return name:match "^(.+)%-[^%-]+$"
 end
 
 -- Un file di workspace stile VSCode: <nome>.code-workspace o <nome>.workspace.
+-- Il match è ancorato al suffisso, quindi vale sia sul basename sia sul path pieno.
 local function is_workspace_file(name)
   return name:match "%.code%-workspace$" ~= nil or name:match "%.workspace$" ~= nil
 end
+M.is_workspace_file = is_workspace_file
 
 -- Cartelle membro dichiarate in un file workspace (formato VSCode:
 -- { "folders": [ { "path": "..." }, ... ] }, JSONC). I path sono relativi a `base`
@@ -114,9 +121,69 @@ function M.group(dir)
   return parent, members, set
 end
 
+-- Attiva il workspace descritto da `file` (formato VSCode .workspace/.code-workspace):
+-- ne estrae le cartelle membro e le rende il "gruppo corrente" per ricerca file/testo,
+-- alpha e vista di gruppo di nvim-tree, INDIPENDENTEMENTE dalla cwd (a differenza di
+-- M.group, che deriva i fratelli dalla cwd). Ritorna parent, membri, set in caso di
+-- successo; nil se il file non elenca cartelle valide (l'attivazione precedente resta).
+function M.activate(file)
+  file = vim.fs.normalize(file)
+  local parent = vim.fs.dirname(file)
+  local members = workspace_members(file, parent)
+  if #members == 0 then
+    return nil
+  end
+  local set = {}
+  for _, m in ipairs(members) do
+    set[m] = true
+  end
+  table.sort(members)
+  M.active = { file = file, parent = parent, members = members, set = set }
+  return parent, members, set
+end
+
+-- Porta nvim-tree sul workspace attivo. Se i membri sono tutti figli diretti del
+-- parent usa la vista di gruppo filtrata (mostra SOLO i membri, come <leader>E);
+-- altrimenti apre il tree con root sul parent senza filtro (i membri annidati non si
+-- possono nascondere con la logica dei figli diretti di M.filter). No-op senza
+-- workspace attivo o senza nvim-tree.
+function M.focus_tree()
+  if not M.active then
+    return
+  end
+  local ok, api = pcall(require, "nvim-tree.api")
+  if not ok then
+    return
+  end
+  local parent = M.active.parent
+  local all_direct = true
+  for _, m in ipairs(M.active.members) do
+    if vim.fs.dirname(m) ~= parent then
+      all_direct = false
+      break
+    end
+  end
+  if all_direct then
+    M.tree_parent, M.tree_set = parent, M.active.set
+  else
+    M.tree_parent, M.tree_set = nil, nil
+  end
+  api.tree.change_root(parent)
+  api.tree.open()
+  api.tree.reload()
+end
+
 -- Elenco di directory per telescope `search_dirs` (sempre >= 1 elemento).
--- Path normalizzati a '/' (vim.fs.normalize).
+-- Path normalizzati a '/' (vim.fs.normalize). Se un workspace è attivo vince sui
+-- fratelli by-cwd; ne ritorna una COPIA perché search_dirs muta la lista in-place.
 function M.dirs()
+  if M.active then
+    local copy = {}
+    for i, m in ipairs(M.active.members) do
+      copy[i] = m
+    end
+    return copy
+  end
   local _, members = M.group()
   return members
 end
