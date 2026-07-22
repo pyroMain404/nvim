@@ -66,11 +66,16 @@ function M.config()
     -- non membri del gruppo. Inattivo (ritorna false) nel resto dei casi.
     filters = {
       custom = pg.filter,
+      dotfiles = false, -- mostra i dotfile (default, reso esplicito)
+      git_ignored = false, -- mostra anche i file in .gitignore (default: nascosti)
     },
     renderer = {
       add_trailing = false,
       group_empty = false,
-      highlight_git = false,
+      -- Il NOME riflette lo stato git: gli ignorati diventano grigi
+      -- (NvimTreeGitFileIgnoredHL -> Comment). Tocca solo i file con stato git,
+      -- i puliti restano col colore di default.
+      highlight_git = "name",
       full_name = false,
       highlight_opened_files = "none",
       root_folder_label = ":t",
@@ -110,18 +115,21 @@ function M.config()
             renamed = icons.git.FileRenamed,
             untracked = icons.git.FileUntracked,
             deleted = icons.git.FileDeleted,
-            ignored = icons.git.FileIgnored,
+            ignored = "", -- niente icona-prefisso per gli ignorati: bastano grigi (vedi highlight_git)
           },
         },
       },
       special_files = { "Cargo.toml", "Makefile", "README.md", "readme.md" },
       symlink_destination = true,
     },
+    -- L'albero NON deve cambiare stato all'apertura di un file: update_focused_file
+    -- ri-espande/ri-rootta ad ogni BufEnter ("uncollapsing folders recursively" +
+    -- update_root), richiudendo le sottodir aperte a mano. Disabilitato: lo stato
+    -- espanso/chiuso resta quello scelto dall'utente. Il re-root al CAMBIO PROGETTO
+    -- resta comunque, gestito da sync_root_with_cwd = true (scatta solo su DirChanged,
+    -- cioe' quando la cwd cambia = quando l'auto-chdir di user/projects passa progetto).
     update_focused_file = {
-      enable = true,
-      debounce_delay = 15,
-      update_root = true,
-      ignore_list = {},
+      enable = false,
     },
 
     filesystem_watchers = {
