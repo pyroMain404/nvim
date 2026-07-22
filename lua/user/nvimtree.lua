@@ -37,16 +37,12 @@ function M.config()
   }
 
   -- Al resize del terminale la funzione width NON viene rivalutata da sola per
-  -- un tree già aperto. L'API pubblica api.tree.resize() è rotta in questa
-  -- versione pinnata (chiama view.configure_width, che non esiste in nvim-tree.view),
-  -- quindi si richiama direttamente view.resize(): senza argomenti ricalcola la
-  -- width dalla funzione configurata (columns/3).
+  -- un tree già aperto. api.tree.resize() senza argomenti resetta la width ai
+  -- valori di config (la nostra funzione columns/3) e riapplica; è innocuo se il
+  -- tree è chiuso (il view.resize interno esce subito quando non è visibile).
   vim.api.nvim_create_autocmd("VimResized", {
     callback = function()
-      local view = require "nvim-tree.view"
-      if view.is_visible() then
-        view.resize()
-      end
+      require("nvim-tree.api").tree.resize()
     end,
   })
 
