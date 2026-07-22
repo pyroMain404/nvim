@@ -38,13 +38,34 @@ function M.config()
 
   -- Al resize del terminale la funzione width NON viene rivalutata da sola per
   -- un tree già aperto. api.tree.resize() senza argomenti resetta la width ai
-  -- valori di config (la nostra funzione columns/3) e riapplica; è innocuo se il
-  -- tree è chiuso (il view.resize interno esce subito quando non è visibile).
+  -- valori di config (la nostra funzione, vedi sotto) e riapplica; è innocuo se
+  -- il tree è chiuso (il view.resize interno esce subito quando non è visibile).
   vim.api.nvim_create_autocmd("VimResized", {
     callback = function()
       require("nvim-tree.api").tree.resize()
     end,
   })
+
+  -- Numero di finestre-editor AFFIANCATE (split verticali) nella tab corrente,
+  -- escluso il tree. Cammina l'albero di winlayout(): un nodo "row" dispone i
+  -- figli fianco a fianco (:vsplit) → si sommano; un "col" li impila (:split) →
+  -- contano come una sola colonna, quindi si prende il massimo. Le finestre
+  -- flottanti non compaiono in winlayout. Serve a stringere il tree quando lo
+  -- spazio orizzontale è già diviso tra più window.
+  local function side_by_side_editors(node)
+    node = node or vim.fn.winlayout()
+    local kind = node[1]
+    if kind == "leaf" then
+      local buf = vim.api.nvim_win_get_buf(node[2])
+      return vim.bo[buf].filetype == "NvimTree" and 0 or 1
+    end
+    local total = 0
+    for _, child in ipairs(node[2]) do
+      local n = side_by_side_editors(child)
+      total = kind == "row" and (total + n) or math.max(total, n)
+    end
+    return total
+  end
 
   local icons = require "user.icons"
 
@@ -53,9 +74,12 @@ function M.config()
     sync_root_with_cwd = true,
     view = {
       relativenumber = true,
-      -- larghezza = 1/3 delle colonne del terminale (rivalutata a ogni apertura)
+      -- Larghezza rivalutata a ogni apertura/resize: 1/5 delle colonne quando ci
+      -- sono più finestre-editor affiancate (lo spazio orizzontale è già diviso),
+      -- 1/3 altrimenti (tree + singola finestra).
       width = function()
-        return math.floor(vim.o.columns / 3)
+        local divisor = side_by_side_editors() > 1 and 5 or 3
+        return math.floor(vim.o.columns / divisor)
       end,
     },
     -- Filtro attivo solo nella vista di gruppo (<leader>eg): nasconde i fratelli

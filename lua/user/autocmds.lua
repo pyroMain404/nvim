@@ -40,10 +40,27 @@ vim.api.nvim_create_autocmd({ "VimResized" }, {
   end,
 })
 
-vim.api.nvim_create_autocmd({ "BufWinEnter" }, {
-  pattern = { "!vim" },
+-- Autoread reattivo: ricarica i buffer quando un processo ESTERNO (Claude Code,
+-- git, un formatter...) modifica il file su disco. `autoread` è on di default,
+-- ma Neovim confronta il timestamp del file solo su pochissimi eventi: senza
+-- questo, la modifica esterna resta invisibile finché non si forza a mano un
+-- `:checktime`/`:e`. Qui lo forziamo quando si torna sulla finestra nvim
+-- (FocusGained), si entra in un buffer (BufEnter) o dopo una pausa di inattività
+-- (CursorHold/I, cadenza = updatetime = 100ms in options.lua → reattivo).
+-- Solo buffer normali su file (buftype vuoto): salta terminali, prompt, ecc.
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI", "TermLeave" }, {
   callback = function()
-    vim.cmd "checktime"
+    if vim.bo.buftype == "" and vim.fn.getcmdwintype() == "" then
+      vim.cmd "checktime"
+    end
+  end,
+})
+
+-- Segnala quando un buffer viene ricaricato da disco, così la modifica esterna
+-- non passa inosservata (il ricarico di autoread è altrimenti silenzioso).
+vim.api.nvim_create_autocmd({ "FileChangedShellPost" }, {
+  callback = function()
+    vim.notify("Buffer ricaricato: il file è cambiato su disco", vim.log.levels.INFO)
   end,
 })
 
