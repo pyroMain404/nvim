@@ -127,6 +127,15 @@ function M.config()
     filesystem_watchers = {
       enable = true,
       debounce_delay = 50,
+      -- Alla cancellazione Windows genera una raffica di eventi rename sulla
+      -- directory-genitore osservata (ReadDirectoryChangesW "cascades events out
+      -- of order", vedi la gestione EPERM in nvim-tree/watcher.lua). Se restano
+      -- sotto i 50ms l'uno dall'altro il debounce non flusha mai e il contatore
+      -- per-directory supera il default (1000), disarmando il watcher a ogni
+      -- delete. E' un burst TRANSITORIO (finisce e torna il silenzio), non un
+      -- flusso illimitato tipo rust-analyzer che inonda %TEMP%: alzare la soglia
+      -- tollera il rumore benigno senza perdere la protezione contro i runaway.
+      max_events = 5000,
       -- sostituisce i default: vanno ripetuti oltre alle aggiunte
       ignore_dirs = {
         "/.ccls-cache",
