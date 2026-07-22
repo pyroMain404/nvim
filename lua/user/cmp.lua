@@ -161,6 +161,10 @@ function M.config()
       ghost_text = false,
     },
   }
+
+  -- Agentic.nvim ha il proprio completamento nel prompt buffer (slash-command con
+  -- `/`, file-picker con `@`): nvim-cmp non deve attaccarsi lì e sovrapporsi.
+  cmp.setup.filetype("AgenticInput", { sources = {} })
 end
 
 return M

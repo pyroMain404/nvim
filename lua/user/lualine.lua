@@ -22,6 +22,12 @@ function M.config()
       component_separators = { left = "", right = "" },
       section_separators = { left = "", right = "" },
       ignore_focus = { "NvimTree" },
+      -- Le finestre di agentic.nvim disegnano da sé i propri titoli/decorazioni:
+      -- lualine non deve sovrascriverle (vedi README di agentic, sezione Lualine).
+      disabled_filetypes = {
+        statusline = { "AgenticChat", "AgenticInput", "AgenticCode", "AgenticFiles", "AgenticDiagnostics" },
+        winbar = { "AgenticChat", "AgenticInput", "AgenticCode", "AgenticFiles", "AgenticDiagnostics" },
+      },
     },
     sections = {
       lualine_a = {},
