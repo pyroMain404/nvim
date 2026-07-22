@@ -32,21 +32,25 @@ Leggi la procedura headless in `.claude/docs/verifica-headless.md` ed eseguila (
 
 La CI (`headless.yml`) è il gate autorevole (vedi `verifica-headless.md`); `gh` è autenticato su questa macchina (scope `repo`) e ne legge esito e log **senza aprire il browser**. **Non replicare a mano in locale i due gate che la CI copre** (startup + load-all/deprecated): leggi il run.
 
-1. Individua il run innescato dal push, filtrando sullo SHA appena pushato (evita di agganciare un run precedente):
+> **Due trappole `gh` verificate** (senza queste i comandi falliscono, HTTP 404):
+> - **Forza `-R pyroMain404/nvim` su OGNI comando `gh`.** Il repo ha il remote `upstream` = `LunarVim/Launch.nvim`: senza `-R`, `gh` lo auto-aggancia e interroga il repo sbagliato.
+> - **Non usare `--workflow headless.yml`.** `--workflow` risolve il file sul *default branch* del repo = `master`, che qui è la config disgiunta e **non contiene** `headless.yml` (→ 404). Filtra i run per SHA, non per workflow.
+
+1. Individua il run innescato dal push, filtrando sullo SHA appena pushato (evita di agganciare un run precedente). Il run può metterci qualche secondo a registrarsi (un breve `sleep`/retry aiuta):
    ```bash
    SHA=$(git rev-parse HEAD)
-   gh run list --branch windows --workflow headless.yml --limit 10 \
+   gh run list -R pyroMain404/nvim --branch windows --limit 15 \
      --json databaseId,headSha,status,conclusion \
      --jq ".[] | select(.headSha==\"$SHA\") | .databaseId" | head -1
    ```
-   Se non compare subito, riprova dopo qualche secondo (il run può metterci un attimo a registrarsi).
 2. Attendi il completamento e cattura l'esito (esce non-zero se la CI fallisce):
    ```bash
-   gh run watch <run-id> --exit-status --compact
+   gh run watch <run-id> -R pyroMain404/nvim --exit-status --compact
    ```
+   > La CI usa action su Node 20: `gh` mostra un'annotazione `! Node.js 20 is deprecated … forced to run on Node.js 24` — è un avviso **della piattaforma GitHub**, non della config; se `--exit-status` esce 0 la CI è verde.
 3. **Se la CI è rossa**: leggi SOLO gli step falliti e riporta la causa; **non** dichiarare fatto.
    ```bash
-   gh run view <run-id> --log-failed
+   gh run view <run-id> -R pyroMain404/nvim --log-failed
    ```
    Correggi e ricomincia dallo Step 1, oppure riproduci in locale (`verifica-headless.md` § *Installazione da zero simulata*) se serve più contesto dei log.
 
