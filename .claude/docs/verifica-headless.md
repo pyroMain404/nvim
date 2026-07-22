@@ -15,7 +15,7 @@ La verifica autorevole è la **CI GitHub Actions** (`.github/workflows/headless.
 
 - **Attach LSP per linguaggio** — la CI non installa i server né compila i parser (niente zig/tree-sitter-cli sul runner): l'attach di un LSP e l'highlight treesitter reali vanno osservati in locale quando tocchi un server o un parser (vedi sotto).
 - **Misconfig silenziose** — nessuno smoke-test le vede (chiave `opts` ignorata, RHS di un keymap errato che erra solo se premuto): vanno esercitate a mano aprendo il percorso specifico.
-- **Riprodurre un fallimento CI** — se la CI diventa rossa, riproduci l'ambiente in locale (§ *Installazione da zero simulata*) per vedere l'output grezzo (i log delle Actions richiedono admin/token).
+- **Riprodurre un fallimento CI** — se la CI diventa rossa, i log si leggono con `gh run view <run-id> --log-failed` (`gh` è autenticato, scope `repo`); riproduci l'ambiente in locale (§ *Installazione da zero simulata*) solo se ti serve più contesto dei log grezzi.
 
 ## Quick sanity locale (Step 1 di /fine-lavoro: fail-fast prima del push)
 
@@ -75,7 +75,7 @@ Valgono sia per interpretare l'esito della CI sia per i test locali.
 
 ## Installazione da zero simulata (per riprodurre un problema CI)
 
-È **esattamente ciò che fa la CI**: la ricetta serve solo a riprodurre in locale un fallimento del runner (i log delle Actions non sono leggibili senza admin/token). Mirror fedele = **senza `machine.lua`** (git-ignorato, assente sul checkout CI) e con parser/tool assenti.
+È **esattamente ciò che fa la CI**: la ricetta serve a riprodurre in locale un fallimento del runner quando i log (`gh run view <run-id> --log-failed`) non bastano a capire la causa. Mirror fedele = **senza `machine.lua`** (git-ignorato, assente sul checkout CI) e con parser/tool assenti.
 
 ```powershell
 $T = "$env:TEMP\nvim-ci"; Remove-Item -Recurse -Force $T -ErrorAction SilentlyContinue
@@ -92,7 +92,7 @@ Remove-Item Env:XDG_CONFIG_HOME,Env:XDG_DATA_HOME,Env:XDG_STATE_HOME,Env:XDG_CAC
 
 ## Errori comuni
 
-- **Replicare a mano la CI**: dopo il push, l'esito CI è la fonte di verità — non rifare in locale i due gate, leggi il run.
+- **Replicare a mano la CI**: dopo il push, l'esito CI è la fonte di verità — non rifare in locale i due gate, leggi il run con `gh run watch <run-id> --exit-status` / `gh run view <run-id> --log-failed`.
 - Dichiarare "funziona" dopo il solo check di sintassi: l'attach LSP (che la CI non fa) va osservato davvero in locale.
 - Testare le mappature which-key contando i keymap prima che il plugin che le registra sia caricato.
 - Dimenticare la routine di fine lavoro: quick sanity locale → commit su `windows` → push (→ la CI verifica) → bump del submodule `nvim` nel `<superproject>` se presente (vedi CLAUDE.md).

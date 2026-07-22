@@ -1,7 +1,7 @@
 ---
 description: Routine di fine lavoro — test headless, commit+push su windows, bump del submodule nel superproject (se presente)
 argument-hint: [messaggio di commit opzionale]
-allowed-tools: Bash(git *), PowerShell(nvim *), Read
+allowed-tools: Bash(git *), Bash(gh *), PowerShell(nvim *), Read
 ---
 
 Esegui la **routine di fine lavoro** di questa config Neovim, nell'ordine, fermandoti se uno step fallisce.
@@ -28,6 +28,30 @@ Leggi la procedura headless in `.claude/docs/verifica-headless.md` ed eseguila (
 - Messaggio di commit: se `$ARGUMENTS` non è vuoto, usalo. Altrimenti **genera** un messaggio conciso e specifico dal diff (`git diff --cached`), nello stile dei commit recenti del repo. Aggiungi in coda i trailer Co-Authored-By e Claude-Session come da istruzioni di sessione.
 - `git commit`, poi `git push origin windows`. Riporta l'esito del push (non dichiararlo fatto se il push non è andato a buon fine).
 
+## Step 2b — Leggi l'esito della CI con `gh` (gate primario)
+
+La CI (`headless.yml`) è il gate autorevole (vedi `verifica-headless.md`); `gh` è autenticato su questa macchina (scope `repo`) e ne legge esito e log **senza aprire il browser**. **Non replicare a mano in locale i due gate che la CI copre** (startup + load-all/deprecated): leggi il run.
+
+1. Individua il run innescato dal push, filtrando sullo SHA appena pushato (evita di agganciare un run precedente):
+   ```bash
+   SHA=$(git rev-parse HEAD)
+   gh run list --branch windows --workflow headless.yml --limit 10 \
+     --json databaseId,headSha,status,conclusion \
+     --jq ".[] | select(.headSha==\"$SHA\") | .databaseId" | head -1
+   ```
+   Se non compare subito, riprova dopo qualche secondo (il run può metterci un attimo a registrarsi).
+2. Attendi il completamento e cattura l'esito (esce non-zero se la CI fallisce):
+   ```bash
+   gh run watch <run-id> --exit-status --compact
+   ```
+3. **Se la CI è rossa**: leggi SOLO gli step falliti e riporta la causa; **non** dichiarare fatto.
+   ```bash
+   gh run view <run-id> --log-failed
+   ```
+   Correggi e ricomincia dallo Step 1, oppure riproduci in locale (`verifica-headless.md` § *Installazione da zero simulata*) se serve più contesto dei log.
+
+Prosegui allo Step 3 solo con la CI **verde**.
+
 ## Step 3 — Bump del submodule nel `<superproject>`
 
 Esegui **solo se `<superproject>` non è vuoto** (altrimenti questa config non è montata come submodule: salta e dillo). Solo se lo step 2 — o un push preesistente — ha aggiornato `origin/windows`:
@@ -37,4 +61,4 @@ Esegui **solo se `<superproject>` non è vuoto** (altrimenti questa config non �
 
 ## Al termine
 
-Riepiloga in poche righe: esito del test, hash + messaggio del commit su windows, esito del push, e stato del bump del submodule (o "superproject assente, saltato"). Chiudi con una riga `result:` autoconclusiva.
+Riepiloga in poche righe: esito del test locale, hash + messaggio del commit su windows, esito del push, **conclusione della CI letta con `gh`** (verde/rossa + run-id), e stato del bump del submodule (o "superproject assente, saltato"). Chiudi con una riga `result:` autoconclusiva.
