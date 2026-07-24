@@ -1,3 +1,7 @@
+## 2026-07-24
+
+- Stop explicitly enabling filetype plugins and syntax support because they are enabled by default on all supported Neovim versions.
+
 ## 2026-06-23
 
 - Start using 'mini.input'.
