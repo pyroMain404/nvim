@@ -35,4 +35,5 @@ spec "user.indentline"
 spec "user.toggleterm"
 spec "user.markview"
 spec_dir "user.agentic"
+spec "user.extras.dressing" -- floating + ricerca fuzzy per ogni vim.ui.select (es. lista chat di agentic)
 require "user.lazy"
