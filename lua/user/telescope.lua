@@ -80,6 +80,8 @@ function M.config()
           ["<esc>"] = actions.close,
           ["j"] = actions.move_selection_next,
           ["k"] = actions.move_selection_previous,
+          ["<C-j>"] = actions.move_selection_next,
+          ["<C-k>"] = actions.move_selection_previous,
           ["q"] = actions.close,
         },
       },
