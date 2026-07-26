@@ -21,7 +21,7 @@ local M = {}
 -- Versione Node fissata per gli LSP (npm bundled ~10.9.x). È un valore
 -- macchina-specifico (quale versione fnm è installata): sta in `user/machine.lua`
 -- (git-ignorato), non qui. Se assente → nil → nessun prepend, node globale.
-local machine = pcall(require, "user.machine") and require "user.machine" or {}
+local machine = pcall(require, "user.core.machine") and require "user.core.machine" or {}
 M.pinned = machine.node_version
 
 local is_win = vim.fn.has "win32" == 1

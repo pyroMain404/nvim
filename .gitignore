@@ -50,4 +50,4 @@ vscode-java-test/
 
 # Override macchina-specifici della config nvim (path JDK, ecc.). Vedi
 # machine.lua.example per il template. Non portabile: resta fuori dal repo.
-lua/user/machine.lua
+lua/user/core/machine.lua

@@ -31,9 +31,9 @@ nvim
 On the first launch, everything is installed automatically:
 
 1. **lazy.nvim** bootstraps itself and installs every plugin at the exact versions pinned in `lazy-lock.json`.
-2. **mason-lspconfig** installs the language servers (`ensure_installed` in `lua/user/mason.lua`) and enables them.
+2. **mason-lspconfig** installs the language servers (`ensure_installed` in `lua/user/lsp/mason.lua`) and enables them.
 3. **Mason** also installs the none-ls tools (`stylua`, `black`).
-4. **nvim-treesitter** compiles the parsers listed in `lua/user/treesitter.lua` when the first file is opened (this is where the C compiler is needed).
+4. **nvim-treesitter** compiles the parsers listed in `lua/user/lang/treesitter.lua` when the first file is opened (this is where the C compiler is needed).
 
 Give the first launch a couple of minutes, then restart Neovim and run:
 
