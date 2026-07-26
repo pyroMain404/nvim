@@ -3,28 +3,19 @@ local M = {
   event = "VeryLazy",
 }
 
--- Apri nvim-tree quando nvim viene lanciato su una directory (es. `nvim .` o
--- `nvim <cartella>`). Registrato in `init` (che lazy esegue all'avvio) e NON in
--- `config`: quest'ultimo gira su VeryLazy, cioè DOPO VimEnter, quindi l'autocmd
--- non esisterebbe ancora allo scatto. Con `hijack_netrw = false` è netrw a
--- renderizzare il buffer-directory: lo sostituiamo con un buffer vuoto e apriamo
--- il tree, così il layout resta pulito (tree + buffer vuoto) senza il doppione
--- netrw. `require("nvim-tree.api")` forza lazy a caricare il plugin (ed eseguire
--- M.config/setup) prima dell'apertura.
+-- Con netrw disabilitato (vedi options.lua) e `hijack_netrw = true`, è nvim-tree
+-- stesso a dirottare i buffer-directory (hijack_directories) e ad aprirsi al
+-- loro posto quando nvim è lanciato su una cartella (es. `nvim .`). Il suo
+-- autocmd BufEnter viene però registrato dentro setup(), che gira su VeryLazy =
+-- DOPO che il buffer-directory di avvio è già stato entrato: troppo tardi. Quindi
+-- quando l'argomento è una directory forziamo il caricamento del plugin qui in
+-- `init` (che lazy esegue durante il sourcing di init.lua, PRIMA che l'argomento
+-- venga aperto), così l'hijack nativo scatta da sé — nessuna apertura manuale.
 function M.init()
-  vim.api.nvim_create_autocmd("VimEnter", {
-    callback = function(data)
-      if vim.fn.isdirectory(data.file) ~= 1 then
-        return
-      end
-      vim.cmd.cd(vim.fn.fnameescape(data.file))
-      vim.cmd.enew()
-      if vim.api.nvim_buf_is_valid(data.buf) then
-        pcall(vim.api.nvim_buf_delete, data.buf, { force = true })
-      end
-      require("nvim-tree.api").tree.open()
-    end,
-  })
+  local arg = vim.fn.argv(0)
+  if type(arg) == "string" and arg ~= "" and vim.fn.isdirectory(arg) == 1 then
+    require("lazy").load { plugins = { "nvim-tree.lua" } }
+  end
 end
 
 function M.config()
@@ -70,7 +61,7 @@ function M.config()
   local icons = require "user.icons"
 
   require("nvim-tree").setup {
-    hijack_netrw = false,
+    hijack_netrw = true, -- serve a hijack_directories per aprirsi sui buffer-cartella
     sync_root_with_cwd = true,
     view = {
       relativenumber = true,
