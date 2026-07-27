@@ -25,6 +25,11 @@ function M.config()
   wk.add {
     { "<leader>e", "<cmd>NvimTreeToggle<CR>", desc = "Explorer" },
     { "<leader>E", pg.toggle_tree, desc = "Explorer (gruppo progetti)" },
+    -- Rivela+evidenzia il file corrente nel tree (apre il tree se chiuso).
+    -- Serve un keybind manuale perché update_focused_file è disabilitato di
+    -- proposito (vedi setup più sotto): l'evidenziazione avviene su richiesta,
+    -- senza ri-espandere/richiudere le sottodir a ogni BufEnter.
+    { "<leader>fe", "<cmd>NvimTreeFindFile<CR>", desc = "Trova file in Explorer" },
   }
 
   -- Al resize del terminale la funzione width NON viene rivalutata da sola per
