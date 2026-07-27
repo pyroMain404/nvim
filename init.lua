@@ -35,5 +35,5 @@ spec "user.ui.indentline"
 spec "user.editor.toggleterm"
 spec "user.ui.markview"
 spec_dir "user.workflow.agentic"
-spec "user.extras.dressing" -- floating + ricerca fuzzy per ogni vim.ui.select (es. lista chat di agentic)
+spec "user.extras.snacks" -- floating + ricerca fuzzy per ogni vim.ui.select/input (es. lista chat di agentic); rimpiazza dressing.nvim (archiviato)
 require "user.core.lazy"

@@ -16,7 +16,6 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
     "oil",
     "spectre_panel",
     "lir",
-    "DressingSelect",
     "tsplayground",
     "",
   },

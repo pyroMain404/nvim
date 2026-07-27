@@ -8,7 +8,7 @@ function M.config()
     filetypes_denylist = {
       "mason",
       "harpoon",
-      "DressingInput",
+      "snacks_input",
       "NeogitCommitMessage",
       "qf",
       "dirvish",
@@ -27,7 +27,7 @@ function M.config()
       "Jaq",
       "spectre_panel",
       "toggleterm",
-      "DressingSelect",
+      "snacks_picker_list",
       "TelescopePrompt",
     },
   }
