@@ -274,7 +274,44 @@ nmap_leader('sr', '<Cmd>lua MiniSessions.select("read")<CR>',   'Read')
 nmap_leader('sR', '<Cmd>lua MiniSessions.restart()<CR>',        'Restart')
 nmap_leader('sw', '<Cmd>lua MiniSessions.write()<CR>',          'Write current')
 
--- t is for 'Terminal'
+-- t is for 'Terminal'. Common usage:
+-- - `<Leader>tt` / `<Leader>tT` - terminal in vertical/horizontal split
+-- - `<Leader>tl` - 'lazygit' in a centered floating window. Quit it as usual
+--   (`q`) to close the window and reload files it changed on disk.
+local term_lazygit = function()
+  if vim.fn.executable('lazygit') ~= 1 then
+    return vim.notify('`lazygit` is not available', vim.log.levels.WARN)
+  end
+
+  -- Cover most of the editor while keeping some context visible around.
+  -- Border comes from `:h 'winborder'` set in 'plugin/10_options.lua'.
+  local height = math.floor(0.9 * vim.o.lines)
+  local width = math.floor(0.9 * vim.o.columns)
+  local win_config = {
+    relative = 'editor',
+    height = height,
+    width = width,
+    row = math.floor(0.5 * (vim.o.lines - height)),
+    col = math.floor(0.5 * (vim.o.columns - width)),
+    title = ' lazygit ',
+    title_pos = 'center',
+  }
+  local buf_id = vim.api.nvim_create_buf(false, true)
+  local win_id = vim.api.nvim_open_win(buf_id, true, win_config)
+
+  local on_exit = vim.schedule_wrap(function()
+    pcall(vim.api.nvim_win_close, win_id, true)
+    pcall(vim.api.nvim_buf_delete, buf_id, { force = true })
+    -- Reload buffers changed by 'lazygit' (checkout, discard, stash, ...)
+    vim.cmd('checktime')
+  end)
+
+  -- Runs in current directory, which 'mini.misc' keeps at the project root
+  vim.fn.jobstart('lazygit', { term = true, on_exit = on_exit })
+  vim.cmd('startinsert')
+end
+
+nmap_leader('tl', term_lazygit,               'Lazygit')
 nmap_leader('tT', '<Cmd>horizontal term<CR>', 'Terminal (horizontal)')
 nmap_leader('tt', '<Cmd>vertical term<CR>',   'Terminal (vertical)')
 
