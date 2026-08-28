@@ -132,16 +132,30 @@ nmap_leader('eQ', explore_locations,                        'Location list')
 -- - `<Leader>fv` - all visited paths; requires 'mini.visits'
 --
 -- All these use 'mini.pick'. See `:h MiniPick-overview` for an overview.
-local pick_added_hunks_buf = '<Cmd>Pick git_hunks path="%" scope="staged"<CR>'
 local pick_workspace_symbols_live = '<Cmd>Pick lsp scope="workspace_symbol_live"<CR>'
+
+-- HACK: `:Pick ... path="%"` can not be used on Windows, as 'mini.pick' converts
+-- command arguments to a table by loading them as Lua code, where backslashes of
+-- an expanded path are parsed as (mostly invalid) escape sequences.
+-- Call the picker directly with the path as a proper Lua value instead.
+-- Remove after this is fixed upstream (still present in 'mini.nvim' 0.18.0).
+local pick_buf_path = function(picker, scope)
+  return function()
+    local path = vim.api.nvim_buf_get_name(0)
+    if path == '' then
+      return vim.notify('Buffer is not a file on disk', vim.log.levels.WARN)
+    end
+    MiniExtra.pickers[picker]({ path = path, scope = scope })
+  end
+end
 
 nmap_leader('f/', '<Cmd>Pick history scope="/"<CR>',            '"/" history')
 nmap_leader('f:', '<Cmd>Pick history scope=":"<CR>',            '":" history')
 nmap_leader('fa', '<Cmd>Pick git_hunks scope="staged"<CR>',     'Added hunks (all)')
-nmap_leader('fA', pick_added_hunks_buf,                         'Added hunks (buf)')
+nmap_leader('fA', pick_buf_path('git_hunks', 'staged'),         'Added hunks (buf)')
 nmap_leader('fb', '<Cmd>Pick buffers<CR>',                      'Buffers')
 nmap_leader('fc', '<Cmd>Pick git_commits<CR>',                  'Commits (all)')
-nmap_leader('fC', '<Cmd>Pick git_commits path="%"<CR>',         'Commits (buf)')
+nmap_leader('fC', pick_buf_path('git_commits'),                 'Commits (buf)')
 nmap_leader('fd', '<Cmd>Pick diagnostic scope="all"<CR>',       'Diagnostic workspace')
 nmap_leader('fD', '<Cmd>Pick diagnostic scope="current"<CR>',   'Diagnostic buffer')
 nmap_leader('ff', '<Cmd>Pick files<CR>',                        'Files')
@@ -152,7 +166,7 @@ nmap_leader('fH', '<Cmd>Pick hl_groups<CR>',                    'Highlight group
 nmap_leader('fl', '<Cmd>Pick buf_lines scope="all"<CR>',        'Lines (all)')
 nmap_leader('fL', '<Cmd>Pick buf_lines scope="current"<CR>',    'Lines (buf)')
 nmap_leader('fm', '<Cmd>Pick git_hunks<CR>',                    'Modified hunks (all)')
-nmap_leader('fM', '<Cmd>Pick git_hunks path="%"<CR>',           'Modified hunks (buf)')
+nmap_leader('fM', pick_buf_path('git_hunks'),                   'Modified hunks (buf)')
 nmap_leader('fr', '<Cmd>Pick resume<CR>',                       'Resume')
 nmap_leader('fR', '<Cmd>Pick lsp scope="references"<CR>',       'References (LSP)')
 nmap_leader('fs', pick_workspace_symbols_live,                  'Symbols workspace (live)')
