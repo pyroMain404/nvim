@@ -19,6 +19,11 @@ end
 nmap('[p', '<Cmd>exe "iput! " . v:register<CR>', 'Paste Above')
 nmap(']p', '<Cmd>exe "iput "  . v:register<CR>', 'Paste Below')
 
+nmap('<C-S-H>', '<C-w>H', 'Move to very left')
+nmap('<C-S-J>', '<C-w>J', 'Move to very bottom')
+nmap('<C-S-K>', '<C-w>K', 'Move to very top')
+nmap('<C-S-L>', '<C-w>L', 'Move to very right')
+
 -- Many general mappings are created by 'mini.basics'. See 'plugin/30_mini.lua'
 
 -- stylua: ignore start
