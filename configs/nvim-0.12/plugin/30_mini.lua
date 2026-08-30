@@ -484,6 +484,8 @@ later(function() require('mini.diff').setup() end)
 --   evolution of the line otherwise. Unlike `gF`, it opens the file itself when
 --   the patch is against the working tree (like in `<Leader>gd`/`<Leader>gh`).
 -- - `q` closes the output window.
+-- Both `gF` and `<CR>` open in a vertical split, next to the patch they start
+-- from, instead of in a new tabpage.
 --
 -- See also:
 -- - `:h MiniGit-examples` - examples of common setups
@@ -497,12 +499,15 @@ later(function()
   -- the file, also for the "after" state of a patch against the working tree.
   -- Reuse it to resolve path and line number of the entry at cursor, but then
   -- edit the file itself to get a fully functional buffer ('mini.diff', LSP).
+  -- Ask for a vertical split, as the "auto" default of 'mini.git' switches to a
+  -- new tabpage as soon as a window of the current one holds a normal buffer,
+  -- which is the case as soon as the first file has been opened this way.
   local show_at_cursor = function()
     local win_init = vim.api.nvim_get_current_win()
-    MiniGit.show_at_cursor({ target = 'after' })
+    MiniGit.show_at_cursor({ target = 'after', split = 'vertical' })
     if vim.api.nvim_get_current_win() == win_init then
       -- There is no "after" state if the file was deleted: show "before" one
-      return MiniGit.show_at_cursor()
+      return MiniGit.show_at_cursor({ split = 'vertical' })
     end
 
     -- Only the working tree state is shown as `edit`. A state at some commit
@@ -518,6 +523,11 @@ later(function()
     vim.cmd('setlocal foldmethod< foldexpr< foldlevel<')
     vim.api.nvim_win_set_cursor(0, { lnum, 0 })
     vim.cmd('normal! zv')
+  end
+
+  -- Same split for the state at some commit, which is always shown as a copy
+  local show_diff_source = function()
+    MiniGit.show_diff_source({ split = 'vertical' })
   end
 
   local setup_patch_buf = function()
@@ -545,7 +555,7 @@ later(function()
       vim.keymap.set('n', lhs, rhs, { buffer = 0, desc = desc })
     end
     bmap('<CR>', show_at_cursor, 'Show at cursor')
-    bmap('gF', '<Cmd>lua MiniGit.show_diff_source()<CR>', 'Show diff source')
+    bmap('gF', show_diff_source, 'Show diff source')
     bmap('q', '<Cmd>silent! close<CR>', 'Close output')
   end
   local ft_patch = { 'git', 'diff' }
