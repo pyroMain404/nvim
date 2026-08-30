@@ -473,8 +473,8 @@ later(function() require('mini.diff').setup() end)
 --
 -- Output of `:Git` is shown in a scratch buffer with "git" or "diff" filetype.
 -- Those are set up below to be navigable instead of being a wall of text:
--- - `zm` / `zr` fold and unfold by log entry, then by file, then by hunk.
---   Nothing is folded initially, as 'foldlevel' is 10 (see 'plugin/10_options.lua').
+-- - `zm` / `zr` fold and unfold by hunk, then by file, then by log entry.
+--   Nothing is folded initially, as 'foldlevel' starts at the deepest level.
 -- - `gf` and friends (`<C-w>f`, `[f`, ...) open the file under cursor, ignoring
 --   the "a/" and "b/" prefixes which Git adds to paths inside a patch.
 -- - `gF` opens the file of the patch entry at cursor in the state it had at
@@ -523,8 +523,11 @@ later(function()
       vim.bo.path = root .. ',' .. vim.bo.path
     end
 
-    -- Fold by log entry, file, and hunk
+    -- Fold by file entry (level 1), hunk (2), and hunk body (3). Start at the
+    -- deepest level, as with the global 'foldlevel' of 10 the first several
+    -- `zm` would do nothing at all (see 'plugin/10_options.lua').
     vim.wo.foldmethod, vim.wo.foldexpr = 'expr', 'v:lua.MiniGit.diff_foldexpr()'
+    vim.wo.foldlevel = 3
 
     -- Navigation is mapped only in scratch buffers of 'mini.nvim' itself (both
     -- "minigit://" of `:Git` and "miniextra://" of `:Pick git_commits`), as it
