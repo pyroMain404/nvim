@@ -500,7 +500,10 @@ later(function()
   local show_at_cursor = function()
     local win_init = vim.api.nvim_get_current_win()
     MiniGit.show_at_cursor({ target = 'after' })
-    if vim.api.nvim_get_current_win() == win_init then return end
+    if vim.api.nvim_get_current_win() == win_init then
+      -- There is no "after" state if the file was deleted: show "before" one
+      return MiniGit.show_at_cursor()
+    end
 
     -- Only the working tree state is shown as `edit`. A state at some commit
     -- (`show <commit>:<path>`) has no file on disk, so it is left as it is.
