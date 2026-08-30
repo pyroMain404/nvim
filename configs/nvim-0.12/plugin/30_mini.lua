@@ -468,6 +468,7 @@ later(function() require('mini.diff').setup() end)
 -- - `<Leader>gs` - show information at cursor
 -- - `<Leader>gd` - show unstaged changes as a patch in separate tabpage
 -- - `<Leader>gL` - show Git log of current file
+-- - `<Leader>gb` - show who last changed every line of current file
 -- - `:Git help git` - show output of `git help git` inside Neovim
 --
 -- Output of `:Git` is shown in a scratch buffer with "git" or "diff" filetype.
@@ -514,6 +515,18 @@ later(function()
   end
   local ft_patch = { 'git', 'diff' }
   Config.new_autocmd('FileType', ft_patch, setup_patch_buf, 'Navigable Git output')
+
+  -- Align output of `<Leader>gb` with the window it was called from and make
+  -- both windows scroll together. See `:h MiniGit-examples`.
+  local align_blame = function(au_data)
+    if au_data.data.git_subcommand ~= 'blame' then return end
+    local win_src = au_data.data.win_source
+    vim.wo.wrap = false
+    vim.fn.winrestview({ topline = vim.fn.line('w0', win_src) })
+    vim.api.nvim_win_set_cursor(0, { vim.fn.line('.', win_src), 0 })
+    vim.wo[win_src].scrollbind, vim.wo.scrollbind = true, true
+  end
+  Config.new_autocmd('User', 'MiniGitCommandSplit', align_blame, 'Align Git blame')
 end)
 
 -- Highlight patterns in text. Like `TODO`/`NOTE` or color hex codes.
