@@ -480,8 +480,9 @@ later(function() require('mini.diff').setup() end)
 -- - `gF` opens the file of the patch entry at cursor in the state it had at
 --   that commit, with cursor on the corresponding line.
 -- - `<CR>` shows data at cursor: full commit if it is a hash (like in the
---   output of `:Git log`), file state at that commit if it is inside a patch
---   (`:h MiniGit.show_diff_source()`), evolution of the line otherwise.
+--   output of `:Git log`), the file of the patch entry if it is inside a patch,
+--   evolution of the line otherwise. Unlike `gF`, it opens the file itself when
+--   the patch is against the working tree (like in `<Leader>gd`/`<Leader>gh`).
 -- - `q` closes the output window.
 --
 -- See also:
@@ -491,6 +492,25 @@ later(function() require('mini.diff').setup() end)
 -- - `:h MiniGit.diff_foldexpr()` - how folds inside a patch are computed
 later(function()
   require('mini.git').setup()
+
+  -- `MiniGit.show_diff_source()` always shows a scratch buffer with a copy of
+  -- the file, also for the "after" state of a patch against the working tree.
+  -- Reuse it to resolve path and line number of the entry at cursor, but then
+  -- edit the file itself to get a fully functional buffer ('mini.diff', LSP).
+  local show_at_cursor = function()
+    local win_init = vim.api.nvim_get_current_win()
+    MiniGit.show_at_cursor({ target = 'after' })
+    if vim.api.nvim_get_current_win() == win_init then return end
+
+    -- Only the working tree state is shown as `edit`. A state at some commit
+    -- (`show <commit>:<path>`) has no file on disk, so it is left as it is.
+    local path = vim.api.nvim_buf_get_name(0):match('^minigit://%d+/edit (.*)$')
+    if path == nil then return end
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    vim.cmd('edit ' .. path)
+    vim.api.nvim_win_set_cursor(0, { lnum, 0 })
+    vim.cmd('normal! zv')
+  end
 
   local setup_patch_buf = function()
     -- Resolve "a/path" and "b/path" of a patch to a real file for `:h gf`.
@@ -509,7 +529,7 @@ later(function()
     local bmap = function(lhs, rhs, desc)
       vim.keymap.set('n', lhs, rhs, { buffer = 0, desc = desc })
     end
-    bmap('<CR>', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at cursor')
+    bmap('<CR>', show_at_cursor, 'Show at cursor')
     bmap('gF', '<Cmd>lua MiniGit.show_diff_source()<CR>', 'Show diff source')
     bmap('q', '<Cmd>silent! close<CR>', 'Close output')
   end
