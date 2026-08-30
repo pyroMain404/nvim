@@ -507,10 +507,15 @@ later(function()
 
     -- Only the working tree state is shown as `edit`. A state at some commit
     -- (`show <commit>:<path>`) has no file on disk, so it is left as it is.
+    -- NOTE: 'mini.git' stores the path already escaped for a command.
     local path = vim.api.nvim_buf_get_name(0):match('^minigit://%d+/edit (.*)$')
     if path == nil then return end
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
-    vim.cmd('edit ' .. path)
+
+    -- Keep the patch as alternate file and drop the fold options which the new
+    -- window inherited from it, as they only make sense inside a patch
+    vim.cmd('keepalt edit ' .. path)
+    vim.cmd('setlocal foldmethod< foldexpr< foldlevel<')
     vim.api.nvim_win_set_cursor(0, { lnum, 0 })
     vim.cmd('normal! zv')
   end
