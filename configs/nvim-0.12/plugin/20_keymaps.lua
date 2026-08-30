@@ -180,6 +180,10 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- - `<Leader>gd` - show unstaged changes as a patch in separate tabpage
 -- - `<Leader>gL` - show Git log of current file
 --
+-- Inside the output of these commands `gf` works on the patch paths, `<CR>`
+-- shows more data about the entry at cursor, `zm` / `zr` adjust folds, and
+-- `q` closes the window. See 'plugin/30_mini.lua' for how this is set up.
+--
 -- To review already committed changes there is a `[count]` (default 1) which
 -- tells how many latest commits to look at:
 -- - `<Leader>gh` / `<Leader>gH` - patch of latest `[count]` commits (all/buffer)

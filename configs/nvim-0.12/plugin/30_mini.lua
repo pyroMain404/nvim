@@ -470,11 +470,51 @@ later(function() require('mini.diff').setup() end)
 -- - `<Leader>gL` - show Git log of current file
 -- - `:Git help git` - show output of `git help git` inside Neovim
 --
+-- Output of `:Git` is shown in a scratch buffer with "git" or "diff" filetype.
+-- Those are set up below to be navigable instead of being a wall of text:
+-- - `zm` / `zr` fold and unfold by log entry, then by file, then by hunk.
+--   Nothing is folded initially, as 'foldlevel' is 10 (see 'plugin/10_options.lua').
+-- - `gf` and friends (`<C-w>f`, `[f`, ...) open the file under cursor, ignoring
+--   the "a/" and "b/" prefixes which Git adds to paths inside a patch.
+-- - `gF` opens the file of the patch entry at cursor in the state it had at
+--   that commit, with cursor on the corresponding line.
+-- - `<CR>` shows data at cursor: full commit if it is a hash (like in the
+--   output of `:Git log`), file state at that commit if it is inside a patch
+--   (`:h MiniGit.show_diff_source()`), evolution of the line otherwise.
+-- - `q` closes the output window.
+--
 -- See also:
 -- - `:h MiniGit-examples` - examples of common setups
 -- - `:h :Git` - more details about `:Git` user command
 -- - `:h MiniGit.show_at_cursor()` - what information at cursor is shown
-later(function() require('mini.git').setup() end)
+-- - `:h MiniGit.diff_foldexpr()` - how folds inside a patch are computed
+later(function()
+  require('mini.git').setup()
+
+  local setup_patch_buf = function()
+    -- Resolve "a/path" and "b/path" of a patch to a real file for `:h gf`.
+    -- Add repository root to `:h 'path'` for patches shown from a subdirectory.
+    vim.bo.includeexpr = [[substitute(v:fname, '^[abciwo]/', '', '')]]
+    local root = vim.fs.root(vim.fn.getcwd(), '.git')
+    if root ~= nil then vim.bo.path = root .. ',' .. vim.bo.path end
+
+    -- Fold by log entry, file, and hunk
+    vim.wo.foldmethod, vim.wo.foldexpr = 'expr', 'v:lua.MiniGit.diff_foldexpr()'
+
+    -- Navigation is mapped only in scratch buffers of 'mini.nvim' itself (both
+    -- "minigit://" of `:Git` and "miniextra://" of `:Pick git_commits`), as it
+    -- would shadow useful defaults inside a regular patch or commit file
+    if not vim.api.nvim_buf_get_name(0):find('^mini%a+://') then return end
+    local bmap = function(lhs, rhs, desc)
+      vim.keymap.set('n', lhs, rhs, { buffer = 0, desc = desc })
+    end
+    bmap('<CR>', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at cursor')
+    bmap('gF', '<Cmd>lua MiniGit.show_diff_source()<CR>', 'Show diff source')
+    bmap('q', '<Cmd>silent! close<CR>', 'Close output')
+  end
+  local ft_patch = { 'git', 'diff' }
+  Config.new_autocmd('FileType', ft_patch, setup_patch_buf, 'Navigable Git output')
+end)
 
 -- Highlight patterns in text. Like `TODO`/`NOTE` or color hex codes.
 -- Example usage:
