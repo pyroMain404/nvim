@@ -514,10 +514,14 @@ later(function()
 
   local setup_patch_buf = function()
     -- Resolve "a/path" and "b/path" of a patch to a real file for `:h gf`.
-    -- Add repository root to `:h 'path'` for patches shown from a subdirectory.
+    -- Add repository root to `:h 'path'` for patches shown from a subdirectory,
+    -- escaped because space and comma separate the entries of 'path'.
     vim.bo.includeexpr = [[substitute(v:fname, '^[abciwo]/', '', '')]]
     local root = vim.fs.root(vim.fn.getcwd(), '.git')
-    if root ~= nil then vim.bo.path = root .. ',' .. vim.bo.path end
+    if root ~= nil then
+      root = vim.fn.escape(vim.fs.normalize(root), ' ,')
+      vim.bo.path = root .. ',' .. vim.bo.path
+    end
 
     -- Fold by log entry, file, and hunk
     vim.wo.foldmethod, vim.wo.foldexpr = 'expr', 'v:lua.MiniGit.diff_foldexpr()'
