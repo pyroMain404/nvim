@@ -38,7 +38,8 @@ setup.lua                 Generator script: copies a config into `stdpath('confi
 configs/README.md         What each config directory is and how it is laid out
 configs/nvim-0.12         The config this machine runs — the only one to modify
 configs/nvim-0.10 … 0.13  Other reference configs, inherited from upstream
-CHANGELOG.md              User visible changes, newest first, dated
+CHANGELOG.md              User visible changes, newest first, dated;
+                          this fork's entries go in its bottom section
 ```
 
 Inside `configs/nvim-0.12` (see `configs/README.md` for the full explanation):
@@ -203,10 +204,21 @@ Adapted from `MAINTAINING.md#typical-workflow-for-adding-change`, minus everythi
 
 1. Solve the problem, in `configs/nvim-0.12`. Keep the change as local as the problem is.
 2. Make sure it still reads well: comments updated, `:h` references still correct, file structure and separators intact, formatting per `.stylua.toml`.
-3. If the change is worth being seen later (a notable or breaking feature or fix), add an entry to `CHANGELOG.md`, following the formatting of the entries above it.
+3. If the change is worth being seen later (a notable or breaking feature or fix), add an entry to `CHANGELOG.md` — in the **"Fork changes" section at the bottom of the file**, never at the top. See below.
 4. Verify (see next section). Do it once, at the end.
 5. Commit on `minimax-config`, following the message rules above, and push to `origin`.
 6. Never force-push, and never push to the `minimax` remote — it is upstream, read only. A change worth sending upstream is a separate matter: MiniMax's pull request template rejects changes based on personal taste (enabling a new option, installing a new plugin), which is exactly what belongs in this fork, so keep the two apart.
+
+### Changelog entries
+
+`CHANGELOG.md` holds two logs that must not be interleaved:
+
+- Everything above the `# Fork changes` heading is **upstream's**, newest first. It is not edited here.
+- Everything below it belongs to **this fork**, newest first within its own section.
+
+The split exists for one reason: upstream always adds its entries at the **top** of the file. An entry of this fork placed there touches the same lines as the next upstream release and turns every merge from `minimax` into a conflict over a file where conflicts carry no information. At the bottom, upstream never reaches, and the merge stays clean.
+
+Follow the formatting of the entries already in the section: a `## YYYY-MM-DD` heading, then one dash-prefixed sentence per change, blank line between entries.
 
 ## Verifying a change
 
@@ -251,7 +263,7 @@ This config targets the Neovim installed on this machine (currently 0.12), which
 - [ ] Formatting matches `.stylua.toml` (2 spaces, single quotes, 85 columns).
 - [ ] Problems are reported through `vim.notify` / `vim.notify_once` / a health check — never `error()`.
 - [ ] No generated file edited by hand.
-- [ ] `CHANGELOG.md` updated if the change is worth being seen later.
+- [ ] `CHANGELOG.md` updated if the change is worth being seen later, in the "Fork changes" section at the bottom.
 - [ ] Verification done in one pass, with the traps above accounted for.
 - [ ] One topic per commit; message has an allowed type, the Problem/Solution body, and `Signed-off-by`.
 - [ ] Committed on `minimax-config` and pushed to `origin`, never to `minimax`.

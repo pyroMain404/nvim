@@ -96,3 +96,9 @@
 ## 2025-10-13
 
 - Initial release.
+
+# Fork changes
+
+Entries of this fork, newest first. They are kept below upstream's log because
+upstream always adds at the top of the file: keeping the two apart is what makes
+a merge from 'minimax' conflict-free.
