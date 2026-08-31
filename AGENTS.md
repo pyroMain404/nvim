@@ -14,6 +14,8 @@ Read this file before changing anything. It is short on purpose: it states the r
     2. A MINI module, configured for the use case.
     3. A plugin outside of MINI, only when neither of the above covers the need. It has to earn its place.
 
+  "Already covers the need" is a judgement, not a fact about where the code lives. Part of what Neovim ships in its runtime is a snapshot of a Vimscript plugin written before LSP and tree-sitter existed, kept alive by the Vim project. Prefer the built-in while it works without friction and costs nothing to maintain. Look further when it is **dated** (read the `Last Change:` header of the runtime file — it is there to be read), when it **duplicates in Vimscript what LSP or tree-sitter do better**, or when the language's own ecosystem has a reference tool the runtime does not know about. Writing glue code to close the gap is the signal that the gap is real. Before installing anything, say what the plugin brings that levels 1 and 2 do not, and check that it does not **turn off what already works** — some plugins take ownership of a language server and refuse to coexist with its manual configuration, which makes the choice exclusive rather than additive.
+
 ## General principles
 
 Adapted from `mini.nvim-general-principles` (`:h mini.nvim-general-principles`, also `README.md#general-principles` in the 'mini.nvim' repository).
