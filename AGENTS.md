@@ -78,6 +78,18 @@ Two files in the config are output, not source. They are read to know the curren
 - **A MINI module or its config** → `plugin/30_mini.lua`, in the same step as comparable modules (see below).
 - **A non-MINI plugin** → `plugin/40_plugins.lua`, added through `vim.pack.add()`.
 - **Behavior for one filetype or one language server** → `after/ftplugin/` or `after/lsp/`, never the shared files.
+- **A new external program the config depends on** → installed through `mise`, and reported by the health check. See below.
+
+## External dependencies
+
+Language servers, formatters, linters and language runtimes are installed with [`mise`](https://mise.jdx.dev) (*mise-en-place*), which declares tools in a config file and installs them with a single `mise install`. This is the answer to "how do I get this working on a new machine", and it is what makes the setup reproducible instead of a sequence of commands nobody remembers.
+
+- `mise` covers the role usually given to 'mason.nvim' — which stays disabled on purpose (see the honorable mentions in `plugin/40_plugins.lua`), because it installs programs usable almost only inside Neovim. It does **not** replace 'nvim-lspconfig': the two are orthogonal, `mise` provides the binary and 'nvim-lspconfig' knows how to talk to it (`cmd`, `filetypes`, `root_markers`).
+- Tools needed everywhere (language servers, formatters) belong to `mise`'s **global** config; a project's runtime versions belong to the `mise.toml` **of that project**, which follows whoever clones it. When the registry does not know a name, a backend usually covers it (`aqua:`, `npm:`, `cargo:`, `go:`, `pipx:`).
+- Where a language has its own official channel that keeps the server aligned with the compiler (`rustup component add` for Rust), prefer it: one place for dependencies is a good rule right up to the point where it makes the result worse.
+- **Neovim inherits the environment of the shell that started it.** With shell activation, the active version is the one from the moment of launch — a session opened yesterday keeps yesterday's toolchain. `mise`'s shims avoid this because they sit on `PATH` regardless of how Neovim was started. Either way, the health check is what says which version is actually in use, and that is the first thing to suspect when a server behaves differently from the command line.
+- This does not weaken **Independence**: a missing tool degrades a feature, it never stops startup. `mise` is how dependencies are declared and installed, not something the config requires in order to run.
+- Every dependency added lands in two places or it does not exist: the health check that verifies it, and the reference of the language that needs it.
 
 ## Code style
 

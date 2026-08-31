@@ -102,3 +102,8 @@
 Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
+
+## 2026-08-31
+
+- Adopt `mise` as the way external dependencies (language servers, formatters,
+  linters, language runtimes) are declared and installed.
