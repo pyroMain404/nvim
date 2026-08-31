@@ -66,7 +66,15 @@ già coperta dal runtime.
 | Testo | `'spell'`, `'wrap'`, `'linebreak'`, `'formatoptions'` | utile per linguaggi di documentazione |
 | Navigazione | `'path'`, `'include'`, `'includeexpr'`, `'define'`, `'suffixesadd'` | vedi §8 |
 | Esecuzione | `'makeprg'`, `'errorformat'`, `'keywordprg'`, `'formatprg'` | vedi §6, §7, §15 |
-| Coppie | `'matchpairs'`, `b:match_words` per `%` esteso (`:h matchit`) | i generici sono già impostati |
+| Coppie | `'matchpairs'`, e `b:match_words` per `%` esteso | i generici sono già impostati; vedi la nota qui sotto su matchit |
+
+> **matchit è un pack opzionale, non un built-in attivo.** Vive in
+> `$VIMRUNTIME/pack/dist/opt/matchit` e si carica con `:packadd matchit`; finché non
+> lo si fa, `%` resta quello base e **`:h matchit` non risolve**, perché anche la sua
+> documentazione arriva con il pack. Diversi ftplugin del runtime impostano comunque
+> `b:match_words` e `b:match_skip` — sono innocui se il plugin non c'è, ma non fanno
+> niente. Se il salto tra `if`/`end` di un linguaggio serve davvero, la decisione è
+> abilitare matchit una volta per tutte, non impostare le variabili per linguaggio.
 
 **`b:undo_ftplugin`** (`:h undo_ftplugin`): se il file imposta opzioni, dovrebbe
 saperle annullare quando il filetype cambia. Per un file che tocca due opzioni è
