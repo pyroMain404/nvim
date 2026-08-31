@@ -1,7 +1,7 @@
 -- Made with 'mini.colors' module of https://nvim-mini.org/mini.nvim
 
 if vim.g.colors_name ~= nil then vim.cmd('highlight clear') end
-vim.g.colors_name = "pyropurple"
+vim.g.colors_name = "purplehue"
 
 -- Highlight groups
 local hi = vim.api.nvim_set_hl

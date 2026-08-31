@@ -54,7 +54,7 @@ snippets/                User defined snippets
 after/ftplugin/          Per filetype behavior
 after/lsp/               Language server configurations
 after/snippets/          Snippet files that override plugin provided ones
-colors/pyropurple.lua    Color scheme — generated, never edited by hand
+colors/purplehue.lua     Color scheme — generated, never edited by hand
 ```
 
 - **Only `configs/nvim-0.12` is in use and only it gets modified.** It is what `%LOCALAPPDATA%\nvim` points at, so editing it changes the running config immediately. `nvim-0.10`, `nvim-0.11` and `nvim-0.13` are upstream leftovers: leave them alone, and do not try to keep a change in sync across them.
@@ -66,7 +66,7 @@ colors/pyropurple.lua    Color scheme — generated, never edited by hand
 Two files in the config are output, not source. They are read to know the current state and regenerated to change it — never edited by hand:
 
 - `nvim-pack-lock.json` is maintained by `vim.pack`. It changes as a *result* of installing, updating or removing plugins (`:h vim.pack-lockfile`).
-- `colors/pyropurple.lua` was written by 'mini.colors' (see its first line) from a palette produced by `MiniHues.make_palette()`. To change a color, regenerate the scheme from the palette — do not patch the 800 lines of `nvim_set_hl()` calls it contains.
+- `colors/purplehue.lua` was written by 'mini.colors' (see its first line) from a palette produced by `MiniHues.make_palette()`. To change a color, regenerate the scheme from the palette — do not patch the 800 lines of `nvim_set_hl()` calls it contains.
 
 ## Where a change goes
 
@@ -234,7 +234,7 @@ This config targets the Neovim installed on this machine (currently 0.12), which
 
 - Becoming a distribution: no auto-update mechanism, no plugin abstraction layer, no config of the config.
 - A `lua/` module tree for this config, except the single `lua/config/health.lua` for [health checks](#writing-the-health-check).
-- Editing generated files by hand: `nvim-pack-lock.json`, `colors/pyropurple.lua`.
+- Editing generated files by hand: `nvim-pack-lock.json`, `colors/purplehue.lua`.
 - Keeping `configs/nvim-0.10`, `nvim-0.11` and `nvim-0.13` in sync with the config actually in use.
 - Silencing warnings to make output look clean.
 - **Filetype or language specific logic in the shared `plugin/` files.** Concretely, none of these belong in `plugin/`:
