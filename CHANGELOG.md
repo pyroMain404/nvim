@@ -105,5 +105,9 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-08-31
 
+- Add the `nvim-language-support` skill under '.claude/skills/': the procedure for
+  adding support for a language, platform or format, with a catalogue of what
+  Neovim can be made to do for a language and a reference for Rust.
+
 - Adopt `mise` as the way external dependencies (language servers, formatters,
   linters, language runtimes) are declared and installed.
