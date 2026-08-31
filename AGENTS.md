@@ -126,9 +126,44 @@ When config code detects something wrong — a missing executable, a buffer that
 - **`vim.notify_once()`** for a condition that is detected repeatedly but is worth saying once per session — typically something found at startup, like an optional executable being absent. Same arguments as `vim.notify()` (`:h vim.notify_once()`).
 - **`vim.health.*` inside a health check** for the state of the environment: what is installed, what version, what is missing. This is what `:checkhealth` is for, and it is the right place for problems the user is not blocked by right now. Use `vim.health.start()` once per section, then `ok()`, `info()`, `warn(msg, advice)`, `error(msg, advice)` — `warn` and `error` take an optional second argument with advice on how to fix it (`:h health-dev`).
 
-  A check of this config's own assumptions needs a module at `lua/<name>/health.lua` returning `{ check = function() ... end }`, reachable as `:checkhealth <name>`. This is the one admitted exception to the "no `lua/` directory" rule, and it must live under a dedicated namespace directory (as `configs/README.md` suggests: `lua/username/`), never at the top of `lua/`.
+  A check of this config's own assumptions needs a module returning `{ check = function() ... end }` under `lua/`. This is the one admitted exception to the "no `lua/` directory" rule; see below for how to write it.
 - **`vim.deprecate()`** when a helper of this config is kept working but should stop being used (`:h vim.deprecate()`).
 - **Never `error()` at config level.** A raised error during startup aborts the rest of the file and leaves a half-configured Neovim. Report and continue.
+
+### Writing the health check
+
+**One file — `lua/config/health.lua`, run as `:checkhealth config` — with one `health.start()` section per area. Not one `health.lua` per config directory.**
+
+`:checkhealth` discovers any `lua/**/health.lua` (or `lua/**/health/init.lua`) on the 'runtimepath' and names the check after its path, so `lua/config/options/health.lua` would work and give `:checkhealth config.options`. It is still the wrong shape here, and Neovim's own runtime says so: across the six healthcheck modules it ships (`vim.deprecated`, `vim.health`, `vim.lsp`, `vim.pack`, `vim.provider`, `vim.treesitter` — `lua/vim/health.lua` itself is the reporting API, not a check) and the three provided by the plugins installed here, **every one is a single file per subsystem holding several sections** — `vim.lsp` has six sections in 279 lines, `vim.pack` three in 265, `vim.treesitter` three in 111, `vim.health` itself eight in 715, and `vim.provider` covers clipboard, Node.js, Perl, Python and Ruby in one 953-line file, the largest in the runtime. None of them splits by section.
+
+Neovim in fact went the other way once. The `bad_files` list in `$VIMRUNTIME/lua/vim/health/health.lua` — files whose presence makes `:checkhealth` report a leftover installation — includes `lua/provider/node/health.lua`, `lua/provider/perl/health.lua`, `lua/provider/python/health.lua` and `lua/provider/ruby/health.lua`. The per-provider split existed and was merged back into the single `vim/provider/health.lua`.
+
+The dividing line those files draw is **"is this a subsystem worth interrogating on its own?"**, not "is this a separate directory". `:checkhealth vim.lsp` is worth asking alone; `:checkhealth config.keymaps` answers a question nobody has. This config is one subsystem, so it gets one file, and size is not a reason to split it — 953 lines were not.
+
+Follow the shape those files share (`vim/health/health.lua` is the clearest example):
+
+```lua
+local M = {}
+local health = vim.health
+
+local function check_external_tools()
+  health.start('config: external tools')
+  -- ... health.ok() / health.warn(msg, advice) ...
+end
+
+function M.check()
+  check_external_tools()
+  -- ... one call per area, in the order they should be read ...
+end
+
+return M
+```
+
+- One local `check_*()` function per area, called in order from `M.check()`. That is the whole file structure.
+- Open each with `health.start('<title>')`. Prefix the title with the namespace when it could be mistaken for another plugin's section — `vim.lsp` and `vim.pack` do this (`vim.lsp: Active Clients`, `vim.pack: lockfile`), `vim.provider` does not need to (`Ruby provider (optional)`).
+- Always pass advice to `warn()` and `error()`: the second argument is a string or a list of strings saying how to fix it. The runtime checks almost never omit it.
+- Return early from a check that does not apply, before calling `start()` — `check_tmux()` does nothing outside tmux, `check_terminal()` nothing without `infocmp`. An empty section is worse than an absent one.
+- Close a section that found nothing wrong with `health.ok('no issues found')`, like `check_config()` does, so it is never silent.
 
 ### Which warnings to fix
 
@@ -198,7 +233,7 @@ This config targets the Neovim installed on this machine (currently 0.12), which
 ## Non-goals
 
 - Becoming a distribution: no auto-update mechanism, no plugin abstraction layer, no config of the config.
-- A `lua/` module tree for this config, except a single namespaced `lua/<name>/health.lua` for [health checks](#reporting-problems).
+- A `lua/` module tree for this config, except the single `lua/config/health.lua` for [health checks](#writing-the-health-check).
 - Editing generated files by hand: `nvim-pack-lock.json`, `colors/pyropurple.lua`.
 - Keeping `configs/nvim-0.10`, `nvim-0.11` and `nvim-0.13` in sync with the config actually in use.
 - Silencing warnings to make output look clean.
