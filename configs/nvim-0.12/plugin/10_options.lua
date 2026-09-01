@@ -57,6 +57,28 @@ vim.o.cursorlineopt  = 'screenline,number' -- Show cursor line per screen line
 vim.o.fillchars = 'eob: ,fold:╌'
 vim.o.listchars = 'extends:…,nbsp:␣,precedes:…,tab:> '
 
+-- TODO: show the innermost container of the cursor in `:h 'winbar'`: the
+-- enclosing function or method, the current header in Markdown, the open tag in
+-- HTML. Not a full breadcrumb chain - only the nearest one, which is the part
+-- that is actually lost when scrolling inside a long body.
+--
+-- 'winbar' is the right tool for it: it is per window, so each split answers for
+-- itself; it is filled exactly like `:h 'statusline'`, so it accepts a Lua
+-- function; and it takes a line from the window frame instead of mixing into the
+-- text, as virtual text would.
+--
+-- Two things decide whether it stays simple:
+-- - Where the container comes from. Tree-sitter answers synchronously from the
+--   node under the cursor (`:h vim.treesitter.get_node()`), while LSP document
+--   symbols are asynchronous and need a cache to be usable here.
+-- - How the interesting nodes are named per language. Instead of a table of node
+--   types - which would be language specific logic in a shared file - reuse the
+--   `@function.outer` and `@class.outer` captures that 'nvim-treesitter-textobjects'
+--   already maintains for every language ('plugin/40_plugins.lua' installs it).
+--
+-- It is evaluated on every redraw, so it has to be cheap: cache per buffer and
+-- cursor line, and leave 'winbar' empty where there is no container to show.
+
 -- Folds (see `:h fold-commands`, `:h zM`, `:h zR`, `:h zA`, `:h zj`)
 vim.o.foldlevel   = 10       -- Fold nothing by default; set to 0 or 1 to fold
 vim.o.foldmethod  = 'indent' -- Fold based on indent level
