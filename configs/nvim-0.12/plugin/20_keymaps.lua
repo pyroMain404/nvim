@@ -254,6 +254,20 @@ xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 -- NOTE: most LSP mappings represent a more structured way of replacing built-in
 -- LSP mappings (like `:h gra` and others). This is needed because `gr` is mapped
 -- by an "replace" operator in 'mini.operators' (which is more commonly used).
+--
+-- TODO: make `:h :make` asynchronous, and give it a mapping in this group.
+-- Building and testing from here is already almost free: runtime compiler plugins
+-- set `:h 'makeprg'` and `:h 'errorformat'` per language, so `:make check` fills
+-- the quickfix list and `]q` walks the errors. The single flaw is that `:make`
+-- blocks the interface until the command returns.
+--
+-- The fix is to keep everything and replace only the waiting: run the command
+-- with `:h vim.system()` and feed its output to `:h setqflist()` with the buffer's
+-- own 'errorformat', so compiler plugins, `:compiler` and the quickfix mappings
+-- keep working untouched. Reaching for a terminal instead gives up all of that.
+--
+-- Worth handling when doing it: one run at a time per buffer, a way to know it is
+-- still running, and `:h 'autowrite'` so a stale buffer is never compiled.
 nmap_leader('la', '<Cmd>lua vim.lsp.buf.code_action()<CR>',     'Actions')
 nmap_leader('ld', '<Cmd>lua vim.diagnostic.open_float()<CR>',   'Diagnostic popup')
 nmap_leader('lf', '<Cmd>lua require("conform").format()<CR>',   'Format')
