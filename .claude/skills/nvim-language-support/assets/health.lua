@@ -42,6 +42,9 @@ local function check_external_tools()
     { name = 'git', why = "'mini.git' and 'mini.diff' show no data" },
     { name = 'rg', why = '`<Leader>ff` and `<Leader>fg` get slower' },
     { name = 'lazygit', why = '`<Leader>tl` warns and does nothing' },
+    -- Not reported by any runtime healthcheck, yet `AGENTS.md` requires
+    -- `stylua --check .` to pass before a change is finished
+    { name = 'stylua', why = 'config formatting can not be checked' },
   }
 
   for _, tool in ipairs(tools) do
