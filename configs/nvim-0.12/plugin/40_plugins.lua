@@ -160,6 +160,38 @@ later(function() add({ 'https://github.com/rafamadriz/friendly-snippets' }) end)
 --   require('mason').setup()
 -- end)
 
+-- NOTE: Neovim ships a debugger of its own, and it is easy to miss because it is
+-- not a plugin to install: 'Termdebug' is an optional pack in the runtime,
+-- loaded with `:packadd termdebug` (`:h terminal-debug`).
+--
+-- It is a front end for `gdb`, not a DAP client, and that decides what it covers:
+-- anything gdb can debug, which is far more than C - C++, Rust (also through
+-- `rust-gdb`), Go, Fortran, Ada, Zig. It does not reach the languages whose
+-- ecosystem uses its own adapter (Python, Node, Java, .NET); those still need
+-- 'nvim-dap' plus that adapter.
+--
+-- What it gives: a gdb window, a separate window for the program's own input and
+-- output, breakpoint signs in the source, and the cursor following execution.
+-- Commands are `:Termdebug` / `:TermdebugCommand` to start, then `:Break`,
+-- `:Step`, `:Over`, `:Finish`, `:Continue`, `:Evaluate`.
+--
+-- Worth trying before installing anything for a compiled language. Uncomment to
+-- test (use `gcc`), and note that on Windows gdb always runs in prompt mode
+-- (`:h termdebug-prompt`), so the gdb window starts in Insert mode:
+-- later(function()
+--   -- Start from an empty dictionary, as `:h g:termdebug_config` asks. Setting
+--   -- `command` is needed when gdb is not on `PATH` under that name.
+--   vim.g.termdebug_config = {
+--     -- `wide` splits vertically when there is room, which reads better than
+--     -- three stacked windows
+--     wide = 1,
+--     -- Termdebug maps `K` to `:Evaluate` during a session and restores it at
+--     -- the end. Set to 0 to keep LSP hover on `K` throughout.
+--     map_K = 1,
+--   }
+--   vim.cmd('packadd termdebug')
+-- end)
+
 -- Beautiful, usable, well maintained color schemes outside of 'mini.nvim' and
 -- have full support of its highlight groups. Use if you don't like 'miniwinter'
 -- enabled in 'plugin/30_mini.lua' or other suggested 'mini.hues' based ones.
