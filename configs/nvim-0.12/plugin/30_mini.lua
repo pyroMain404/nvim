@@ -607,6 +607,23 @@ end)
 --
 -- See also:
 -- - `:h MiniHipatterns-examples` - examples of common setups
+--
+-- TODO: collect these markers into a quickfix or location list, not only into
+-- the picker. `:Pick hipatterns` is already there and is the right tool for
+-- "jump to one of them now"; a list is the right tool for working through them,
+-- because it persists, survives editing, and is navigated with `]q` / `[q`
+-- without reopening anything.
+--
+-- Two sources, and they answer different questions:
+-- - `:h MiniHipatterns.get_matches()` returns the matches of a single buffer,
+--   already parsed, so a location list of the current file costs a few lines
+--   (`:h setloclist()`). Per window, which is what a per file list should be.
+-- - The whole project needs a search instead: `:h :grep` with `'grepprg'` set to
+--   `ripgrep` fills the quickfix list, and the pattern is just the alternation of
+--   the words highlighted below.
+--
+-- Keep the word list in one place when doing it: the highlighters here and the
+-- search pattern must not drift apart.
 later(function()
   local hipatterns = require('mini.hipatterns')
   local hi_words = MiniExtra.gen_highlighter.words
