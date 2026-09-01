@@ -247,10 +247,18 @@ now_if_args(function()
   require('mini.misc').setup()
 
   -- Change current working directory based on the current file path. It
-  -- searches up the file tree until the first root marker ('.git' or 'Makefile')
-  -- and sets their parent directory as a current directory.
+  -- searches up the file tree until the first root marker and sets its parent
+  -- directory as a current directory.
   -- This is helpful when simultaneously dealing with files from several projects.
-  MiniMisc.setup_auto_root()
+  --
+  -- 'nvim-pack-lock.json' comes before the defaults so that this config is its
+  -- own project. Without it the nearest marker above a file here is the '.git'
+  -- of the whole fork, which puts the other 'configs/' directories - the ones
+  -- that are never modified - inside every search and picker.
+  -- The lockfile works as a marker because it sits next to the 'init.lua' in use
+  -- and nowhere else; 'init.lua' itself can not, as every config and many plugins
+  -- have one.
+  MiniMisc.setup_auto_root({ 'nvim-pack-lock.json', '.git', 'Makefile' })
 
   -- Restore latest cursor position on file open
   MiniMisc.setup_restore_cursor()
