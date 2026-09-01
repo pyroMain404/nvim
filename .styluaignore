@@ -1,0 +1,4 @@
+# Generated files: output, not source. They are regenerated to change them and
+# never edited by hand (see "Generated files" in AGENTS.md), so formatting them
+# would only produce a diff nobody should apply.
+configs/*/colors/*.lua

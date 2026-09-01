@@ -95,7 +95,9 @@ Language servers, formatters, linters and language runtimes are installed with [
 
 - **Formatting follows `.stylua.toml`.** [StyLua](https://github.com/JohnnyMorganz/StyLua) is installed, so formatting is checked with `stylua --check <path>` and applied with `stylua <path>` — not by eye. Run it from inside the repository, since StyLua looks for `.stylua.toml` walking up from the file it is formatting; a file checked from elsewhere is silently formatted with StyLua's own defaults (tabs, double quotes) and the diff is meaningless.
 
-  **A whole-config `stylua --check configs/nvim-0.12/` reports every Lua file, and that is not a formatting problem.** `.stylua.toml` sets `line_endings = "Unix"` while `core.autocrlf` is on, so the working tree holds CRLF and StyLua wants to rewrite every line. The content is already conformant: converting a copy to LF makes the check pass unchanged. Until this is settled (a `.gitattributes` with `eol=lf` would), read a whole-config run as noise and check the files actually touched — after converting them, or by looking only at diffs that are not full-file.
+  Two settings exist so that a whole-config run is quiet and its output means something. `line_endings = "Windows"` matches the CRLF that `core.autocrlf` puts in the working tree — with the upstream `"Unix"` value StyLua rewrote every line of every file and the report was pure noise. `.styluaignore` excludes the generated color scheme, which is output and must not be reformatted.
+
+  One known diff remains, in `plugin/30_mini.lua`, where StyLua wants to move a comment placed inside a string concatenation. That code comes from upstream and the change is cosmetic, so it is left alone: reformatting inherited code to silence the formatter buys nothing and costs a conflict.
 
   What the file mandates:
     - 2 space indent, spaces only.
