@@ -93,7 +93,11 @@ Language servers, formatters, linters and language runtimes are installed with [
 
 ## Code style
 
-- **Formatting follows `.stylua.toml`.** [StyLua](https://github.com/JohnnyMorganz/StyLua) is not installed on this machine, so the rules are applied by hand when writing code, and by running `stylua .` from the repository root only if it ever gets installed. What the file mandates:
+- **Formatting follows `.stylua.toml`.** [StyLua](https://github.com/JohnnyMorganz/StyLua) is installed, so formatting is checked with `stylua --check <path>` and applied with `stylua <path>` — not by eye. Run it from inside the repository, since StyLua looks for `.stylua.toml` walking up from the file it is formatting; a file checked from elsewhere is silently formatted with StyLua's own defaults (tabs, double quotes) and the diff is meaningless.
+
+  **A whole-config `stylua --check configs/nvim-0.12/` reports every Lua file, and that is not a formatting problem.** `.stylua.toml` sets `line_endings = "Unix"` while `core.autocrlf` is on, so the working tree holds CRLF and StyLua wants to rewrite every line. The content is already conformant: converting a copy to LF makes the check pass unchanged. Until this is settled (a `.gitattributes` with `eol=lf` would), read a whole-config run as noise and check the files actually touched — after converting them, or by looking only at diffs that are not full-file.
+
+  What the file mandates:
     - 2 space indent, spaces only.
     - Single quotes preferred (`quote_style = "AutoPreferSingle"`).
     - Maximum line width 85 — narrower than upstream 'mini.nvim' (120), because these files are read side by side.
@@ -274,7 +278,7 @@ This config targets the Neovim installed on this machine (currently 0.12), which
 
 - [ ] The change is in `configs/nvim-0.12`, in the right file, under the right separator and load step.
 - [ ] Comments explain why, in the style of their neighbors, with `:h` references.
-- [ ] Formatting matches `.stylua.toml` (2 spaces, single quotes, 85 columns).
+- [ ] `stylua --check` passes on the files touched (run from inside the repository; see the note about CRLF).
 - [ ] Problems are reported through `vim.notify` / `vim.notify_once` / a health check — never `error()`.
 - [ ] No generated file edited by hand.
 - [ ] `CHANGELOG.md` updated if the change is worth being seen later, in the "Fork changes" section at the bottom.
