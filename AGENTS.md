@@ -182,7 +182,7 @@ return M
 - Open each with `health.start('<title>')`. Prefix the title with the namespace when it could be mistaken for another plugin's section — `vim.lsp` and `vim.pack` do this (`vim.lsp: Active Clients`, `vim.pack: lockfile`), `vim.provider` does not need to (`Ruby provider (optional)`).
 - Always pass advice to `warn()` and `error()`: the second argument is a string or a list of strings saying how to fix it. The runtime checks almost never omit it.
 - Return early from a check that does not apply, before calling `start()` — `check_tmux()` does nothing outside tmux, `check_terminal()` nothing without `infocmp`. An empty section is worse than an absent one.
-- Close a section that found nothing wrong with `health.ok('no issues found')`, like `check_config()` does, so it is never silent.
+- Close a section that found nothing wrong with an explicit `health.ok()`, so it is never silent. Start the message with a capital letter: the runtime is inconsistent here — `check_config()` writes `no issues found`, while `No deprecated functions detected`, `Up to date` and `Setup is correct` capitalise — and the capitalised form is both the majority and the one that reads as a sentence next to `warn()` and `error()` messages.
 
 ### Which warnings to fix
 
