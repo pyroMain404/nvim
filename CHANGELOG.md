@@ -103,6 +103,15 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-02
+
+- Set `'smoothscroll'`, so that scrolling past a wrapped line moves by screen
+  line instead of skipping all of its screen lines at once.
+
+- Add `'nvim-pack-lock.json'` as the first root marker of `setup_auto_root()`, so
+  that the working directory becomes the config in use rather than the whole
+  fork, keeping the other `configs/` directories out of searches and pickers.
+
 ## 2026-08-31
 
 - Add the `nvim-language-support` skill under '.claude/skills/': the procedure for
