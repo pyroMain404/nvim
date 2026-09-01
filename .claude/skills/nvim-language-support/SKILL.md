@@ -14,9 +14,6 @@ Aggiungere il supporto per un linguaggio, una piattaforma o un formato. L'obiett
    comandi improvvisati che nessuno ricorda l'anno dopo (Fase 4).
 3. **Mettere ogni pezzo** nel file che gli compete.
 
-Le regole di stile, collocazione, verifica e commit sono in `AGENTS.md`, che è già
-in contesto: questa skill non le ripete, le presuppone.
-
 ## Fase 1 — Inventario: cosa c'è già
 
 **Non saltare questa fase.** È quella che distingue una configurazione di venti
@@ -26,19 +23,21 @@ filetype viene effettivamente impostato.
 
 ```vim
 " Il filetype viene riconosciuto? Con quale nome?
-:set filetype?
-:lua =vim.filetype.match({ filename = 'esempio.xyz' })
+:=vim.bo.filetype
+:=vim.filetype.match({ filename = 'esempio.xyz' })
 
 " Quali file del runtime sono già attivi per questo filetype?
-:echo globpath(&rtp, 'ftplugin/<ft>.{vim,lua}')
-:echo globpath(&rtp, 'indent/<ft>.{vim,lua}')
-:echo globpath(&rtp, 'compiler/*.{vim,lua}')
+:=vim.fn.globpath(vim.o.rtp, 'ftplugin/<ft>.{vim,lua}')
+:=vim.fn.globpath(vim.o.rtp, 'indent/<ft>.{vim,lua}')
 
-" Chi ha impostato cosa: `:verbose` nomina il file responsabile.
-" È la domanda più utile dell'intera fase.
-:verbose setlocal makeprg? errorformat? commentstring? comments?
-:verbose setlocal include? includeexpr? define? suffixesadd? path?
-:verbose setlocal shiftwidth? expandtab? textwidth? foldmethod? keywordprg?
+" Quali compiler plugin esistono, senza scorrere le directory
+:=vim.fn.getcompletion('', 'compiler')
+
+" Chi ha impostato cosa: `:verbose` nomina il file responsabile, `vim.bo`/`vim.wo`
+" danno il valore senza rumore. Servono entrambi, per domande diverse.
+:verbose setlocal makeprg? errorformat? commentstring? includeexpr?
+:=vim.bo.makeprg
+:=vim.wo.foldexpr
 
 " Esiste una pagina di help dedicata al ftplugin built-in?
 :h ft-<lang>
@@ -70,9 +69,15 @@ Non è una scelta di gusto. Applica questi criteri, in quest'ordine:
 - copre il caso d'uso senza attriti, e il costo di manutenzione è zero: si aggiorna
   con Neovim, non ha config, non si rompe;
 - il plugin candidato porta soprattutto funzioni che non useresti;
-- il built-in è la base su cui il resto poggia (`:compiler`, `'includeexpr'`,
-  `commentstring`): sostituirlo significa perdere comportamenti che altri pezzi
-  danno per scontati.
+- **altre parti della config lo danno per scontato.** Le opzioni impostate dai
+  ftplugin del runtime non servono solo a chi le legge: `'commentstring'` è ciò che
+  'mini.comment' usa per commentare, `'makeprg'` ed `'errorformat'` sono ciò che
+  `:make` legge per riempire il quickfix (e quindi ciò che rende utili `]q` e `[q`
+  di 'mini.bracketed'), `'includeexpr'` e `'suffixesadd'` sono ciò che fa arrivare
+  `gf` al file giusto, `'shiftwidth'` decide l'indentazione di ogni operatore che
+  rientra il testo. Sostituire il ftplugin con un plugin che imposta le sue
+  convenzioni significa spostare tutti questi comportamenti insieme, spesso senza
+  accorgersene finché uno smette di funzionare.
 
 **Guarda altrove quando riconosci uno di questi segnali**
 
@@ -86,13 +91,27 @@ Non è una scelta di gusto. Applica questi criteri, in quest'ordine:
 - ti accorgi di **star scrivendo la stessa funzionalità a mano**: se serve del codice
   per colmare la distanza, quel codice è già scritto e manutenuto da qualcun altro.
 
-**Prima di installare un plugin**, l'ordine di preferenza di `AGENTS.md` resta:
-built-in → modulo MINI configurato → plugin esterno. Il livello MINI si salta troppo
-spesso, ed è quello che risolve più casi di quanti sembri (`references/capabilities.md`
-elenca i moduli con configurazione per linguaggio). Un plugin esterno deve
-**guadagnarsi il posto**: dichiara cosa porta che gli altri due livelli non danno, e
-verifica che **non spenga ciò che già funziona** — alcuni chiedono esplicitamente di
-non configurare il server a mano, e in quel caso la scelta è esclusiva, non additiva.
+**Il segnale opposto, che vale quanto gli altri**: un plugin che *reimplementa* ciò
+che Neovim ha nel frattempo assorbito nel core va **evitato**, anche quando è
+popolare e ben fatto. LSP, tree-sitter, `vim.pack`, `vim.snippet`, i comandi di
+diagnostica, gli inlay hint e i semantic token sono stati a lungo territorio di
+plugin, e quei plugin esistono ancora, spesso con più installazioni del built-in che
+li ha resi superflui. Popolarità e attività di sviluppo misurano quanti utenti sono
+arrivati prima del core, non se oggi servano: qui l'ordine di preferenza di
+`AGENTS.md` decide, e il built-in vince.
+
+**Prima di installare un plugin** vale l'ordine di preferenza di `AGENTS.md`. Il
+livello MINI si salta troppo spesso, ed è quello che risolve più casi di quanti
+sembri: `references/capabilities.md` elenca, asse per asse, i moduli con
+configurazione per linguaggio.
+
+Un plugin esterno deve dichiarare cosa porta che gli altri due livelli non danno, e
+va verificato che **non spenga ciò che già funziona**. Alcuni prendono possesso della
+configurazione di un server e chiedono esplicitamente di non configurarlo per conto
+proprio: la scelta diventa allora **esclusiva** — o il plugin, o `after/lsp/<server>.lua`,
+mai i due insieme — invece che **additiva**, cioè un pezzo che si aggiunge lasciando
+al suo posto quello che c'era. È la differenza che decide se una prova si può
+annullare cancellando due righe o se richiede di rifare la configurazione.
 
 Riporta la decisione all'utente prima di installare qualcosa. Un plugin nuovo è un
 impegno di manutenzione, non un dettaglio implementativo.
@@ -118,7 +137,7 @@ Per ogni asse decidi **serve / non serve / è già gratis**, sapendo già dove a
 | Navigazione | `path`, `include`, `includeexpr`, LSP | `gf`, `[i`, `<C-]>` non arrivano dove dovrebbero |
 | Textobject e manipolazione | `vim.b.mini*_config` in `after/ftplugin/` | i costrutti del linguaggio meritano operatori propri |
 | Gestione dipendenze | plugin dedicato, attivato sul manifesto | il linguaggio ha un manifesto che si modifica spesso |
-| Debug del programma | 'nvim-dap' + adapter, o plugin del linguaggio | serve eseguire passo passo, non solo leggere errori |
+| Debug del programma | `Termdebug`, o 'nvim-dap' + adapter | serve eseguire passo passo, non solo leggere errori |
 | Toolchain e installazione | `mise`, health check | sempre, appena serve un binario esterno |
 | Salute | `lua/config/health.lua` | sempre, se hai aggiunto una dipendenza esterna |
 
@@ -138,67 +157,44 @@ linter. Installarli a mano funziona una volta sola; il punto è renderli
 **dichiarativi e riproducibili**, così che la config sappia da cosa dipende e il
 health check possa verificarlo.
 
-Lo strumento adottato è [`mise`](https://mise.jdx.dev) (*mise-en-place*), che gestisce
-sia i runtime dei linguaggi sia gli strumenti di sviluppo, con un file dichiarativo e
-attivazione automatica per directory. Copre il ruolo che altrove si dà a
-'mason.nvim' — che questa config lascia deliberatamente disattivato, perché installa
-programmi utilizzabili quasi solo dentro Neovim — **senza** sostituire
-'nvim-lspconfig': i due sono ortogonali, `mise` procura i binari, 'nvim-lspconfig'
-sa come parlargli (`cmd`, `filetypes`, `root_markers`).
+Lo strumento adottato è [`mise`](https://mise.jdx.dev) (*mise-en-place*). Il suo
+ruolo nella config, il rapporto con 'mason.nvim' e con 'nvim-lspconfig', e la regola
+sui canali ufficiali del linguaggio sono in `AGENTS.md`, sezione "External
+dependencies". Qui solo la procedura.
 
-### Dichiarare
+### Dichiarare e installare
 
-I server e i formatter servono in qualunque directory si apra Neovim, quindi vanno
-nella configurazione **globale** di `mise` (`mise config ls` ne dice il percorso):
+Server e formatter servono in qualunque directory, quindi vanno nella configurazione
+**globale**; runtime e versioni di un progetto nel `mise.toml` **del progetto**:
 
 ```bash
-mise use -g rust-analyzer@latest
-mise use -g lua-language-server@latest
+mise use -g rust-analyzer@latest     # globale: `mise config ls` dice dove finisce
+mise install                         # installa tutto ciò che è dichiarato
 ```
 
-I runtime e le versioni **di un progetto** vanno invece nel `mise.toml` del progetto,
-dove convivono con il resto della sua configurazione e seguono chi lo clona:
+Quando il registry non conosce un nome, quasi sempre lo copre un backend:
+`aqua:owner/repo` per i binari da GitHub release, più `npm:`, `cargo:`, `go:`,
+`pipx:`. Verifica con `mise registry | grep <nome>` prima di concludere che un tool
+non sia disponibile.
 
-```toml
-[tools]
-rust = "1.98"
-```
+### Su Windows, gli shim non sono una preferenza
 
-Quando il registry di `mise` non conosce un nome, quasi sempre lo copre un backend:
-`aqua:` per i binari da GitHub release (`aqua:rust-lang/rust-analyzer`), più `npm:`,
-`cargo:`, `go:`, `pipx:`. Verifica con `mise registry | grep <nome>` prima di
-concludere che un tool non sia disponibile.
+Le FAQ di `mise` sono esplicite: su Windows nativo il supporto passa **solo dagli
+shim**, perché non esiste ancora l'attivazione per PowerShell. La conseguenza da
+tenere a mente è che **le variabili d'ambiente dichiarate in `mise.toml` non vengono
+applicate**: gli shim mettono i binari su `PATH`, ma non popolano l'ambiente. Se un
+tool ne ha bisogno — una `DATABASE_URL`, una variabile che il server legge — o lo si
+lancia con `mise x` / `mise run`, oppure quella variabile va impostata altrove: per un
+progetto, il suo `.nvim.lua` (`:h 'exrc'`, già abilitato).
 
-Con tutto dichiarato, l'installazione diventa un comando solo — ed è questo che
-rende la procedura automatizzabile:
-
-```bash
-mise install
-```
-
-### Far vedere i binari a Neovim
-
-È il punto in cui si perde più tempo, se si sbaglia. `mise` ha due modalità:
-
-- **`mise activate`** aggancia la shell e aggiorna l'ambiente al cambio di directory.
-  Neovim vede i tool **solo se è stato lanciato da una shell attivata**, perché
-  eredita l'ambiente di quel momento: una sessione aperta ieri continua con la
-  versione di ieri.
-- **Gli shim** sono wrapper su `PATH`, quindi funzionano anche per un Neovim
-  lanciato da un'icona, da un launcher o da un altro programma.
-
-Su questa macchina, dove Neovim non è sempre avviato da un terminale, **gli shim
-sono la scelta più affidabile**; l'attivazione di shell resta comoda per lavorare
-nel progetto. Qualunque sia la scelta, il health check deve dire **quale versione è
-attiva in questa sessione**, perché è la prima cosa da sospettare quando un server
-si comporta in modo incoerente con la riga di comando.
+Il rovescio positivo: gli shim stanno su `PATH` sempre, quindi funzionano anche per
+un Neovim avviato da un'icona o da un launcher, che è il caso normale qui.
 
 ### Registrare la dipendenza
 
-Una dipendenza nuova va scritta in due posti, o è come se non esistesse:
-
-- la **reference del linguaggio** in `references/`, con il comando `mise use` esatto;
-- il **health check**, che ne verifica presenza e versione (Fase 6).
+Una dipendenza nuova va scritta in due posti, o è come se non esistesse: la
+**reference del linguaggio** in `references/`, con il comando esatto, e il **health
+check**, che ne verifica presenza e versione.
 
 ## Fase 5 — Implementare
 
@@ -208,86 +204,51 @@ senza parser non esistono i textobject tree-sitter; senza server non c'è niente
 mappare. Procedere in quest'ordine evita di inseguire un guasto che viene da due
 livelli più in basso.
 
-1. **Riconoscimento** — `ftdetect/<lang>.lua` con `vim.filetype.add()`, solo se la
-   Fase 1 ha mostrato un filetype vuoto o sbagliato.
+1. **Riconoscimento** — `ftdetect/<lang>.lua`, solo se la Fase 1 ha mostrato un
+   filetype vuoto o sbagliato.
 2. **Tree-sitter** — il linguaggio nella tabella `languages` di
    `plugin/40_plugins.lua`, sotto il separatore `-- Tree-sitter ===`. È una lista che
    alimenta un macchinario agnostico, quindi è il posto giusto. Riavvia una volta e
    aspetta la fine dell'installazione del parser prima di aprire quei file.
-3. **Server di linguaggio** — `after/lsp/<server>.lua` che ritorna la tabella di
-   config, più il nome dentro `vim.lsp.enable({ ... })`. Il modello di forma è
-   'after/lsp/lua_ls.lua': header con la fonte del server, `on_attach` per ciò che ha
-   senso solo a server attaccato, `settings` con la struttura definita dal server —
-   e dillo in un commento, perché chi legge non deve chiedersi se quei nomi vengano
-   da Neovim.
+3. **Server di linguaggio** — `after/lsp/<server>.lua`, più il nome dentro
+   `vim.lsp.enable({ ... })` nella sezione `-- Language servers ===` di
+   `plugin/40_plugins.lua`.
 4. **Editing** — `after/ftplugin/<ft>.lua`, solo per ciò che il ftplugin del runtime
    non fa già. Qui vanno anche le config buffer-local di MINI.
 5. **Build e test** — se esiste un compiler plugin nel runtime, `:compiler <tool>` e
-   basta. Altrimenti valuta `compiler/<tool>.lua` (`:h write-compiler-plugin`) prima
-   di scrivere `makeprg` ed `errorformat` a mano.
+   basta. Se non esiste, il posto dove definirlo è un `compiler/<tool>.lua`
+   (`:h write-compiler-plugin`), **non** `'makeprg'` ed `'errorformat'` impostati
+   dentro il ftplugin: nel compiler plugin sono riusabili da altri filetype,
+   documentabili, e reversibili con `:compiler make`; nel ftplugin restano legati a
+   un solo linguaggio e invisibili a chi cerca da dove viene il comando.
 6. **Il resto** degli assi che la Fase 3 ha marcato come necessari.
-7. **Health check** (Fase 6) e voce nel changelog (Fase 7).
+7. **Health check**: `assets/health.lua` è lo scheletro da cui partire se
+   `lua/config/health.lua` non esiste ancora. Cosa controllare per un linguaggio è in
+   `references/capabilities.md`; la forma del file è in `AGENTS.md`.
+8. **Changelog e commit**, seguendo `AGENTS.md`. Un linguaggio è quasi sempre più
+   commit: parser, server, quickfix e health check risolvono problemi diversi.
 
-## Fase 6 — Health check
-
-`AGENTS.md` fissa la forma del file — un solo `lua/config/health.lua`, una
-`check_*()` per area — e va seguita alla lettera. Se il file non esiste ancora,
-`assets/health.lua` è lo scheletro da cui partire.
-
-Cosa merita un controllo, per un linguaggio:
-
-- **Gli eseguibili e la loro versione**, non solo la presenza: una toolchain vecchia
-  fallisce in modi più confusi di una assente.
-- **Quale toolchain è attiva in questa sessione**, e se `mise` la sta gestendo
-  (Fase 4). È l'informazione che spiega i guasti altrimenti inspiegabili.
-- **Il parser tree-sitter installato**, non solo disponibile.
-- **Il server**, come eseguibile effettivamente raggiungibile.
-
-Il consiglio in `warn()` ed `error()` dovrebbe essere il comando esatto da eseguire —
-con `mise` è quasi sempre una riga sola, il che rende il check anche una guida
-all'installazione.
-
-## Fase 7 — Changelog e commit
-
-Le voci di questo fork vanno nella sezione **"Fork changes"** in fondo a
-`CHANGELOG.md`, mai in cima: upstream aggiunge sempre in testa al file, e tenere le
-proprie voci separate evita un conflitto a ogni merge da `minimax`. Il dettaglio è
-scritto in `AGENTS.md`.
-
-Un commit per argomento, con il formato Problem/Solution: il soggetto **enuncia il
-problema**. Il supporto di un linguaggio è quasi sempre più commit — parser, server,
-quickfix, health check risolvono problemi diversi:
-
-```
-feat(plugins): Rust files have no syntax tree
-feat(lsp): Rust code has no diagnostics, completion or navigation
-feat(health): a missing Rust toolchain is only discovered when it fails
-```
+Gli altri scheletri in `assets/` coprono i file che ricorrono ogni volta —
+`ftdetect`, `ftplugin`, `lsp`, `compiler`, query, snippet — già nella forma che
+`AGENTS.md` richiede.
 
 ## Verifica
 
 Vale la regola di `AGENTS.md`: una sola passata alla fine, e i passi interattivi si
-**consegnano all'utente** invece di simularli headless. Quelli specifici di un
-linguaggio nuovo:
+consegnano all'utente invece di simularli. Le domande da porre in quella passata,
+specifiche di un linguaggio appena aggiunto:
 
-```
-1. mise install; riavvia Neovim e aspetta l'installazione dei parser
-2. Apri un file del linguaggio
-3. :InspectTree             — l'albero c'è
-4. :checkhealth vim.lsp     — il client è attaccato, senza errori
-5. :verbose setlocal makeprg? errorformat?  — vengono dal file che ti aspetti
-6. :make <sottocomando>     — un errore introdotto apposta finisce nel quickfix e
-                              `]q` ci salta sopra
-7. <Leader>ld, <Leader>ls, <Leader>lr — diagnostica, definizione, rename
-8. :checkhealth config      — la sezione nuova dice il vero
-```
+- il parser è installato e l'albero è quello atteso (`:InspectTree`);
+- il server si attacca senza errori (`:checkhealth vim.lsp`);
+- `makeprg` ed `errorformat` vengono dal file che ti aspetti, e un errore introdotto
+  apposta finisce nel quickfix;
+- le mapping `<Leader>l` fanno quello che promettono su un simbolo vero;
+- `:checkhealth config` dice il vero sulla toolchain.
 
 ## Reference
 
 - `references/capabilities.md` — il catalogo degli assi: cosa dà ciascuno, dove va,
   come scoprire se è già coperto, quali moduli MINI lo toccano.
-- `references/rust.md` — Rust come caso completo: cosa il runtime dà già, cosa è
-  invecchiato, i plugin che valgono la valutazione, l'installazione con `mise` e il
-  ciclo `:make` mappato sull'*inner development loop* di *Zero To Production In Rust*.
-  Serve anche da modello per la struttura di una reference di linguaggio.
-- `assets/health.lua` — scheletro del primo `lua/config/health.lua`.
+- `references/rust.md` — Rust come caso completo, e modello per la struttura di una
+  reference di linguaggio.
+- `assets/` — gli scheletri dei file da creare.
