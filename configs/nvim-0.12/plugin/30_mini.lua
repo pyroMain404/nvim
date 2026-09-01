@@ -349,6 +349,25 @@ later(function() require('mini.align').setup() end)
 --
 -- See also:
 -- - `:h MiniBracketed` - overall mapping design and list of targets
+--
+-- FIXME: `[i` and `[d` no longer reach the built-in include-search and
+-- define-search (`:h [i`, `:h [d`), which jump to where a name is imported or
+-- defined using `:h 'include'` and `:h 'define'` - the options that runtime
+-- ftplugins set per language.
+--
+-- What actually happens, checked with `:verbose map [i` on a loaded config:
+-- - `[i` ends up as `MiniIndentscope.operator('top')`. Three layers claim it:
+--   the built-in, the `indent` target here, and 'mini.indentscope' further down
+--   this file. The last `setup()` wins, so 'mini.bracketed' creates a mapping
+--   that nothing can reach.
+-- - `[d` is the diagnostic jump. Neovim itself took it first (`:h lsp-defaults`),
+--   so this one was already gone before MINI.
+--
+-- The documented fix for the masked mapping is `indent = { suffix = '' }` here -
+-- `:h MiniBracketed.config` suggests exactly that "in favor of 'mini.indentscope'".
+-- It frees the mapping but does not give `[i` back: deciding that needs answering
+-- whether include-search is still wanted now that LSP references and `gf` cover
+-- most of it, and if so, under which keys.
 later(function() require('mini.bracketed').setup() end)
 
 -- Remove buffers. Opened files occupy space in tabline and buffer picker.
