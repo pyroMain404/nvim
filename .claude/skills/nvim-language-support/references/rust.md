@@ -51,25 +51,50 @@ la risposta esatta; `rustfmt#PreWrite()`, dove ci sono 'conform.nvim' e il serve
 Niente di tutto questo è rotto: semplicemente non è più la strada migliore. Il
 progetto a monte, `rust-lang/rust.vim`, è in manutenzione conservativa.
 
+### Il livello che si dimentica: 'nvim-lspconfig'
+
+Prima di valutare i plugin va detto cosa c'è già, perché per Rust è molto più del
+solito. Il config installa 'nvim-lspconfig' (`plugin/40_plugins.lua`, sezione
+"Language servers"), quindi `after/lsp/rust_analyzer.lua` **non è la configurazione
+del server**: è un override che si fonde sopra
+[`lsp/rust_analyzer.lua`](https://github.com/neovim/nvim-lspconfig/blob/master/lsp/rust_analyzer.lua),
+il quale non è il consueto `cmd` + `filetypes` + `root_markers`:
+
+| Cosa fa | Perché conta |
+|---|---|
+| `root_dir` chiama `cargo metadata --no-deps` | trova la **workspace root** vera, non il primo `Cargo.toml` risalendo: è la differenza nei progetti multi-crate |
+| riconosce i file dentro registry, git checkout, toolchain e sysroot src | il sorgente di una dipendenza si attacca al client già attivo invece di aprirne uno nuovo |
+| dichiara `serverStatusNotification` e implementa `rust-analyzer.runSingle` | **i runnable ci sono già**, senza plugin |
+| accende tutti i lens (`run`, `debug`, `implementations`, `references`, `updateTest`) | vedi §4: accesi non vuol dire visibili |
+| crea `:LspCargoReload` | ricarica il workspace cargo dopo un cambio di `Cargo.toml` |
+| `before_init` copia `settings['rust-analyzer']` in `initializationOptions` | `rust-analyzer` legge le proprie impostazioni **da lì** all'avvio. Senza quella riga le impostazioni di §4 non arrivano al server |
+
+Da leggere prima di scrivere qualsiasi cosa, come chiede `assets/lsp.lua`:
+
+```vim
+:=vim.lsp.config['rust_analyzer']
+```
+
 ### I due plugin da valutare
 
 Sono decisioni indipendenti e di natura diversa.
 
 **[`rustaceanvim`](https://github.com/mrcjkb/rustaceanvim)** — richiede Neovim ≥ 0.12
-(compatibile) e `rust-analyzer`. Aggiunge runnables e debuggables (eseguire il test
-sotto il cursore, anche sotto debugger), **espansione ricorsiva delle macro** — in un
-progetto pieno di macro procedurali come quello del libro è la funzione che più
-spesso manca — `view HIR`/`MIR`, grafo delle crate, `docs.rs` per il simbolo sotto il
-cursore, spiegazione dei codici di errore, structural search replace.
+(compatibile) e `rust-analyzer`. Tolto ciò che 'nvim-lspconfig' già copre, quello che
+resta suo è: **espansione ricorsiva delle macro** — in un progetto pieno di macro
+procedurali come quello del libro è la funzione che più spesso manca — `view HIR`/`MIR`,
+grafo delle crate, `docs.rs` per il simbolo sotto il cursore, spiegazione dei codici
+di errore, structural search replace, e runnable e debuggable fatti bene: asincroni e
+agganciati a 'nvim-dap'.
 
 Il costo non è l'installazione: è che **prende possesso del server**. La sua
 documentazione chiede di non configurare `rust_analyzer` a mano né via
 'nvim-lspconfig'. È quindi il caso esclusivo descritto nella Fase 2: o il plugin, o
 `after/lsp/rust_analyzer.lua`. **Raccomandazione**: partire dalla configurazione
-diretta del server (§3), che copre completamento, diagnostica, navigazione e rename,
-e passare a `rustaceanvim` solo quando emerge un'esigenza che non copre — tipicamente
-il debug o l'esecuzione dei singoli test — migrando la configurazione, non
-affiancandola.
+diretta del server (§4) — che con il livello di 'nvim-lspconfig' sotto copre
+completamento, diagnostica, navigazione, rename, runnable e reload del workspace — e
+passare a `rustaceanvim` solo quando emerge un'esigenza che non copre, tipicamente le
+macro o il debug, migrando la configurazione e non affiancandola.
 
 **[`crates.nvim`](https://github.com/saecki/crates.nvim)** — lavora solo su
 `Cargo.toml`: completamento delle versioni, popup con versioni e feature, virtual
@@ -102,8 +127,23 @@ rispetta il `rust-toolchain.toml` del progetto; un percorso assoluto no.
 moderno, il fold per struttura, i textobject via `MiniAi.gen_spec.treesitter()` e le
 injection.
 
-**Server**: `after/lsp/rust_analyzer.lua` a partire da `assets/lsp.lua`. Due
-impostazioni valgono più di tutte le altre:
+### Il server: `after/lsp/rust_analyzer.lua`
+
+**Solo `settings`, nessuna funzione.** È la regola generale di `SKILL.md`, sezione
+"I livelli si sovrappongono"; per `rust_analyzer` è quella che costa di più, perché il
+default di 'nvim-lspconfig' definisce tre funzioni e ciascuna porta via qualcosa:
+
+- un `on_attach` — proprio ciò che lo scheletro invita a scrivere — cancella
+  `:LspCargoReload`;
+- un `before_init` cancella la riga che riempie `initializationOptions`, e siccome
+  `rust-analyzer` legge le proprie impostazioni all'avvio da lì, `check.command` e
+  `procMacro` qui sotto **non arrivano mai al server**. Nessun errore e nessun
+  avviso: semplicemente clippy non gira;
+- un `root_dir` cancella `cargo metadata` e il riconoscimento dei sorgenti delle
+  dipendenze.
+
+Se serve comportamento buffer-locale con il server attaccato, la sede è un
+autocomando `LspAttach` in `after/ftplugin/rust.lua`, non un `on_attach` qui.
 
 ```lua
 settings = {
@@ -116,6 +156,12 @@ settings = {
     -- Without this the code inside them is invisible to the server and gets
     -- reported as errors.
     procMacro = { enable = true },
+
+    -- 'nvim-lspconfig' turns every lens on, but implements only `runSingle`:
+    -- `debugSingle` is advertised in the capabilities and has no handler, so
+    -- the "Debug" lens fails when run. Turn it back on together with a DAP
+    -- client, not before.
+    lens = { debug = { enable = false } },
   },
 }
 ```
@@ -124,6 +170,25 @@ Verifica i nomi contro il manuale della versione installata: sono definiti dal
 server e cambiano nel tempo. Da **proporre** e non decidere: gli inlay hint (in Rust
 mostrano i tipi inferiti, utili quanto invadenti) e `cargo.features`, che dipende dal
 progetto e quindi appartiene al suo `.nvim.lua`.
+
+### Due limiti del livello ereditato, da conoscere prima di stupirsi
+
+**I lens sono accesi ma invisibili.** Neovim non aggiorna i code lens da solo: senza
+un autocomando che chiami `vim.lsp.codelens.refresh()` non compare niente sopra le
+funzioni, e `<Leader>ll` (`plugin/20_keymaps.lua`, "Lens") non trova nulla da
+eseguire. Non è un problema di Rust: è generico, e quindi la sede giusta **non** è
+`after/ftplugin/rust.lua`. È una proposta da fare una volta sola per la config
+condivisa, non una riga per linguaggio.
+
+**`runSingle` blocca Neovim.** L'implementazione di 'nvim-lspconfig' fa `proc:wait()`
+sul thread principale e poi rovescia l'output in un `vim.notify`: per un `cargo test`
+significa editor fermo finché non finisce, e risultato in un popup invece che nel
+quickfix. È lo stesso difetto già analizzato — e già risolto sulla carta — nel
+commento sopra i mapping `<Leader>l` di `plugin/20_keymaps.lua`: eseguire con
+`vim.system()` e passare l'output a `setqflist()` con l'`errorformat` del buffer.
+Finché resta così, `:make test` (§5) è la strada migliore per eseguire i test.
+
+### Il resto
 
 **Formattazione**: `rustfmt` è il formatter ufficiale, quindi va dichiarato in
 `formatters_by_ft` anche se il server saprebbe formattare — stessa versione della
@@ -194,4 +259,11 @@ Oltre ai punti generali di `SKILL.md`, quelli che valgono solo qui:
   non solo gli errori di compilazione;
 - `gf` con il cursore su un `use` deve aprire il modulo **senza** che il server sia
   attaccato: è il built-in, e verifica che non sia stato perso;
-- `<Leader>ls` su un simbolo di una dipendenza deve aprire il sorgente nel registry.
+- `<Leader>ls` su un simbolo di una dipendenza deve aprire il sorgente nel registry,
+  e deve restare attaccato **un solo** client `rust_analyzer`: due client vogliono
+  dire che il `root_dir` di 'nvim-lspconfig' è stato sostituito;
+- `:LspCargoReload` deve esistere in un buffer Rust con server attaccato. È il
+  canarino del merge di §4: se manca, `after/lsp/rust_analyzer.lua` ha sovrascritto
+  una funzione ereditata invece di aggiungere solo `settings`;
+- un lint che segnala solo clippy e non `rustc` deve comparire come diagnostica: è
+  l'unica prova che `initializationOptions` è arrivato al server.
