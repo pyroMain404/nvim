@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Move 'mini.diff', 'mini.git' and the Git integration built on them out of
+  'plugin/30_mini.lua' and into 'plugin/31_git.lua'. Reading the repository had
+  grown to a third of the file for two modules out of thirty three, and to
+  almost every line by which that file differs from upstream: keeping it apart
+  makes both files shorter to read and a merge from 'minimax' smaller.
+
 - Write who last changed the current line at the end of that line, instead of
   reading it in the window of `:Git blame`: the annotation follows the cursor
   and disappears while the buffer has unsaved changes, as `git blame` counts the

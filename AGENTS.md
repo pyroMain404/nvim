@@ -52,6 +52,8 @@ nvim-pack-lock.json      `vim.pack` lockfile — generated, never edited by hand
 plugin/10_options.lua    Built-in Neovim behavior
 plugin/20_keymaps.lua    Custom mappings, mostly under `<Leader>`
 plugin/30_mini.lua       MINI configuration
+plugin/31_git.lua        Git integration: 'mini.diff', 'mini.git', and what
+                         is built on them
 plugin/40_plugins.lua    Plugins outside of MINI
 snippets/                User defined snippets
 after/ftplugin/          Per filetype behavior
@@ -75,7 +77,7 @@ Two files in the config are output, not source. They are read to know the curren
 
 - **An option of Neovim itself** → `plugin/10_options.lua`.
 - **A mapping** → `plugin/20_keymaps.lua`, under the existing `<Leader>` group that matches its meaning, with a `mini.clue` description.
-- **A MINI module or its config** → `plugin/30_mini.lua`, in the same step as comparable modules (see below).
+- **A MINI module or its config** → `plugin/30_mini.lua`, in the same step as comparable modules (see below). The one exception is Git: `plugin/31_git.lua` holds 'mini.diff', 'mini.git' and the integration built on them, because that area outgrew a module setup — two modules answering the same question plus the code making them work together. Nothing else moves out of `plugin/30_mini.lua` for being long.
 - **A non-MINI plugin** → `plugin/40_plugins.lua`, added through `vim.pack.add()`.
 - **Behavior for one filetype or one language server** → `after/ftplugin/` or `after/lsp/`, never the shared files.
 - **A new external program the config depends on** → installed through `mise`, and reported by the health check. See below.
