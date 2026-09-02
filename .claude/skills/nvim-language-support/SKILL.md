@@ -291,9 +291,11 @@ livelli più in basso.
    documentabili, e reversibili con `:compiler make`; nel ftplugin restano legati a
    un solo linguaggio e invisibili a chi cerca da dove viene il comando.
 6. **Il resto** degli assi che la Fase 3 ha marcato come necessari.
-7. **Health check**: `assets/health.lua` è lo scheletro da cui partire se
-   `lua/config/health.lua` non esiste ancora. Cosa controllare per un linguaggio è in
-   `references/capabilities.md`; la forma del file è in `AGENTS.md`.
+7. **Health check**: `lua/config/health.lua` esiste — si aggiunge un
+   `check_<lang>()` e lo si chiama da `M.check()`, sul modello di `check_rust()`;
+   `assets/health.lua` resta lo scheletro per una config che non ce l'abbia ancora.
+   Cosa controllare per un linguaggio è in `references/capabilities.md`; la forma del
+   file è in `AGENTS.md`.
 8. **Changelog e commit**, seguendo `AGENTS.md`. Un linguaggio è quasi sempre più
    commit: parser, server, quickfix e health check risolvono problemi diversi.
 
