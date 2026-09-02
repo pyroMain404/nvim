@@ -273,6 +273,28 @@ creare mapping buffer-local per comandi propri del server — **a una condizione
 che si aggiunge invece di sostituire è un autocomando `LspAttach` in
 `after/ftplugin/<ft>.lua`.
 
+### Più server sullo stesso filetype
+
+`vim.lsp.enable()` accetta più nomi, e niente impedisce a due server di attaccarsi
+allo stesso buffer: è la norma dove l'ecosistema separa il type checker dal linter
+(Python con `ruff` di fianco a un type checker, TypeScript con `eslint` di fianco a
+`ts_ls`). Neovim li tratta da pari — l'hover e le code action interrogano tutti i
+client attaccati e uniscono le risposte — quindi funziona, ma tre cose vanno decise
+invece che subite:
+
+- **Chi formatta.** Due server che dichiarano `documentFormattingProvider` rendono
+  `gq` e il fallback di 'conform.nvim' non deterministici. Si sceglie uno e agli altri
+  si toglie la capability su `LspAttach`
+  (`client.server_capabilities.documentFormattingProvider = false`).
+- **La diagnostica doppia.** Due strumenti che applicano la stessa regola segnalano
+  due volte lo stesso problema. Si spegne la regola nella configurazione dello
+  strumento, non in Neovim: `vim.diagnostic` è globale (§5).
+- **Chi ha risposto.** `:checkhealth vim.lsp` elenca i client attaccati al buffer, ed è
+  il modo per sapere quale dei due ha prodotto una risposta strana.
+
+Due client dello **stesso** server sullo stesso progetto non sono invece mai voluti:
+vuol dire che `root_dir` ha risposto due volte in modo diverso.
+
 ## 5. Diagnostica
 
 `vim.diagnostic` è già configurato globalmente in 'plugin/10_options.lua' con una

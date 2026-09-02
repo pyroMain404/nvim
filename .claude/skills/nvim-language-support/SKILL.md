@@ -14,6 +14,10 @@ Aggiungere il supporto per un linguaggio, una piattaforma o un formato. L'obiett
    comandi improvvisati che nessuno ricorda l'anno dopo (Fase 4).
 3. **Mettere ogni pezzo** nel file che gli compete.
 
+Se invece il linguaggio è **già configurato e qualcosa non funziona**, la procedura
+non è la strada: parti da ["Quando qualcosa non funziona"](#quando-qualcosa-non-funziona),
+che va dal sintomo al livello da interrogare.
+
 ## Fase 1 — Inventario: cosa c'è già
 
 **Non saltare questa fase.** È quella che distingue una configurazione di venti
@@ -293,8 +297,17 @@ Gli altri scheletri in `assets/` coprono i file che ricorrono ogni volta —
 ## Verifica
 
 Vale la regola di `AGENTS.md`: una sola passata alla fine, e i passi interattivi si
-consegnano all'utente invece di simularli. Le domande da porre in quella passata,
-specifiche di un linguaggio appena aggiunto:
+consegnano all'utente invece di simularli.
+
+Prima della lista, il criterio che la genera: **un controllo che passerebbe anche non
+avendo fatto niente non è un controllo.** "Il server si attacca" è vero anche senza il
+file in `after/lsp/`; "l'highlight funziona" è vero anche con il vecchio `syntax/`. Un
+controllo utile *può fallire*, e il suo fallimento accusa **un livello preciso**. I
+punti specifici del linguaggio si scrivono così nella sua reference — `rust.md` §8 è
+l'esempio: un solo client attaccato, un comando che esiste solo se il default di
+'nvim-lspconfig' è sopravvissuto, un lint che solo clippy emette.
+
+Le domande generali, da porre comunque:
 
 - il parser è installato e l'albero è quello atteso (`:InspectTree`);
 - il server si attacca senza errori (`:checkhealth vim.lsp`);
@@ -303,6 +316,33 @@ specifiche di un linguaggio appena aggiunto:
 - le mapping `<Leader>l` fanno quello che promettono su un simbolo vero;
 - `:checkhealth config` dice il vero sulla toolchain.
 
+## Quando qualcosa non funziona
+
+Per un linguaggio già configurato la procedura non serve: serve sapere **quale livello
+interrogare**. Ogni riga è "sintomo → livello da sospettare → comando che risponde", e
+il criterio comune è che la risposta deve nominare un file o un valore, non lasciare
+un'impressione.
+
+| Sintomo | Livello da sospettare | Comando |
+|---|---|---|
+| Non si carica niente: né ftplugin, né parser, né server | il filetype, che viene prima di tutto | `:=vim.bo.filetype`, `:=vim.filetype.match({ filename = '…' })` |
+| Highlight assente o povero | parser non installato | `:InspectTree`, `:Inspect` |
+| Highlight che *era* completo e ora è parziale | query che ha sostituito quella del plugin | la **prima riga** dei file in `after/queries/`: manca `; extends` |
+| Il server non si attacca | eseguibile assente, o `root_dir` che non trova la radice | `:checkhealth vim.lsp`, `:=vim.lsp.config['<server>']` |
+| Due client dello stesso server sullo stesso progetto | `root_dir` sovrascritto da `after/lsp/` | `:checkhealth vim.lsp` |
+| Un'impostazione di `settings` non ha effetto | nome sbagliato, **o una funzione ereditata sovrascritta** | il manuale del server, e `:=vim.lsp.config['<server>']` |
+| Un comando o una mapping del server è sparito | `on_attach` ereditato sovrascritto | `:=vim.lsp.config['<server>']` |
+| `:make` lascia il quickfix vuoto | `errorformat` che non riconosce l'output | `:verbose setlocal makeprg? errorformat?`, poi `:clist` |
+| `:make` prende gli errori ma non i test falliti | `errorformat` incompleto | `:h errorformat`, e la forma esatta di un fallimento |
+| `:make` usa il comando sbagliato | un altro `compiler/` prima sul `rtp` | `:verbose setlocal makeprg?` — nomina il file |
+| Formatta, ma non come dalla riga di comando | 'conform.nvim' è ricaduto sull'LSP | `:ConformInfo` |
+| Lo strumento c'è nel terminale ma non in Neovim | ambiente ereditato all'avvio | `:checkhealth config`, `:=vim.fn.exepath('<tool>')` |
+| `gf`, `commentstring` o l'indentazione sbagliati | opzione del ftplugin sovrascritta | `:verbose setlocal commentstring? includeexpr? suffixesadd?` |
+
+`:verbose setlocal <opt>?` è l'unico strumento che nomina **il file responsabile**, ed
+è per questo che ricorre qui insieme a `:=vim.lsp.config['<server>']`: quasi ogni
+guasto di questo elenco è un livello che ne ha sovrascritto un altro.
+
 ## Reference
 
 - `references/capabilities.md` — il catalogo degli assi: cosa dà ciascuno, dove va,
@@ -310,3 +350,21 @@ specifiche di un linguaggio appena aggiunto:
 - `references/rust.md` — Rust come caso completo, e modello per la struttura di una
   reference di linguaggio.
 - `assets/` — gli scheletri dei file da creare.
+
+### La forma di una reference di linguaggio
+
+`rust.md` non è solo un esempio: è la struttura da riusare, perché ogni sua sezione
+risponde a una domanda che ritorna per ogni linguaggio.
+
+1. Cosa il runtime dà già — l'esito della Fase 1, in forma di tabella.
+2. Cosa di quello tenere e cosa no, i plugin valutati, e **la raccomandazione** con il
+   suo motivo (Fase 2).
+3. Installazione della toolchain, con il comando esatto (Fase 4).
+4. Cosa implementare, asse per asse, con il codice che finisce nei file (Fase 5).
+5. Il ciclo di lavoro quotidiano che ne risulta.
+6. Ambiente di progetto, se il linguaggio ne ha bisogno (`.nvim.lua`).
+7. Cosa deve dire il health check.
+8. Verifica: i controlli falsificabili che valgono solo per questo linguaggio.
+
+Le sezioni senza contenuto si omettono; non se ne aggiungono di nuove senza un motivo,
+perché la struttura serve a poter confrontare due linguaggi.
