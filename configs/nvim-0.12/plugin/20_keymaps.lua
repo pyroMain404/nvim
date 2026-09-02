@@ -185,6 +185,11 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- shows more data about the entry at cursor, `zm` / `zr` adjust folds, and
 -- `q` closes the window. See 'plugin/30_mini.lua' for how this is set up.
 --
+-- The buffer scoped commands say `-- %:p` and not `-- %`: `:Git` runs from the
+-- root of the repository, while `%` expands relative to the current directory.
+-- The two differ as soon as Neovim is started below the root, and Git then gets
+-- a path which matches nothing and answers with an empty output.
+--
 -- To review already committed changes there is a `[count]` (default 1) which
 -- tells how many latest commits to look at:
 -- - `<Leader>gh` / `<Leader>gH` - patch of latest `[count]` commits (all/buffer)
@@ -195,7 +200,7 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 --   `[h` / `]h` and hunk textobject `gh`).
 -- - `<Leader>gR` - restore reference text back to the one from Git index.
 local git_log_cmd = [[Git log --pretty=format:\%h\ \%as\ │\ \%s --topo-order]]
-local git_log_buf_cmd = git_log_cmd .. ' --follow -- %'
+local git_log_buf_cmd = git_log_cmd .. ' --follow -- %:p'
 
 local git_diff_head = function(postfix)
   return function() vim.cmd('Git diff HEAD~' .. vim.v.count1 .. (postfix or '')) end
@@ -229,14 +234,14 @@ local diff_ref_index = function()
 end
 
 nmap_leader('ga', '<Cmd>Git diff --cached<CR>',             'Added diff')
-nmap_leader('gA', '<Cmd>Git diff --cached -- %<CR>',        'Added diff buffer')
-nmap_leader('gb', '<Cmd>vertical Git blame -- %<CR>',       'Blame buffer')
+nmap_leader('gA', '<Cmd>Git diff --cached -- %:p<CR>',      'Added diff buffer')
+nmap_leader('gb', '<Cmd>vertical Git blame -- %:p<CR>',     'Blame buffer')
 nmap_leader('gc', '<Cmd>Git commit<CR>',                    'Commit')
 nmap_leader('gC', '<Cmd>Git commit --amend<CR>',            'Commit amend')
 nmap_leader('gd', '<Cmd>Git diff<CR>',                      'Diff')
-nmap_leader('gD', '<Cmd>Git diff -- %<CR>',                 'Diff buffer')
+nmap_leader('gD', '<Cmd>Git diff -- %:p<CR>',               'Diff buffer')
 nmap_leader('gh', git_diff_head(),                          'HEAD~N diff')
-nmap_leader('gH', git_diff_head(' -- %'),                   'HEAD~N diff buffer')
+nmap_leader('gH', git_diff_head(' -- %:p'),                 'HEAD~N diff buffer')
 nmap_leader('gl', '<Cmd>' .. git_log_cmd .. '<CR>',         'Log')
 nmap_leader('gL', '<Cmd>' .. git_log_buf_cmd .. '<CR>',     'Log buffer')
 nmap_leader('go', '<Cmd>lua MiniDiff.toggle_overlay()<CR>', 'Toggle overlay')

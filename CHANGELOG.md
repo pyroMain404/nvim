@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Pass the absolute path (`-- %:p`) to the buffer scoped Git commands
+  (`<Leader>gA`, `<Leader>gb`, `<Leader>gD`, `<Leader>gH`, `<Leader>gL`), which
+  answered with an empty output whenever Neovim was started below the root of
+  the repository: `:Git` runs from that root, while `%` expands relative to the
+  current directory.
+
 - Add `<Leader>ou`, which fetches the `minimax` upstream remote, asks before
   merging it into the local branch and reports the outcome, so keeping the fork
   current no longer needs a shell session.
