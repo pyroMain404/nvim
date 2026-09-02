@@ -102,10 +102,12 @@ now_if_args(function()
   -- Use `:h vim.lsp.enable()` to automatically enable language server based on
   -- the rules provided by 'nvim-lspconfig'.
   -- Use `:h vim.lsp.config()` or 'after/lsp/' directory to configure servers.
-  -- Uncomment and tweak the following `vim.lsp.enable()` call to enable servers.
-  -- vim.lsp.enable({
-  --   -- For example, if `lua-language-server` is installed, use `'lua_ls'` entry
-  -- })
+  -- A name here needs the server installed to do anything: enabling one that is
+  -- missing fails silently, which is why the health check reports the toolchain.
+  vim.lsp.enable({
+    -- Installed with `rustup`, configured in 'after/lsp/rust_analyzer.lua'
+    'rust_analyzer',
+  })
 end)
 
 -- Formatting =================================================================

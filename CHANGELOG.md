@@ -105,6 +105,15 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Attach `rust-analyzer` to Rust buffers, configured in
+  'after/lsp/rust_analyzer.lua'. It reports `clippy` lints while typing instead
+  of only in CI, expands procedural macros so that the code inside
+  `#[tokio::main]` stops being reported as errors, and leaves off the "Debug"
+  code lens, which 'nvim-lspconfig' announces without a handler behind it.
+  Install the server with `rustup component add rust-analyzer rust-src`; until
+  then nothing changes. This is also the first entry in `vim.lsp.enable()`,
+  which was empty.
+
 - Group the Git state and functions of the config under `Config.git`:
   `Config.git.diff_ref`, `Config.git.set_diff_ref()`, `Config.git.blame` and
   `Config.git.toggle_blame()`. They used to sit next to the loading helpers in

@@ -103,12 +103,13 @@ indipendente dalla scelta precedente. Va attivato su `BufRead Cargo.toml`.
 
 ## 3. Fase 4 — installazione
 
-Su questa macchina `rust-analyzer` **non è installato**: l'eseguibile risponde
-`error: Unknown binary 'rust-analyzer.exe' in official toolchain`.
-
 ```bash
 rustup component add rust-analyzer rust-src
 ```
+
+Fatto: su questa macchina il server è `rust-analyzer 1.98.0 (88d9e12a 2026-08-18)`,
+cioè lo stesso commit di `rustc 1.98.0` — che è il motivo per cui `rustup` è la via
+giusta qui. `rust-src`, `clippy` e `rustfmt` erano già installati.
 
 Vale qui la regola di `AGENTS.md` sui canali ufficiali: `rustup` installa la versione
 **allineata al toolchain attivo**, e per un linguaggio che rilascia ogni sei
@@ -245,8 +246,8 @@ vim.env.SQLX_OFFLINE = 'true'
 
 Le domande a cui `check_rust()` deve rispondere: `rustup` c'è e quale toolchain è
 attiva in **questa** sessione (`rustup show active-toolchain`); `cargo` e `rustc` con
-quale versione; `rust-analyzer` è raggiungibile — oggi no, e il consiglio da dare è
-il comando `rustup component add` di §3; il parser `rust` è installato, non solo
+quale versione; `rust-analyzer` è raggiungibile, con il comando `rustup component
+add` di §3 come consiglio quando non lo è; il parser `rust` è installato, non solo
 disponibile.
 
 ## 8. Verifica
