@@ -114,6 +114,16 @@ now_if_args(function()
     -- Installed with `rustup`, configured in 'after/lsp/rust_analyzer.lua'
     'rust_analyzer',
   })
+
+  -- Code lens are actions a server announces at a precise place in the code:
+  -- "run this test", "show the implementations of this trait". Neovim does not
+  -- ask for them unless told to, which is why `<Leader>ll` had nothing to run.
+  -- Enabling without a filter covers every server and every buffer opened
+  -- later, and Neovim then requests them on its own, debounced
+  -- (`:h vim.lsp.codelens.enable()`). Most recipes still show
+  -- `vim.lsp.codelens.refresh()` inside an autocommand: that is the older way,
+  -- deprecated in 0.12 and removed in 0.13.
+  vim.lsp.codelens.enable(true)
 end)
 
 -- Formatting =================================================================

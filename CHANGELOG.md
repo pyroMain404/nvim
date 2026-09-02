@@ -105,6 +105,11 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Ask language servers for code lens and show them above the code they belong
+  to. `<Leader>ll` existed but had nothing to run, because Neovim never
+  requested any: the reference and run counts a server offers were simply not
+  there. Enabled once for every server and every buffer, not per language.
+
 - Highlight as SQL the query inside the `sqlx` macros, which the crate checks
   against the database while compiling and the editor showed as a grey string.
   It covers `query!`, `query_as!` and their file and unchecked variants,
