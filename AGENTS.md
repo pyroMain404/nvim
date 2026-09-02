@@ -55,6 +55,7 @@ plugin/30_mini.lua       MINI configuration
 plugin/31_git.lua        Git integration: 'mini.diff', 'mini.git', and what
                          is built on them
 plugin/40_plugins.lua    Plugins outside of MINI
+lua/config/health.lua    `:checkhealth config` — the only file under `lua/`
 snippets/                User defined snippets
 after/ftplugin/          Per filetype behavior
 after/lsp/               Language server configurations

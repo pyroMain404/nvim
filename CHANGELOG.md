@@ -105,6 +105,13 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Add `:checkhealth config`, which answers what the config assumes about the
+  machine it runs on: whether Git, ripgrep, lazygit, StyLua and the
+  `tree-sitter` CLI are reachable and at which version, which Rust toolchain
+  answers in this session, the versions of `rustc`, `cargo`, `rust-analyzer`
+  and clippy, and whether the `rust` and `toml` parsers are installed rather
+  than merely available. Every warning carries the command that fixes it.
+
 - Enable tree-sitter for `rust` and `toml`: structural highlighting, folds by
   structure, and the textobjects of 'nvim-treesitter-textobjects' now work in
   Rust buffers and in `Cargo.toml`, which in a Rust project is read as often as
