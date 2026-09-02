@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Run `<CR>` and `gF` of a Git patch from the root of the repository, as the
+  paths written in a patch are relative to it while 'mini.git' resolves them
+  against the current directory. Below the root - where `setup_auto_root()`
+  leaves it inside this config - opening an entry of a patch against the working
+  tree failed with `E484: Can't open file`.
+
 - Pass the absolute path (`-- %:p`) to the buffer scoped Git commands
   (`<Leader>gA`, `<Leader>gb`, `<Leader>gD`, `<Leader>gH`, `<Leader>gL`), which
   answered with an empty output whenever Neovim was started below the root of

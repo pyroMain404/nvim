@@ -522,6 +522,26 @@ later(function() require('mini.diff').setup() end)
 later(function()
   require('mini.git').setup()
 
+  -- HACK: paths inside a patch are relative to the root of the repository, while
+  -- 'mini.git' resolves them against the current directory, as the notes of
+  -- `:h MiniGit.show_diff_source()` state. The two differ whenever Neovim runs
+  -- below the root, which is the normal case here as `setup_auto_root()` above
+  -- stops at the config directory: showing an entry of a patch against the working
+  -- tree then fails with `:h E484`. Run those calls from the root instead and
+  -- restore the directory after, as `setup_auto_root()` sets it anew (on the next
+  -- event loop tick) for the buffer that gets opened.
+  -- Remove once 'mini.git' resolves the paths itself (still needed in 0.18.0).
+  local repo_root = function() return vim.fs.root(vim.fn.getcwd(), '.git') end
+  local at_repo_root = function(f, opts)
+    local root = repo_root()
+    if root == nil then return f(opts) end
+    local cwd = vim.fn.getcwd()
+    vim.fn.chdir(root)
+    local ok, err = pcall(f, opts)
+    vim.fn.chdir(cwd)
+    if not ok then error(err, 0) end
+  end
+
   -- `MiniGit.show_diff_source()` always shows a scratch buffer with a copy of
   -- the file, also for the "after" state of a patch against the working tree.
   -- Reuse it to resolve path and line number of the entry at cursor, but then
@@ -531,17 +551,22 @@ later(function()
   -- which is the case as soon as the first file has been opened this way.
   local show_at_cursor = function()
     local win_init = vim.api.nvim_get_current_win()
-    MiniGit.show_at_cursor({ target = 'after', split = 'vertical' })
+    at_repo_root(MiniGit.show_at_cursor, { target = 'after', split = 'vertical' })
     if vim.api.nvim_get_current_win() == win_init then
       -- There is no "after" state if the file was deleted: show "before" one
-      return MiniGit.show_at_cursor({ split = 'vertical' })
+      return at_repo_root(MiniGit.show_at_cursor, { split = 'vertical' })
     end
 
     -- Only the working tree state is shown as `edit`. A state at some commit
     -- (`show <commit>:<path>`) has no file on disk, so it is left as it is.
-    -- NOTE: 'mini.git' stores the path already escaped for a command.
+    -- NOTE: 'mini.git' stores the path already escaped for a command, and
+    -- relative to the repository root, hence the same resolution as above.
     local path = vim.api.nvim_buf_get_name(0):match('^minigit://%d+/edit (.*)$')
     if path == nil then return end
+    local root = repo_root()
+    if root ~= nil then
+      path = vim.fn.fnameescape(vim.fs.normalize(root)) .. '/' .. path
+    end
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
 
     -- Keep the patch as alternate file and drop the fold options which the new
@@ -554,7 +579,7 @@ later(function()
 
   -- Same split for the state at some commit, which is always shown as a copy
   local show_diff_source = function()
-    MiniGit.show_diff_source({ split = 'vertical' })
+    at_repo_root(MiniGit.show_diff_source, { split = 'vertical' })
   end
 
   local setup_patch_buf = function()
@@ -562,7 +587,7 @@ later(function()
     -- Add repository root to `:h 'path'` for patches shown from a subdirectory,
     -- escaped because space and comma separate the entries of 'path'.
     vim.bo.includeexpr = [[substitute(v:fname, '^[abciwo]/', '', '')]]
-    local root = vim.fs.root(vim.fn.getcwd(), '.git')
+    local root = repo_root()
     if root ~= nil then
       root = vim.fn.escape(vim.fs.normalize(root), ' ,')
       vim.bo.path = root .. ',' .. vim.bo.path
