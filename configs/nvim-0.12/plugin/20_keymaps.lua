@@ -292,8 +292,60 @@ nmap_leader('mt', '<Cmd>lua MiniMap.toggle()<CR>',       'Toggle')
 
 -- o is for 'Other'. Common usage:
 -- - `<Leader>oz` - toggle between "zoomed" and regular view of current buffer
+-- - `<Leader>ou` - bring upstream changes of this config into the local branch
+--
+-- This config is a fork of 'MiniMax': the `minimax` remote is upstream and is
+-- read only, so its work arrives here only through a merge. Doing it from the
+-- editor keeps "am I behind upstream?" one keypress away instead of a shell
+-- session, and it is the first thing to answer when something misbehaves.
+--
+-- Everything is left to Git itself, called asynchronously (`:h vim.system()`)
+-- so the editor stays usable while fetching: Git already refuses to merge on a
+-- dirty work tree and stops on conflicts, and its own message says more than a
+-- reimplemented check would. The confirmation exists because the files being
+-- rewritten are the ones this Neovim is running from.
+-- NOTE: plugins are a separate matter, updated with `:h vim.pack.update()`.
+local upstream_merge = function()
+  -- `stdpath('config')` is inside the fork's repository, so `-C` finds it no
+  -- matter the current directory
+  local git = function(args, on_done)
+    local cmd = vim.list_extend({ 'git', '-C', vim.fn.stdpath('config') }, args)
+    vim.system(cmd, { text = true }, vim.schedule_wrap(on_done))
+  end
+  -- Which stream carries the reason depends on the subcommand ('merge' reports
+  -- a conflict on stdout), so report whichever one spoke
+  local is_ok = function(out)
+    if out.code == 0 then return true end
+    local msg = vim.trim(out.stderr) ~= '' and out.stderr or out.stdout
+    vim.notify(vim.trim(msg), vim.log.levels.ERROR)
+  end
+
+  vim.notify('Fetching `minimax`...')
+  git({ 'fetch', 'minimax' }, function(fetched)
+    if not is_ok(fetched) then return end
+    git({ 'rev-list', '--count', 'HEAD..minimax/main' }, function(counted)
+      if not is_ok(counted) then return end
+
+      local n = tonumber(vim.trim(counted.stdout))
+      if n == 0 then return vim.notify('Already up to date with `minimax/main`') end
+
+      local prompt = n .. ' new commit(s) upstream. Merge? (y/n) '
+      vim.ui.input({ prompt = prompt }, function(answer)
+        if (answer or ''):lower() ~= 'y' then return end
+        git({ 'merge', '--no-edit', 'minimax/main' }, function(merged)
+          if not is_ok(merged) then return end
+          -- Reload the config files the merge changed on disk
+          vim.cmd('checktime')
+          vim.notify('Merged ' .. n .. ' commit(s) from `minimax/main`')
+        end)
+      end)
+    end)
+  end)
+end
+
 nmap_leader('or', '<Cmd>lua MiniMisc.resize_window()<CR>', 'Resize to default width')
 nmap_leader('ot', '<Cmd>lua MiniTrailspace.trim()<CR>',    'Trim trailspace')
+nmap_leader('ou', upstream_merge,                          'Update from upstream')
 nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
 
 -- s is for 'Session'. Common usage:

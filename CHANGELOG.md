@@ -105,6 +105,10 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Add `<Leader>ou`, which fetches the `minimax` upstream remote, asks before
+  merging it into the local branch and reports the outcome, so keeping the fork
+  current no longer needs a shell session.
+
 - Set `'smoothscroll'`, so that scrolling past a wrapped line moves by screen
   line instead of skipping all of its screen lines at once.
 
