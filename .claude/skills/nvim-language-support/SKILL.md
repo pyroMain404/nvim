@@ -196,6 +196,35 @@ Una dipendenza nuova va scritta in due posti, o è come se non esistesse: la
 **reference del linguaggio** in `references/`, con il comando esatto, e il **health
 check**, che ne verifica presenza e versione.
 
+## I livelli si sovrappongono
+
+Non è una fase: è la regola che vale per ogni file scritto nella Fase 5. Ogni file
+aggiunto per un linguaggio ne ha già uno sotto — del runtime, di un plugin, o di
+entrambi — e **come i due si combinano cambia da asse ad asse**. È la sola parte della
+procedura che rompe in silenzio: nessun errore, nessun messaggio, solo una
+funzionalità che c'era e non c'è più.
+
+| Cosa scrivi | Cosa succede a ciò che stava sotto |
+|---|---|
+| `after/ftplugin/<ft>.lua` | **Si aggiunge**: girano entrambi, il tuo dopo, e corregge (`:h ftplugin-overrule`) |
+| `after/queries/<lang>/*.scm` | **Sostituisce tutto**, a meno che la prima riga sia `; extends` (`:h treesitter-query-modeline-extends`) |
+| `after/snippets/<lang>.json` | Si aggiunge; stesso prefisso **vince** su 'friendly-snippets', un prefisso senza body lo **rimuove** |
+| `after/lsp/<server>.lua` | Fuso con `vim.tbl_deep_extend('force')`: le tabelle si uniscono in profondità, **le funzioni si sostituiscono** |
+| `lsp/<server>.lua` (senza `after/`) | **Perde**: viene fuso *prima* di 'nvim-lspconfig', che quindi lo sovrascrive. È il motivo per cui la sede è `after/lsp/` |
+| `compiler/<tool>.lua` | **Sostituisce**: `:compiler` carica il primo file trovato sul `rtp`, e la config viene prima del runtime |
+
+La riga dell'LSP è quella che sorprende, perché il danno non si vede. Definire
+`on_attach`, `before_init` o `root_dir` **cancella la funzione ereditata**, non la
+affianca. Se 'nvim-lspconfig' usava `before_init` per riempire le
+`initializationOptions` — cioè per far arrivare al server proprio le `settings` che
+hai appena scritto — quelle impostazioni smettono di arrivare, e il server continua a
+funzionare come se non le avessi mai messe.
+
+> In `after/lsp/<server>.lua` scrivi **`settings` e le altre tabelle**. Se ti serve
+> comportamento con il server attaccato e `:=vim.lsp.config['<server>']` mostra che il
+> default definisce già una funzione, non scrivere `on_attach`: usa un autocomando
+> `LspAttach` in `after/ftplugin/<ft>.lua`, che si aggiunge invece di sostituire.
+
 ## Fase 5 — Implementare
 
 Segui l'ordine di dipendenza: ogni passo si verifica da solo, e i successivi

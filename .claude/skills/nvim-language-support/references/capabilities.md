@@ -191,6 +191,12 @@ Campi che si usano davvero: `cmd`, `filetypes`, `root_markers`
 `:=vim.lsp.config['<server>']` mostra cosa si eredita, e il file locale dovrebbe
 contenere **solo ciò che differisce**.
 
+**Differire non è però sempre aggiungere.** I livelli si fondono con
+`vim.tbl_deep_extend('force')`: una tabella si unisce in profondità, una funzione
+(`on_attach`, `before_init`, `root_dir`) **sostituisce** quella ereditata e ne
+cancella gli effetti senza dirlo. La regola completa, per tutti gli assi, è in
+`SKILL.md`, sezione "I livelli si sovrappongono".
+
 ### Cosa arriva senza configurare niente
 
 `:h lsp-defaults` è la lista autorevole. In sintesi: `K` per l'hover (a meno che
@@ -259,9 +265,13 @@ naturali per una mapping buffer-local quando un linguaggio le rende utili.
 > `buf_detach_client()` a mano ha senso solo per client avviati con `vim.lsp.start()`
 > fuori da quel meccanismo — che qui non è il caso.
 
-`on_attach` resta il posto giusto per ridurre i `triggerCharacters` troppo aggressivi
+`on_attach` è il posto giusto per ridurre i `triggerCharacters` troppo aggressivi
 (come fa 'after/lsp/lua_ls.lua' per 'mini.completion'), abilitare gli inlay hint, e
-creare mapping buffer-local per comandi propri del server.
+creare mapping buffer-local per comandi propri del server — **a una condizione**: che
+`:=vim.lsp.config['<server>']` non ne mostri già uno. Se il default di
+'nvim-lspconfig' definisce `on_attach`, scriverne un altro qui lo cancella; la forma
+che si aggiunge invece di sostituire è un autocomando `LspAttach` in
+`after/ftplugin/<ft>.lua`.
 
 ## 5. Diagnostica
 
@@ -399,7 +409,8 @@ distinta: valgono per il server, non per la directory corrente.
 
 - **Completamento**: 'mini.completion' usa l'LSP quando c'è, le parole del buffer
   quando non c'è. Per linguaggio l'unico intervento sensato è ridurre i
-  `triggerCharacters` in `on_attach` quando il popup diventa rumoroso.
+  `triggerCharacters` in `on_attach` — o su `LspAttach`, vedi §4 — quando il popup
+  diventa rumoroso.
 - **Snippet**: `after/snippets/<lang>.json`
   (`:h MiniSnippets.gen_loader.from_lang()`). 'friendly-snippets' è già installato e
   copre la maggior parte dei linguaggi: guarda cosa arriva già prima di scriverne. Il
