@@ -117,6 +117,20 @@ a merge from 'minimax' conflict-free.
   the repository: `:Git` runs from that root, while `%` expands relative to the
   current directory.
 
+- Turn `<Leader>gr` and `<Leader>gR` into toggles of the 'mini.diff' reference
+  text, the first for every buffer and the second for the current one only, so
+  that the uppercase key narrows the scope as it does everywhere else. Restoring
+  the Git index no longer has a mapping of its own: pressing the same key again
+  does it. The reference in use is readable in `Config.diff_ref` and
+  `vim.b.diff_ref`, and settable with `Config.set_diff_ref()`.
+
+- Pick the referenced revision from the Git log when `<Leader>gr` / `<Leader>gR`
+  are pressed without a `[count]`, so that a commit can be referenced by hash and
+  not only by distance from `HEAD`. `1<Leader>gr` is the previous behavior.
+
+- Fail with an error when applying a hunk (`gh`) while a revision is referenced,
+  instead of silently staging it against the Git index.
+
 - Add `<Leader>ou`, which fetches the `minimax` upstream remote, asks before
   merging it into the local branch and reports the outcome, so keeping the fork
   current no longer needs a shell session.

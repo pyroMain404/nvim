@@ -181,6 +181,12 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- - `<Leader>gL` - show Git log of current file
 -- - `<Leader>gb` - show who last changed every line of current file
 --
+-- This group reads the repository, it does not manage it: changing what Git
+-- stores (staging, branching, stashing, rebasing) is done in 'lazygit'
+-- (`<Leader>tl`), which is a Git client already. Committing stays here because
+-- writing a message is editing text. Everything else answers "what changed,
+-- when, and by whom", so that the code can be read through its history.
+--
 -- Inside the output of these commands `gf` works on the patch paths, `<CR>`
 -- shows more data about the entry at cursor, `zm` / `zr` adjust folds, and
 -- `q` closes the window. See 'plugin/30_mini.lua' for how this is set up.
@@ -194,11 +200,24 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- tells how many latest commits to look at:
 -- - `<Leader>gh` / `<Leader>gH` - patch of latest `[count]` commits (all/buffer)
 --   in a separate tabpage. Example: `3<Leader>gh` - patch of latest 3 commits.
--- - `<Leader>gr` - set 'mini.diff' reference text to the current file as it was
---   `[count]` commits ago and show overlay. This makes latest commits look
---   exactly like they are not committed yet (including hunk navigation with
---   `[h` / `]h` and hunk textobject `gh`).
--- - `<Leader>gR` - restore reference text back to the one from Git index.
+--
+-- Reading the code as it was at some revision is done by referencing it: the
+-- revision becomes the 'mini.diff' reference text, which makes every commit
+-- made after it look exactly like it is not committed yet. Hunk navigation
+-- (`[h` / `]h`), hunk textobject (`gh`) and overlay then work on the history.
+-- - `<Leader>gr` / `<Leader>gR` - reference a revision in every buffer / in the
+--   current one. Pressing it again restores the reference to the Git index.
+-- - `[count]` references `HEAD~[count]`. Example: `3<Leader>gr`. Without it the
+--   revision is picked from the Git log (of the current file for `<Leader>gR`),
+--   which is the way to reference a commit by hash.
+-- - What is referenced can be read in `Config.diff_ref` and `vim.b.diff_ref`,
+--   the source that actually attached in `vim.b.minidiff_summary.source_name`.
+-- - Hunks can not be applied (`gh`) while a revision is referenced: they would
+--   be staged against the index, which is not what is shown.
+--
+-- The source providing that reference text and `Config.set_diff_ref()`, which
+-- these two mappings drive, are in 'plugin/30_mini.lua' next to the 'mini.diff'
+-- setup they configure.
 local git_log_cmd = [[Git log --pretty=format:\%h\ \%as\ │\ \%s --topo-order]]
 local git_log_buf_cmd = git_log_cmd .. ' --follow -- %:p'
 
@@ -206,31 +225,32 @@ local git_diff_head = function(postfix)
   return function() vim.cmd('Git diff HEAD~' .. vim.v.count1 .. (postfix or '')) end
 end
 
--- Use file's content from `HEAD~[count]` as 'mini.diff' reference text.
--- NOTE: it is reset back to Git index content after the index changes.
--- NOTE: while the reference is not the index, do not apply hunks (`gh`):
--- they would be staged against the index. Use `<Leader>gR` first.
-local diff_ref_head = function()
-  local path = vim.api.nvim_buf_get_name(0)
-  if vim.fn.filereadable(path) ~= 1 then
-    return vim.notify('Buffer is not a file on disk', vim.log.levels.WARN)
+-- Call `Config.set_diff_ref()` with `HEAD~[count]`, or with a commit picked from
+-- the log when there is no `[count]`. Restore the Git index instead when
+-- a revision is already referenced.
+-- NOTE: `choose` runs while the picker is still the current buffer, hence the
+-- buffer identifier resolved before starting it.
+local diff_ref_toggle = function(scope)
+  return function()
+    local buf_id, cur_ref = nil, Config.diff_ref
+    if scope == 'buf' then
+      buf_id, cur_ref = vim.api.nvim_get_current_buf(), vim.b.diff_ref
+    end
+    if cur_ref ~= nil then return Config.set_diff_ref(nil, buf_id) end
+
+    local count = vim.v.count
+    if count > 0 then return Config.set_diff_ref('HEAD~' .. count, buf_id) end
+
+    local path = nil
+    if scope == 'buf' then
+      path = vim.api.nvim_buf_get_name(0)
+      if vim.fn.filereadable(path) ~= 1 then
+        return vim.notify('Buffer is not a file on disk', vim.log.levels.WARN)
+      end
+    end
+    local choose = function(item) Config.set_diff_ref(item:match('^%S+'), buf_id) end
+    MiniExtra.pickers.git_commits({ path = path }, { source = { choose = choose } })
   end
-
-  local rev = 'HEAD~' .. vim.v.count1
-  local cmd = { 'git', 'show', rev .. ':./' .. vim.fn.fnamemodify(path, ':t') }
-  local out = vim.system(cmd, { cwd = vim.fn.fnamemodify(path, ':h') }):wait()
-  if out.code ~= 0 then return vim.notify(vim.trim(out.stderr), vim.log.levels.ERROR) end
-
-  -- Account for possible 'crlf' end of line in Git object
-  MiniDiff.set_ref_text(0, (out.stdout:gsub('\r\n', '\n')))
-  if not MiniDiff.get_buf_data(0).overlay then MiniDiff.toggle_overlay(0) end
-  vim.notify('Diff reference: ' .. rev)
-end
-
--- Reattaching the source makes it set reference text from Git index anew
-local diff_ref_index = function()
-  MiniDiff.disable(0)
-  MiniDiff.enable(0)
 end
 
 nmap_leader('ga', '<Cmd>Git diff --cached<CR>',             'Added diff')
@@ -245,8 +265,8 @@ nmap_leader('gH', git_diff_head(' -- %:p'),                 'HEAD~N diff buffer'
 nmap_leader('gl', '<Cmd>' .. git_log_cmd .. '<CR>',         'Log')
 nmap_leader('gL', '<Cmd>' .. git_log_buf_cmd .. '<CR>',     'Log buffer')
 nmap_leader('go', '<Cmd>lua MiniDiff.toggle_overlay()<CR>', 'Toggle overlay')
-nmap_leader('gr', diff_ref_head,                            'Reference HEAD~N')
-nmap_leader('gR', diff_ref_index,                           'Reference index')
+nmap_leader('gr', diff_ref_toggle('all'),                   'Reference revision')
+nmap_leader('gR', diff_ref_toggle('buf'),                   'Reference revision buffer')
 nmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>',  'Show at cursor')
 
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')

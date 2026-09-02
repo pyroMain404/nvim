@@ -487,7 +487,83 @@ later(function() require('mini.comment').setup() end)
 -- - `:h MiniDiff-overview` - overview of how module works
 -- - `:h MiniDiff-diff-summary` - available summary information
 -- - `:h MiniDiff.gen_source` - available built-in sources
-later(function() require('mini.diff').setup() end)
+--
+-- Beside the default source, this config can use the file content at some
+-- revision as reference text, which is what makes the latest commits readable
+-- as if they were not committed yet. That source and the state telling which
+-- revision is referenced are set up below, and mapped to `<Leader>gr` and
+-- `<Leader>gR` in 'plugin/20_keymaps.lua'.
+later(function()
+  require('mini.diff').setup()
+
+  -- 'mini.diff' source using file content at `rev` as reference text.
+  -- Every field is set because a buffer-local config is merged field by field
+  -- into the global one (`:h mini.nvim-buffer-local-config`): a field left out
+  -- would be silently taken from the source this one replaces. `apply_hunks` is
+  -- the one that matters, as staging happens against the index and not `rev`.
+  -- The Git source is kept as a fallback for files absent from that revision,
+  -- and reused across calls because it watches '.git/index' on its own.
+  local diff_source_git = nil
+  local diff_sources_at = function(rev)
+    local attach = function(buf_id)
+      local path = vim.api.nvim_buf_get_name(buf_id)
+      if vim.fn.filereadable(path) ~= 1 then return false end
+      local cmd = { 'git', 'show', rev .. ':./' .. vim.fn.fnamemodify(path, ':t') }
+      local out = vim.system(cmd, { cwd = vim.fn.fnamemodify(path, ':h') }):wait()
+      if out.code ~= 0 then return false end
+      -- Account for possible 'crlf' end of line in Git object
+      MiniDiff.set_ref_text(buf_id, (out.stdout:gsub('\r\n', '\n')))
+    end
+    local apply_hunks = function()
+      error('Hunks are shown against ' .. rev .. '. Restore the index to apply.')
+    end
+
+    diff_source_git = diff_source_git or MiniDiff.gen_source.git()
+    local source = {
+      name = 'git-' .. rev,
+      attach = attach,
+      detach = function(_) end,
+      apply_hunks = apply_hunks,
+    }
+    return { source, diff_source_git }
+  end
+
+  -- Revision used as 'mini.diff' reference text, `nil` for the Git index: in
+  -- `Config.diff_ref` for every buffer, in `vim.b.diff_ref` for a single one.
+  -- Change it through this function, as the source has to be attached anew:
+  -- - `:lua Config.set_diff_ref('v0.15.0')` - reference a tag everywhere
+  -- - `:lua Config.set_diff_ref(nil, 0)` - restore the index in current buffer
+  Config.diff_ref = nil
+  Config.set_diff_ref = function(rev, buf_id)
+    local source = rev ~= nil and diff_sources_at(rev) or nil
+    local bufs = vim.api.nvim_list_bufs()
+    if buf_id == nil then
+      Config.diff_ref, MiniDiff.config.source = rev, source
+    else
+      buf_id = buf_id == 0 and vim.api.nvim_get_current_buf() or buf_id
+      vim.b[buf_id].diff_ref = rev
+      vim.b[buf_id].minidiff_config = source ~= nil and { source = source } or nil
+      bufs = { buf_id }
+    end
+
+    -- Reference text is set while the source attaches, so reattach to apply it.
+    -- Show the overlay wherever a revision is referenced, as reading the old text
+    -- in place is the point of it. Reattaching resets it back to the config value.
+    for _, id in ipairs(bufs) do
+      if MiniDiff.get_buf_data(id) ~= nil then
+        MiniDiff.disable(id)
+        MiniDiff.enable(id)
+        local data = MiniDiff.get_buf_data(id)
+        local has_rev = (vim.b[id].diff_ref or Config.diff_ref) ~= nil
+        local show_overlay = has_rev and data ~= nil and not data.overlay
+        if show_overlay then MiniDiff.toggle_overlay(id) end
+      end
+    end
+
+    local scope = buf_id ~= nil and ' (buffer)' or ''
+    vim.notify('Diff reference' .. scope .. ': ' .. (rev or 'Git index'))
+  end
+end)
 
 -- Git integration for more straightforward Git actions based on Neovim's state.
 -- It is not meant as a fully featured Git client, only to provide helpers that
