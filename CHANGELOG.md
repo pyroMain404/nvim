@@ -105,6 +105,11 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Stop 'mini.pairs' from closing a single quote in Rust buffers, where `'`
+  opens a lifetime rather than a string: typing `&'` used to give `&''` and the
+  extra quote had to be removed in every `&'a str` and `<'a, T>`. Double quotes
+  keep pairing, and a character literal is typed in full.
+
 - Add `:checkhealth config`, which answers what the config assumes about the
   machine it runs on: whether Git, ripgrep, lazygit, StyLua and the
   `tree-sitter` CLI are reachable and at which version, which Rust toolchain

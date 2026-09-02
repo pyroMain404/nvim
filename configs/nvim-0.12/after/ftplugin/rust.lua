@@ -1,0 +1,24 @@
+-- ┌────────────────┐
+-- │ Rust behaviour │
+-- └────────────────┘
+--
+-- This file contains behavior specific to Rust buffers, added on top of what
+-- '$VIMRUNTIME/ftplugin/rust.vim' already does: the official style
+-- (`shiftwidth=4`, `textwidth=100`), `commentstring`, `gf` on a `use` through
+-- `includeexpr` and `suffixesadd`, and `:compiler cargo` as soon as a
+-- `Cargo.toml` is found while walking up. None of that is repeated here.
+-- `:verbose setlocal makeprg? commentstring?` says who set what.
+--
+-- 'mini.pairs' auto-closes a single quote unless the character before it is a
+-- letter or a backslash. That rule fits a language where `'` opens a string and
+-- misfires in Rust, where the same character opens a lifetime: typing `&'`
+-- gave `&''`, and the extra quote had to be removed by hand in every `&'a str`,
+-- `<'a, T>` and `fn f<'a>()`.
+--
+-- `MiniPairs.unmap_buf()` is not the way to undo it. It reverts a mapping made
+-- with `MiniPairs.map_buf()`, while this one comes from `setup()` and is
+-- global; the module's own help says that such a mapping is undone for one
+-- buffer by mapping the key to itself (`:h MiniPairs.unmap_buf()`), which is
+-- what this line does. Double quotes keep pairing, and a character literal is
+-- typed in full.
+vim.keymap.set('i', "'", "'", { buffer = true, desc = 'Insert a plain quote' })
