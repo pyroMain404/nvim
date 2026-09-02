@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Place what `<CR>` opens inside a Git patch by what it is: a commit goes full
+  width below the log it was read from, while a file goes into a full height
+  column at the far right, pushing the files opened before it to the left. Both
+  used to open as a vertical split of the window they were read from, which left
+  the log squeezed between them.
+
 - Run `<CR>` and `gF` of a Git patch from the root of the repository, as the
   paths written in a patch are relative to it while 'mini.git' resolves them
   against the current directory. Below the root - where `setup_auto_root()`

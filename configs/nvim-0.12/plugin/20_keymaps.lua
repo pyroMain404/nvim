@@ -190,6 +190,8 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- Inside the output of these commands `gf` works on the patch paths, `<CR>`
 -- shows more data about the entry at cursor, `zm` / `zr` adjust folds, and
 -- `q` closes the window. See 'plugin/30_mini.lua' for how this is set up.
+-- What `<CR>` opens is placed by what it is: a commit goes full width below
+-- the log it was read from, a file goes into a column at the far right.
 --
 -- The buffer scoped commands say `-- %:p` and not `-- %`: `:Git` runs from the
 -- root of the repository, while `%` expands relative to the current directory.

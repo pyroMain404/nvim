@@ -618,20 +618,37 @@ later(function()
     if not ok then error(err, 0) end
   end
 
+  -- `<CR>` shows either a commit or a file, and the two are read differently:
+  -- a commit is detail of the log it was opened from, so it goes full width
+  -- below it, while a file is the thing being read, so it gets a full height
+  -- column at the far right, pushing the files opened before it to the left.
+  -- Ask for the matching direction and not for the "auto" default of
+  -- 'mini.git', which switches to a new tabpage as soon as a window of the
+  -- current one holds a normal buffer, the case as soon as the first file has
+  -- been opened this way.
+  -- NOTE: which of the two is shown is decided by 'mini.git' from the word at
+  -- cursor (`:h MiniGit.show_at_cursor()`), while the direction has to be known
+  -- before the call, hence the same test repeated here.
+  local is_commit_at_cursor = function()
+    local cword = vim.fn.expand('<cword>')
+    return cword:find('^%x%x%x%x%x%x%x+$') ~= nil and cword == cword:lower()
+  end
+
   -- `MiniGit.show_diff_source()` always shows a scratch buffer with a copy of
   -- the file, also for the "after" state of a patch against the working tree.
   -- Reuse it to resolve path and line number of the entry at cursor, but then
   -- edit the file itself to get a fully functional buffer ('mini.diff', LSP).
-  -- Ask for a vertical split, as the "auto" default of 'mini.git' switches to a
-  -- new tabpage as soon as a window of the current one holds a normal buffer,
-  -- which is the case as soon as the first file has been opened this way.
   local show_at_cursor = function()
     local win_init = vim.api.nvim_get_current_win()
-    at_repo_root(MiniGit.show_at_cursor, { target = 'after', split = 'vertical' })
+    local is_commit = is_commit_at_cursor()
+    local split = is_commit and 'horizontal' or 'vertical'
+    at_repo_root(MiniGit.show_at_cursor, { target = 'after', split = split })
     if vim.api.nvim_get_current_win() == win_init then
       -- There is no "after" state if the file was deleted: show "before" one
-      return at_repo_root(MiniGit.show_at_cursor, { split = 'vertical' })
+      at_repo_root(MiniGit.show_at_cursor, { split = split })
     end
+    if vim.api.nvim_get_current_win() == win_init then return end
+    vim.cmd(is_commit and 'wincmd J' or 'wincmd L')
 
     -- Only the working tree state is shown as `edit`. A state at some commit
     -- (`show <commit>:<path>`) has no file on disk, so it is left as it is.
@@ -653,9 +670,11 @@ later(function()
     vim.cmd('normal! zv')
   end
 
-  -- Same split for the state at some commit, which is always shown as a copy
+  -- A state at some commit is always shown as a copy, in the same column
   local show_diff_source = function()
+    local win_init = vim.api.nvim_get_current_win()
     at_repo_root(MiniGit.show_diff_source, { split = 'vertical' })
+    if vim.api.nvim_get_current_win() ~= win_init then vim.cmd('wincmd L') end
   end
 
   local setup_patch_buf = function()
