@@ -196,13 +196,32 @@ Finché resta così, `:make test` (§5) è la strada migliore per eseguire i tes
 riga di comando e della CI.
 
 **'mini.pairs' e le lifetime**: in Rust l'apice singolo di `&'a str` non apre una
-stringa. Il default non auto-chiude l'apice dopo una lettera, ma dopo `&` sì. Si
-corregge in `after/ftplugin/rust.lua` con `MiniPairs.unmap_buf()`, non con
-`vim.b.minipairs_config`.
+stringa. Il default non auto-chiude l'apice dopo una lettera, ma dopo `&` sì, quindi
+`&'` diventa `&''`. La sede è `after/ftplugin/rust.lua`, ma **due dei rimedi che
+verrebbero in mente non funzionano**: `vim.b.minipairs_config`, perché il modulo non
+rilegge la config, e `MiniPairs.unmap_buf()`, che annulla soltanto una mapping fatta
+con `MiniPairs.map_buf()` — queste vengono da `setup()` e sono globali. La via che il
+modulo stesso documenta per quel caso è rimappare il tasto su sé stesso nel buffer:
+
+```lua
+vim.keymap.set('i', "'", "'", { buffer = true })
+```
 
 **L'injection che vale la pena**, in un progetto che segue il libro: `sqlx::query!`
 prende SQL come stringa letterale verificata a compile time, ma nell'editor resta una
-stringa grigia. `assets/injections.scm` è già impostato su questo caso.
+stringa grigia. Sta in `after/queries/rust/injections.scm`, e tre dettagli decidono se
+la query trova qualcosa — nessuno dei quali dà errore quando è sbagliato:
+
+- `sqlx::query!` è uno `scoped_identifier`, mentre il `query!` lasciato da un `use` è
+  un `identifier`: vanno elencati entrambi;
+- il testo da iniettare è `(string_content)`, non `(string_literal)`, che passerebbe
+  all'altro parser anche le virgolette;
+- l'ancora `.` fissa la stringa alla sua posizione nella chiamata, così il tipo che
+  `query_as!` nomina per primo e un eventuale secondo argomento stringa non vengono
+  letti come SQL.
+
+E serve il parser **`sql`** nella tabella `languages`: senza, l'injection non fa
+niente e non lo dice.
 
 ## 5. Il ciclo di lavoro
 

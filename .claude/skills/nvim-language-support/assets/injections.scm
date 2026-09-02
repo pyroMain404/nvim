@@ -19,11 +19,27 @@
 ; capture names are fixed — @injection.content is the text to parse, and the
 ; language is named either statically with #set! or dynamically from a captured
 ; node (:h treesitter-language-injections).
+;
+; The injected language needs its own parser installed, so it belongs in the
+; `languages` table too. Without it the injection matches and renders nothing, in
+; silence.
+;
+; Write the pattern against the tree, not from memory: :InspectTree shows it, and
+; `node:sexpr()` prints the exact shape of one node. The example below took three
+; corrections that no error message would have pointed at — a scoped call is a
+; `scoped_identifier` and not an `identifier`, `string_literal` hands the quotes to
+; the other parser while `string_content` does not, and without the `.` anchor a
+; second string argument is parsed as SQL as well.
 
 ; Static language: the macro always contains SQL.
 ((macro_invocation
-   macro: (identifier) @_name
-   (token_tree (string_literal) @injection.content))
+   macro: [
+     (identifier) @_name
+     (scoped_identifier name: (identifier) @_name)
+   ]
+   (token_tree
+     .
+     (string_literal (string_content) @injection.content)))
  (#eq? @_name "query")
  (#set! injection.language "sql"))
 
