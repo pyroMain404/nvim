@@ -105,6 +105,11 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Group the Git state and functions of the config under `Config.git`:
+  `Config.git.diff_ref`, `Config.git.set_diff_ref()`, `Config.git.blame` and
+  `Config.git.toggle_blame()`. They used to sit next to the loading helpers in
+  the global context, where nothing told them apart from the rest of it.
+
 - Move 'mini.diff', 'mini.git' and the Git integration built on them out of
   'plugin/30_mini.lua' and into 'plugin/31_git.lua'. Reading the repository had
   grown to a third of the file for two modules out of thirty three, and to

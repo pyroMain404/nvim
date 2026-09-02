@@ -18,6 +18,13 @@
 -- screen draw. See 'plugin/30_mini.lua' for what the loading steps are.
 local later = Config.later
 
+-- The state and the functions of this file live together under `Config.git`,
+-- so that what belongs to the Git integration is told apart from the rest of
+-- the config at a glance, both while reading it here and while typing
+-- `:lua Config.git.` in the command line. It is created now because both
+-- `later()` blocks below fill it in, each with the part it configures.
+Config.git = {}
+
 -- Hunks ======================================================================
 
 -- Work with diff hunks that represent the difference between the buffer text and
@@ -76,16 +83,16 @@ later(function()
   end
 
   -- Revision used as 'mini.diff' reference text, `nil` for the Git index: in
-  -- `Config.diff_ref` for every buffer, in `vim.b.diff_ref` for a single one.
+  -- `Config.git.diff_ref` for every buffer, in `vim.b.diff_ref` for a single one.
   -- Change it through this function, as the source has to be attached anew:
-  -- - `:lua Config.set_diff_ref('v0.15.0')` - reference a tag everywhere
-  -- - `:lua Config.set_diff_ref(nil, 0)` - restore the index in current buffer
-  Config.diff_ref = nil
-  Config.set_diff_ref = function(rev, buf_id)
+  -- - `:lua Config.git.set_diff_ref('v0.15.0')` - reference a tag everywhere
+  -- - `:lua Config.git.set_diff_ref(nil, 0)` - restore the index in current buffer
+  Config.git.diff_ref = nil
+  Config.git.set_diff_ref = function(rev, buf_id)
     local source = rev ~= nil and diff_sources_at(rev) or nil
     local bufs = vim.api.nvim_list_bufs()
     if buf_id == nil then
-      Config.diff_ref, MiniDiff.config.source = rev, source
+      Config.git.diff_ref, MiniDiff.config.source = rev, source
     else
       buf_id = buf_id == 0 and vim.api.nvim_get_current_buf() or buf_id
       vim.b[buf_id].diff_ref = rev
@@ -101,7 +108,7 @@ later(function()
         MiniDiff.disable(id)
         MiniDiff.enable(id)
         local data = MiniDiff.get_buf_data(id)
-        local has_rev = (vim.b[id].diff_ref or Config.diff_ref) ~= nil
+        local has_rev = (vim.b[id].diff_ref or Config.git.diff_ref) ~= nil
         local show_overlay = has_rev and data ~= nil and not data.overlay
         if show_overlay then MiniDiff.toggle_overlay(id) end
       end
@@ -347,7 +354,7 @@ later(function()
 
     blame_clear(buf_id)
     blame_timer:stop()
-    if not Config.blame then return end
+    if not Config.git.blame then return end
     local show = function() blame_show(buf_id, lnum) end
     blame_timer:start(150, 0, vim.schedule_wrap(show))
   end
@@ -358,14 +365,16 @@ later(function()
   -- is asked for at some point while reading, not at every one of them, and
   -- until it is asked there is no reason to run `git` on every pause of the
   -- cursor. Example usage:
-  -- - `:lua Config.toggle_blame()` - what `<Leader>gb` does
-  Config.blame = false
-  Config.toggle_blame = function()
-    Config.blame = not Config.blame
-    if not Config.blame then vim.tbl_map(blame_clear, vim.api.nvim_list_bufs()) end
+  -- - `:lua Config.git.toggle_blame()` - what `<Leader>gb` does
+  Config.git.blame = false
+  Config.git.toggle_blame = function()
+    Config.git.blame = not Config.git.blame
+    if not Config.git.blame then
+      vim.tbl_map(blame_clear, vim.api.nvim_list_bufs())
+    end
     blame_last = {}
     blame_track()
-    vim.notify('Blame line: ' .. (Config.blame and 'on' or 'off'))
+    vim.notify('Blame line: ' .. (Config.git.blame and 'on' or 'off'))
   end
 
   -- Align output of `<Leader>gb` with the window it was called from and make

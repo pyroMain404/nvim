@@ -216,14 +216,14 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- - `[count]` references `HEAD~[count]`. Example: `3<Leader>gr`. Without it the
 --   revision is picked from the Git log (of the current file for `<Leader>gR`),
 --   which is the way to reference a commit by hash.
--- - What is referenced can be read in `Config.diff_ref` and `vim.b.diff_ref`,
+-- - What is referenced can be read in `Config.git.diff_ref` and `vim.b.diff_ref`,
 --   the source that actually attached in `vim.b.minidiff_summary.source_name`.
 -- - Hunks can not be applied (`gh`) while a revision is referenced: they would
 --   be staged against the index, which is not what is shown.
 --
--- The source providing that reference text and `Config.set_diff_ref()`, which
--- these two mappings drive, are in 'plugin/30_mini.lua' next to the 'mini.diff'
--- setup they configure.
+-- The source providing that reference text and `Config.git.set_diff_ref()`,
+-- which these two mappings drive, are in 'plugin/31_git.lua' next to the
+-- 'mini.diff' setup they configure.
 local git_log_cmd = [[Git log --pretty=format:\%h\ \%as\ │\ \%s --topo-order]]
 local git_log_buf_cmd = git_log_cmd .. ' --follow -- %:p'
 
@@ -231,21 +231,21 @@ local git_diff_head = function(postfix)
   return function() vim.cmd('Git diff HEAD~' .. vim.v.count1 .. (postfix or '')) end
 end
 
--- Call `Config.set_diff_ref()` with `HEAD~[count]`, or with a commit picked from
+-- Call `Config.git.set_diff_ref()` with `HEAD~[count]`, or with a commit picked from
 -- the log when there is no `[count]`. Restore the Git index instead when
 -- a revision is already referenced.
 -- NOTE: `choose` runs while the picker is still the current buffer, hence the
 -- buffer identifier resolved before starting it.
 local diff_ref_toggle = function(scope)
   return function()
-    local buf_id, cur_ref = nil, Config.diff_ref
+    local buf_id, cur_ref = nil, Config.git.diff_ref
     if scope == 'buf' then
       buf_id, cur_ref = vim.api.nvim_get_current_buf(), vim.b.diff_ref
     end
-    if cur_ref ~= nil then return Config.set_diff_ref(nil, buf_id) end
+    if cur_ref ~= nil then return Config.git.set_diff_ref(nil, buf_id) end
 
     local count = vim.v.count
-    if count > 0 then return Config.set_diff_ref('HEAD~' .. count, buf_id) end
+    if count > 0 then return Config.git.set_diff_ref('HEAD~' .. count, buf_id) end
 
     local path = nil
     if scope == 'buf' then
@@ -254,14 +254,14 @@ local diff_ref_toggle = function(scope)
         return vim.notify('Buffer is not a file on disk', vim.log.levels.WARN)
       end
     end
-    local choose = function(item) Config.set_diff_ref(item:match('^%S+'), buf_id) end
+    local choose = function(item) Config.git.set_diff_ref(item:match('^%S+'), buf_id) end
     MiniExtra.pickers.git_commits({ path = path }, { source = { choose = choose } })
   end
 end
 
 nmap_leader('ga', '<Cmd>Git diff --cached<CR>',             'Added diff')
 nmap_leader('gA', '<Cmd>Git diff --cached -- %:p<CR>',      'Added diff buffer')
-nmap_leader('gb', '<Cmd>lua Config.toggle_blame()<CR>',     'Blame line (toggle)')
+nmap_leader('gb', '<Cmd>lua Config.git.toggle_blame()<CR>', 'Blame line (toggle)')
 nmap_leader('gc', '<Cmd>Git commit<CR>',                    'Commit')
 nmap_leader('gC', '<Cmd>Git commit --amend<CR>',            'Commit amend')
 nmap_leader('gd', '<Cmd>Git diff<CR>',                      'Diff')
