@@ -105,6 +105,13 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Enable tree-sitter for `rust` and `toml`: structural highlighting, folds by
+  structure, and the textobjects of 'nvim-treesitter-textobjects' now work in
+  Rust buffers and in `Cargo.toml`, which in a Rust project is read as often as
+  the code. Building a parser needs the `tree-sitter` CLI, installed with
+  `mise use -g tree-sitter@latest`; without it 'nvim-treesitter' reports that it
+  cannot run `tree-sitter` and the parser stays missing.
+
 - Attach `rust-analyzer` to Rust buffers, configured in
   'after/lsp/rust_analyzer.lua'. It reports `clippy` lints while typing instead
   of only in CI, expands procedural macros so that the code inside
