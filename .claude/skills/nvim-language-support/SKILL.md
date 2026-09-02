@@ -6,13 +6,15 @@ description: Use when adding, extending, or fixing support for a programming lan
 # Supporto di un nuovo linguaggio
 
 Aggiungere il supporto per un linguaggio, una piattaforma o un formato. L'obiettivo
-è triplice:
+è quadruplice:
 
 1. **Decidere** quanto di ciò che Neovim sa già fare vale la pena attivare, e cosa
    invece va preso da un modulo MINI o da un plugin esterno.
 2. **Installare** le risorse necessarie in modo dichiarativo e ripetibile, non con
    comandi improvvisati che nessuno ricorda l'anno dopo (Fase 4).
 3. **Mettere ogni pezzo** nel file che gli compete.
+4. **Lasciare questa skill più precisa** di come l'hai trovata: ciò che la sessione
+   scopre sul linguaggio, o su Neovim, torna qui e non muore con la sessione (Fase 6).
 
 Se invece il linguaggio è **già configurato e qualcosa non funziona**, la procedura
 non è la strada: parti da ["Quando qualcosa non funziona"](#quando-qualcosa-non-funziona),
@@ -315,6 +317,54 @@ Le domande generali, da porre comunque:
   apposta finisce nel quickfix;
 - le mapping `<Leader>l` fanno quello che promettono su un simbolo vero;
 - `:checkhealth config` dice il vero sulla toolchain.
+
+## Fase 6 — Quello che hai imparato resta qui
+
+Viene dopo la verifica perché è lì che si impara metà delle cose. **Ogni volta che
+questa skill viene usata per un linguaggio o una piattaforma, la sessione produce
+conoscenza che la skill non aveva**: come si comporta davvero un default, cosa un
+comando risponde su questa macchina, quale scorciatoia rompe qualcosa in silenzio.
+Senza questa fase quella conoscenza muore con la sessione, e la volta dopo si rifà la
+stessa indagine e si commette lo stesso errore. Il lavoro è finito quando la skill è
+aggiornata, non quando la config funziona.
+
+**Cosa qualifica.** Il criterio è uno: *se l'avessi saputo all'inizio, avrei lavorato
+diversamente.* E deve essere **verificato** — un comando eseguito, un file letto, un
+comportamento osservato — non deducibile e non ricordato.
+
+**Dove va.** La scelta della sede conta più di quanto sembri:
+
+| Cosa hai imparato | Dove va |
+|---|---|
+| Vale per **questo** linguaggio: il suo runtime, il suo server, il suo ciclo di lavoro | `references/<lang>.md`, nella sezione che gli compete |
+| Vale per **ogni** linguaggio, anche se l'hai scoperto lavorando su uno | `SKILL.md`: una fase, o una regola trasversale |
+| È un asse, un'API o un limite di Neovim | `references/capabilities.md`, sotto il suo asse |
+| Uno scheletro insegnava qualcosa di sbagliato o incompleto | `assets/`, dove il difetto è stato letto |
+
+L'errore da evitare è archiviare in `references/<lang>.md` qualcosa che vale per
+tutti: resta invisibile al linguaggio successivo, che ripete l'errore. Quando una
+scoperta sembra specifica e non lo è — "il default del server definisce funzioni che
+il mio file cancella" nasce da Rust e vale per ogni server — la sede è `SKILL.md`, e
+la reference del linguaggio ci rimanda invece di ripetere.
+
+**Cosa non va scritto.** Questa skill è un indice, e un indice che registra tutto non
+indicizza niente:
+
+- il racconto della sessione: cosa è stato provato, in che ordine, cosa non ha
+  funzionato per strada;
+- ciò che il repository già dice — `AGENTS.md`, i commenti della config, la storia di
+  git — che va richiamato con un rimando, mai riassunto;
+- una regola dedotta e non osservata: scritta come fatto, è peggio del silenzio;
+- ciò che una reference già dice: si corregge quella riga, non se ne aggiunge una
+  seconda che col tempo diverge.
+
+**Un linguaggio nuovo si porta dietro il proprio file.** Se `references/<lang>.md` non
+esiste, crearlo è parte del lavoro e non un extra: è lì che finisce l'esito delle Fasi
+1 e 2, che nessun altro rifarà. La struttura da seguire è in
+["La forma di una reference di linguaggio"](#la-forma-di-una-reference-di-linguaggio).
+
+L'aggiornamento della skill è **un commit a sé**, separato da quelli della config:
+risolve un problema diverso, come chiede `AGENTS.md`.
 
 ## Quando qualcosa non funziona
 
