@@ -232,6 +232,7 @@ Solo se il server la supporta, dentro `on_attach` o su `LspAttach` (`:h lsp-atta
 | Rinomina accoppiata | `vim.lsp.linked_editing_range.enable()` | HTML e affini: rinominare un tag di apertura aggiorna la chiusura |
 | Formattazione durante la digitazione | `vim.lsp.on_type_formatting.enable()` | raro, spesso fastidioso |
 | Completamento inline | `vim.lsp.inline_completion.enable()` | **solo con un server che lo offre**, vedi sotto |
+| Code lens | `vim.lsp.codelens.enable()` | sempre: senza, Neovim non li chiede mai — vedi sotto |
 
 **`inline_completion` non ha niente a che vedere con 'mini.completion'.** Sono due
 cose diverse che il nome avvicina: 'mini.completion' mostra un **menù di candidati**
@@ -245,11 +246,16 @@ tradizionale la implementa, quindi per un linguaggio normale la voce non si pone
 l'unica di questa lista che non si limita a mostrare informazione. Un code lens è
 un'**azione che il server annuncia in un punto preciso del codice**: "esegui questo
 test", "esegui questo main", "mostra le implementazioni di questa interfaccia".
-Chiamarla richiede quindi due condizioni insieme — che il server produca lens, e che
-il cursore sia sulla riga a cui una lens è agganciata — e per questo la mapping
-esiste già ma resta silenziosa quasi ovunque: non è rotta, è che la maggior parte dei
-server non emette lens. Vale la pena ricordarsene per i server che le usano molto
-(quelli con test runner integrato), dove sostituiscono un giro nel terminale.
+Chiamarla richiede tre condizioni insieme, e la prima è quella che si dimentica:
+**Neovim non chiede i lens finché non glielo si dice** (`vim.lsp.codelens.enable()`,
+già chiamato una volta per tutti i server in 'plugin/40_plugins.lua'); poi che il
+server ne produca; e infine che il cursore sia sulla riga a cui uno è agganciato. Con
+la prima mancante la mapping resta silenziosa ovunque, il che si confonde facilmente
+con la terza. Attenzione a `vim.lsp.codelens.refresh()` dentro un autocomando, che
+quasi tutte le ricette mostrano ancora: è la forma precedente, deprecata in 0.12 e
+rimossa in 0.13, mentre `enable()` fa da sé la richiesta, il debounce e il ridisegno.
+Vale la pena ricordarsene per i server che li usano molto (quelli con test runner
+integrato), dove sostituiscono un giro nel terminale.
 
 ### Navigazione e altre funzioni
 

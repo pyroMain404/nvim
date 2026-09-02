@@ -174,12 +174,12 @@ progetto e quindi appartiene al suo `.nvim.lua`.
 
 ### Due limiti del livello ereditato, da conoscere prima di stupirsi
 
-**I lens sono accesi ma invisibili.** Neovim non aggiorna i code lens da solo: senza
-un autocomando che chiami `vim.lsp.codelens.refresh()` non compare niente sopra le
-funzioni, e `<Leader>ll` (`plugin/20_keymaps.lua`, "Lens") non trova nulla da
-eseguire. Non è un problema di Rust: è generico, e quindi la sede giusta **non** è
-`after/ftplugin/rust.lua`. È una proposta da fare una volta sola per la config
-condivisa, non una riga per linguaggio.
+**I lens erano accesi ma invisibili**, e la causa non era di Rust: Neovim non chiede
+i code lens a nessun server finché non glielo si dice. La riga che li accende è
+`vim.lsp.codelens.enable(true)` in `plugin/40_plugins.lua` — una sola, globale, valida
+per ogni server e per ogni buffer aperto dopo. **Non** un autocomando su
+`vim.lsp.codelens.refresh()`, che è la forma precedente: deprecata in 0.12 e rimossa
+in 0.13.
 
 **`runSingle` blocca Neovim.** L'implementazione di 'nvim-lspconfig' fa `proc:wait()`
 sul thread principale e poi rovescia l'output in un `vim.notify`: per un `cargo test`
