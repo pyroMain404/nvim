@@ -136,6 +136,17 @@ The comment style is part of the config, not decoration. Match the surrounding f
 - Explain *why*, not *what*. `-- Set 'foldlevel' to 10` is noise; `-- 'foldlevel' has to exceed the deepest fold so that zm closes one level per press` is documentation.
 - Use the notation conventions already stated in `init.lua`: `<Space>fh` for key sequences, 'path/to/file' for paths, `:h xxx` for help.
 
+### Keywords in comments
+
+Four words are highlighted, and only those four: `plugin/30_mini.lua` configures 'mini.hipatterns' with `FIXME`, `HACK`, `TODO` and `NOTE`. Anything else (`XXX`, `WARN`, `PERF`) is neither highlighted nor found by `:Pick hipatterns`, so as a marker it does not exist. Write the word in uppercase, at the start of the comment, followed by a colon.
+
+- **`HACK`** — code that exists only because something outside this repository is broken or missing. The test is what happens if upstream fixes it tomorrow: a HACK is **deleted**, not rewritten. Say what upstream does wrong, why the workaround sits where it does, and **the version in which the problem is still present** — that last part is what makes it retestable after the next `vim.pack.update()`, and without it a workaround becomes scar tissue nobody dares to remove.
+- **`FIXME`** — something in this config is broken right now and is not worked around: whoever reads it has to know not to trust that piece. The difference from HACK is where the fault is, not how bad it is — HACK is broken elsewhere and compensated here, FIXME is broken here and left as is. A FIXME that gets worked around becomes a HACK; a HACK that stops being needed is deleted, never downgraded to a FIXME.
+- **`TODO`** — work deferred on purpose, to be done here. It has to be startable: what, why not now, and the first step, so that whoever picks it up does not have to redo the analysis. Anything that does not reach that bar is a wish and does not belong in the code.
+- **`NOTE`** — no pending work. A constraint, a non-obvious behavior of an API, a known limit: what a reader needs in order not to be surprised, or not to break the code with an innocuous looking edit. Never to explain *what* the code does.
+
+Configuring a module, or composing several of them into a behavior none of them provides alone, is not a HACK however much glue it takes: that is the config doing its job. And plain documentation takes no keyword at all. The four words are an index, and an index that lists everything indexes nothing — the more so once the markers are collected into a list, which is the TODO standing in `plugin/30_mini.lua`.
+
 ## Reporting problems
 
 When config code detects something wrong — a missing executable, a buffer that is not a file, a command that failed — report it through one of these, and nothing else. The choice is between "the user needs to know now" and "the user will find out when they go looking".
