@@ -156,6 +156,12 @@ a un buffer di restare in uno stato ibrido dopo un `:setfiletype`.
 - **Attivare un linguaggio**: aggiungerlo alla tabella `languages` in
   `plugin/40_plugins.lua`. L'autocomando che chiama `vim.treesitter.start()` sui
   filetype corrispondenti è già lì e non va toccato.
+- **Perché l'installazione riesca serve la CLI `tree-sitter`**: 'nvim-treesitter'
+  scarica la grammatica e poi la **compila invocando quel programma**. Senza,
+  l'installazione fallisce con `ENOENT ... 'tree-sitter'` e il linguaggio resta
+  semplicemente non installato — il file si apre lo stesso, colorato dal vecchio
+  `syntax/`, che è il motivo per cui il guasto passa inosservato. La CLI è dichiarata
+  in `mise` e verificata da `:checkhealth config`.
 - **Già gratis?**
   `:=vim.tbl_contains(require('nvim-treesitter').get_available(), '<lang>')`,
   `:InspectTree` per l'albero, `:Inspect` per sapere quale capture e quale gruppo
