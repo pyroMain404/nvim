@@ -46,13 +46,34 @@ filetype viene effettivamente impostato.
 :=vim.tbl_contains(require('nvim-treesitter').get_available(), '<lang>')
 :InspectTree
 
-" LSP: 'nvim-lspconfig' ha già un default per il server?
-:=vim.lsp.config['<server>']
 :checkhealth vim.lsp vim.treesitter
 ```
 
+### Il secondo inventario: i plugin già installati
+
+Fermarsi a `$VIMRUNTIME` fa dare per scontato un livello che per questo linguaggio ha
+già lavorato. 'nvim-lspconfig', 'nvim-treesitter-textobjects' e 'friendly-snippets'
+spediscono **default per linguaggio**, e la varianza da un linguaggio all'altro è
+enorme: il file di 'nvim-lspconfig' per `lua_ls` è una decina di righe, quello per
+`rust_analyzer` ne ha duecento — ricerca della workspace root con `cargo metadata`,
+runnable, comandi utente.
+
+```vim
+" Cosa 'nvim-lspconfig' dà già per il server. LEGGILO, non limitarti a vedere che
+" esiste: le funzioni che contiene sono quelle che un override cancella.
+:=vim.lsp.config['<server>']
+
+" I textobject tree-sitter arrivano già da 'nvim-treesitter-textobjects'?
+:=vim.treesitter.query.get('<lang>', 'textobjects') ~= nil
+
+" Quali snippet arrivano da 'friendly-snippets' (un `<lang>.json`, o una directory)
+:=vim.fn.globpath(vim.o.rtp, 'snippets/<lang>*', false, true)
+```
+
 Da qui esce la lista di **cosa manca**. Riportala all'utente prima di implementare:
-spesso è la parte più sorprendente del lavoro.
+spesso è la parte più sorprendente del lavoro. E ciò che questi comandi mostrano non
+va riscritto né, peggio, sovrascritto per sbaglio: vedi
+["I livelli si sovrappongono"](#i-livelli-si-sovrappongono).
 
 ## Fase 2 — Il built-in basta, o serve altro?
 
@@ -61,6 +82,14 @@ non significa che sia la scelta migliore: parte di ciò che Neovim spedisce sono
 snapshot di plugin Vimscript nati prima di LSP e tree-sitter, manutenuti a ritmo
 lento dal Vim project. Funzionano, ma a volte l'ecosistema del linguaggio si è
 spostato altrove.
+
+**E la scelta non è binaria.** Fra il runtime e un plugin nuovo c'è un livello
+intermedio **già installato**, che per un linguaggio diffuso ha spesso già fatto il
+lavoro: 'nvim-lspconfig' per il server, 'nvim-treesitter' e i suoi textobject per
+l'albero, 'friendly-snippets' per gli snippet, 'conform.nvim' per la formattazione.
+Il secondo inventario della Fase 1 serve a questo — sapere cosa quel livello dà prima
+di chiedersi se ne serve un terzo. Un plugin nuovo che duplica quel livello è lo
+stesso errore di uno che duplica il core, solo meno visibile.
 
 Non è una scelta di gusto. Applica questi criteri, in quest'ordine:
 
