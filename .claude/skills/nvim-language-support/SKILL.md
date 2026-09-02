@@ -222,8 +222,13 @@ tool ne ha bisogno — una `DATABASE_URL`, una variabile che il server legge —
 lancia con `mise x` / `mise run`, oppure quella variabile va impostata altrove: per un
 progetto, il suo `.nvim.lua` (`:h 'exrc'`, già abilitato).
 
-Il rovescio positivo: gli shim stanno su `PATH` sempre, quindi funzionano anche per
-un Neovim avviato da un'icona o da un launcher, che è il caso normale qui.
+E il `PATH` non se lo mettono da soli: la directory degli shim
+(`%LOCALAPPDATA%\mise\shims`) va aggiunta una volta al `PATH` di sistema, perché
+`mise` su Windows non lo fa. Finché non è fatto, uno strumento installato con `mise`
+è **invisibile** a un Neovim avviato da un'icona o da un launcher — che è il caso
+normale qui — e il sintomo è quello di un programma non installato. Fatta quella
+volta, gli shim valgono per qualunque modo di avviarlo, ed è il loro vantaggio;
+`:checkhealth config` è ciò che dice se è stata fatta.
 
 ### Registrare la dipendenza
 
