@@ -121,7 +121,9 @@ local function check_rust()
 
   -- The parser has to be installed, not merely available. This is the same
   -- check 'plugin/40_plugins.lua' uses to decide what to install.
-  for _, lang in ipairs({ 'rust', 'toml' }) do
+  -- `sql` is here because 'after/queries/rust/injections.scm' parses the SQL
+  -- inside the `sqlx` macros with it, and stays inert while it is missing
+  for _, lang in ipairs({ 'rust', 'toml', 'sql' }) do
     if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
       health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
         "Restart Neovim once with '" .. lang .. "' in `languages`, and wait",

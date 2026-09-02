@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Highlight as SQL the query inside the `sqlx` macros, which the crate checks
+  against the database while compiling and the editor showed as a grey string.
+  It covers `query!`, `query_as!` and their file and unchecked variants,
+  written either as `sqlx::query!` or bare, and it needs the `sql` parser,
+  which is now installed for this alone.
+
 - Format Rust with `rustfmt` on `<Leader>lf` instead of through the language
   server: same program, same version and same 'rustfmt.toml' as the command
   line and CI. It is the first entry of `formatters_by_ft`, which was empty.

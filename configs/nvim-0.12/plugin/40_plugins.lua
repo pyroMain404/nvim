@@ -63,6 +63,9 @@ now_if_args(function()
     'rust',
     -- Manifest of a Rust project, read as often as the code itself
     'toml',
+    -- Only used through the injection in 'after/queries/rust/injections.scm',
+    -- which parses the SQL inside the `sqlx` macros
+    'sql',
   }
   local isnt_installed = function(lang)
     return #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0
