@@ -725,6 +725,99 @@ later(function()
   local ft_patch = { 'git', 'diff' }
   Config.new_autocmd('FileType', ft_patch, setup_patch_buf, 'Navigable Git output')
 
+  -- Who last changed the line under the cursor, written at the end of the line
+  -- itself instead of in a window: this is the reading wanted while writing
+  -- code, and a window for one line costs the code half of the screen.
+  -- `<Leader>gb` toggles it, `:vertical Git blame -- %:p` still blames the
+  -- whole file. What is shown, in the layout `<Leader>gl` uses:
+  -- `Gaetano Esposito │ 2026-09-02 │ fix(mini): patch fails below the root`
+  --
+  -- NOTE: `git blame` reads the file from disk, so nothing is shown while the
+  -- buffer is modified: past the first unsaved edit the line numbers are no
+  -- longer the ones on disk and lines would be credited to the wrong commit.
+  local blame_ns = vim.api.nvim_create_namespace('custom-config-blame')
+  local blame_timer = vim.uv.new_timer()
+  local blame_last = {}
+
+  local blame_clear = function(buf_id)
+    if not vim.api.nvim_buf_is_valid(buf_id) then return end
+    vim.api.nvim_buf_clear_namespace(buf_id, blame_ns, 0, -1)
+  end
+
+  local blame_show = function(buf_id, lnum)
+    local root = (MiniGit.get_buf_data(buf_id) or {}).root
+    if root == nil or vim.bo[buf_id].modified then return end
+
+    local range = lnum .. ',' .. lnum
+    local path = vim.api.nvim_buf_get_name(buf_id)
+    local cmd = { 'git', 'blame', '--porcelain', '-L', range, '--', path }
+    local on_done = function(out)
+      -- An answer for a line the cursor has left is of no interest anymore
+      local is_current = blame_last.buf_id == buf_id and blame_last.lnum == lnum
+      if out.code ~= 0 or not is_current then return end
+
+      -- A line not committed yet is reported with a hash of only zeros
+      local text = 'Not committed yet'
+      if out.stdout:find('^0+ ') == nil then
+        local author = out.stdout:match('\nauthor ([^\n]*)') or '?'
+        local summary = out.stdout:match('\nsummary ([^\n]*)') or '?'
+        local time = tonumber(out.stdout:match('\nauthor%-time (%d+)'))
+        local date = time ~= nil and os.date('%Y-%m-%d', time) or '?'
+        text = author .. ' │ ' .. date .. ' │ ' .. summary
+      end
+      -- NOTE: `hl_mode` defaults to "replace", which would keep the annotation
+      -- on the background of 'Normal' while the line it belongs to is
+      -- highlighted by `:h 'cursorline'`, making it look cut out of the line.
+      -- "combine" keeps the foreground of 'Comment' over whichever background
+      -- the line has.
+      -- The leading space is one column more than `virt_text_pos` leaves, so
+      -- that the annotation does not read as part of the line it follows.
+      -- `virt_text_win_col` would pin it to a fixed window column instead,
+      -- landing inside the code on every line longer than that column.
+      local opts = {
+        virt_text = { { ' ' .. text, 'Comment' } },
+        virt_text_pos = 'eol',
+        hl_mode = 'combine',
+      }
+      pcall(vim.api.nvim_buf_set_extmark, buf_id, blame_ns, lnum - 1, 0, opts)
+    end
+    vim.system(cmd, { cwd = root, text = true }, vim.schedule_wrap(on_done))
+  end
+
+  -- Blame a line only once the cursor rests on it, as holding `j` would
+  -- otherwise start a `git` process for every line passed through
+  local blame_track = function()
+    local buf_id, lnum = vim.api.nvim_get_current_buf(), vim.fn.line('.')
+    local tick = vim.b[buf_id].changedtick
+    local is_same = blame_last.buf_id == buf_id and blame_last.lnum == lnum
+    if is_same and blame_last.tick == tick then return end
+    -- Left as it is, the annotation of the previous buffer stays readable in
+    -- whatever split still shows it, as if the cursor had never left
+    if blame_last.buf_id ~= nil then blame_clear(blame_last.buf_id) end
+    blame_last = { buf_id = buf_id, lnum = lnum, tick = tick }
+
+    blame_clear(buf_id)
+    blame_timer:stop()
+    if not Config.blame then return end
+    local show = function() blame_show(buf_id, lnum) end
+    blame_timer:start(150, 0, vim.schedule_wrap(show))
+  end
+  local blame_events = { 'CursorMoved', 'CursorMovedI', 'BufEnter' }
+  Config.new_autocmd(blame_events, nil, blame_track, 'Blame current line')
+
+  -- Whether that annotation is shown at all. Example usage:
+  -- - `:lua Config.toggle_blame()` - what `<Leader>gb` does
+  Config.blame = true
+  Config.toggle_blame = function()
+    Config.blame = not Config.blame
+    if not Config.blame then
+      vim.tbl_map(blame_clear, vim.api.nvim_list_bufs())
+    end
+    blame_last = {}
+    blame_track()
+    vim.notify('Blame line: ' .. (Config.blame and 'on' or 'off'))
+  end
+
   -- Align output of `<Leader>gb` with the window it was called from and make
   -- both windows scroll together. See `:h MiniGit-examples`.
   local align_blame = function(au_data)

@@ -179,13 +179,17 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- - `<Leader>go` - toggle 'mini.diff' overlay to show in-buffer unstaged changes
 -- - `<Leader>gd` - show unstaged changes as a patch in separate tabpage
 -- - `<Leader>gL` - show Git log of current file
--- - `<Leader>gb` - show who last changed every line of current file
+-- - `<Leader>gb` - toggle who last changed the line under the cursor
 --
 -- This group reads the repository, it does not manage it: changing what Git
 -- stores (staging, branching, stashing, rebasing) is done in 'lazygit'
 -- (`<Leader>tl`), which is a Git client already. Committing stays here because
 -- writing a message is editing text. Everything else answers "what changed,
 -- when, and by whom", so that the code can be read through its history.
+--
+-- Who last changed the line under the cursor is written at the end of that
+-- line, and `<Leader>gb` turns it off. Blaming the whole file at once is still
+-- `:vertical Git blame -- %:p`, aligned with the window it was called from.
 --
 -- Inside the output of these commands `gf` works on the patch paths, `<CR>`
 -- shows more data about the entry at cursor, `zm` / `zr` adjust folds, and
@@ -257,7 +261,7 @@ end
 
 nmap_leader('ga', '<Cmd>Git diff --cached<CR>',             'Added diff')
 nmap_leader('gA', '<Cmd>Git diff --cached -- %:p<CR>',      'Added diff buffer')
-nmap_leader('gb', '<Cmd>vertical Git blame -- %:p<CR>',     'Blame buffer')
+nmap_leader('gb', '<Cmd>lua Config.toggle_blame()<CR>',     'Blame line (toggle)')
 nmap_leader('gc', '<Cmd>Git commit<CR>',                    'Commit')
 nmap_leader('gC', '<Cmd>Git commit --amend<CR>',            'Commit amend')
 nmap_leader('gd', '<Cmd>Git diff<CR>',                      'Diff')
