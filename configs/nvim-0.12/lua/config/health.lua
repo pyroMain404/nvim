@@ -52,17 +52,27 @@ end
 local function check_external_tools()
   health.start('config: external tools')
 
-  report('git', "'mini.git' and 'mini.diff' show no data", 'Install Git')
+  -- These three are ordinary system utilities: what breaks without them is a
+  -- convenience, not this config, so they come from the system package manager
+  report(
+    'git',
+    "'mini.git' and 'mini.diff' show no data",
+    'Install it with `winget install Git.Git`'
+  )
   report(
     'rg',
     '`<Leader>ff` and `<Leader>fg` get slower',
-    'Install it with `mise use -g ripgrep@latest`'
+    'Install it with `winget install BurntSushi.ripgrep.GNU`'
   )
   report(
     'lazygit',
     '`<Leader>tl` warns and does nothing',
-    'Install it with `mise use -g lazygit@latest`'
+    'Install it with `winget install JesseDuffield.lazygit`'
   )
+  -- The next two are the opposite case: without them a change to this config
+  -- can not be finished or a language can not be added, so they are declared in
+  -- `mise` and the advice says so.
+  --
   -- Not reported by any runtime healthcheck, yet `AGENTS.md` requires
   -- `stylua --check .` to pass before a change is finished
   report(
