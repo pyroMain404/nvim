@@ -105,6 +105,10 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-02
 
+- Format Rust with `rustfmt` on `<Leader>lf` instead of through the language
+  server: same program, same version and same 'rustfmt.toml' as the command
+  line and CI. It is the first entry of `formatters_by_ft`, which was empty.
+
 - Stop 'mini.pairs' from closing a single quote in Rust buffers, where `'`
   opens a lifetime rather than a string: typing `&'` used to give `&''` and the
   extra quote had to be removed in every `&'a str` and `<'a, T>`. Double quotes

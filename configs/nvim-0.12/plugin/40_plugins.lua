@@ -135,7 +135,13 @@ later(function()
     },
     -- Map of filetype to formatters
     -- Make sure that necessary CLI tool is available
-    -- formatters_by_ft = { lua = { 'stylua' } },
+    formatters_by_ft = {
+      -- The official formatter of the language, so that `<Leader>lf`, the
+      -- command line and CI agree. The server would format too, but through
+      -- its own copy: `rustfmt` is the one that reads the project's
+      -- 'rustfmt.toml' and comes with the active toolchain.
+      rust = { 'rustfmt' },
+    },
   })
 end)
 
