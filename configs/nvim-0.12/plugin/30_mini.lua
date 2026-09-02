@@ -618,6 +618,20 @@ later(function()
     if not ok then error(err, 0) end
   end
 
+  -- The output of Git is read next to the code, so its column is given a fixed
+  -- width and everything left goes to the file. It is the width the config
+  -- files themselves are written to, which a commit subject and a patch are
+  -- meant to fit in. Never take more than half of the screen: a fixed width is
+  -- a bad deal on a narrow terminal.
+  -- NOTE: `textoff` is what the line numbers and the signs take, so that the
+  -- text gets the full width and not the window.
+  local git_column_width = 85
+  local fit_git_column = function(win_id)
+    if not vim.api.nvim_win_is_valid(win_id) then return end
+    local width = math.min(git_column_width, math.floor(0.5 * vim.o.columns))
+    vim.api.nvim_win_set_width(win_id, width + vim.fn.getwininfo(win_id)[1].textoff)
+  end
+
   -- `<CR>` shows either a commit or a file, and the two are read differently:
   -- a commit is detail of the log it was opened from, so it goes full width
   -- below it, while a file is the thing being read, so it gets a full height
@@ -649,6 +663,7 @@ later(function()
     end
     if vim.api.nvim_get_current_win() == win_init then return end
     vim.cmd(is_commit and 'wincmd J' or 'wincmd L')
+    if not is_commit then fit_git_column(win_init) end
 
     -- Only the working tree state is shown as `edit`. A state at some commit
     -- (`show <commit>:<path>`) has no file on disk, so it is left as it is.
@@ -674,7 +689,9 @@ later(function()
   local show_diff_source = function()
     local win_init = vim.api.nvim_get_current_win()
     at_repo_root(MiniGit.show_diff_source, { split = 'vertical' })
-    if vim.api.nvim_get_current_win() ~= win_init then vim.cmd('wincmd L') end
+    if vim.api.nvim_get_current_win() == win_init then return end
+    vim.cmd('wincmd L')
+    fit_git_column(win_init)
   end
 
   local setup_patch_buf = function()

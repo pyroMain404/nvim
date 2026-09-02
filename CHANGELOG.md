@@ -109,7 +109,9 @@ a merge from 'minimax' conflict-free.
   width below the log it was read from, while a file goes into a full height
   column at the far right, pushing the files opened before it to the left. Both
   used to open as a vertical split of the window they were read from, which left
-  the log squeezed between them.
+  the log squeezed between them. The column holding the Git output is 85 columns
+  wide, the width the config files themselves are written to, so that what is
+  left of the screen goes to the file instead of to half a screen of blanks.
 
 - Run `<CR>` and `gF` of a Git patch from the root of the repository, as the
   paths written in a patch are relative to it while 'mini.git' resolves them
