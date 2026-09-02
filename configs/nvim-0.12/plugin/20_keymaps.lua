@@ -187,8 +187,8 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- writing a message is editing text. Everything else answers "what changed,
 -- when, and by whom", so that the code can be read through its history.
 --
--- Who last changed the line under the cursor is written at the end of that
--- line, and `<Leader>gb` turns it off. Blaming the whole file at once is still
+-- `<Leader>gb` writes who last changed the line under the cursor at the end of
+-- that line, off until asked for. Blaming the whole file at once is still
 -- `:vertical Git blame -- %:p`, aligned with the window it was called from.
 --
 -- Inside the output of these commands `gf` works on the patch paths, `<CR>`

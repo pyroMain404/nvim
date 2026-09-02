@@ -114,8 +114,8 @@ a merge from 'minimax' conflict-free.
 - Write who last changed the current line at the end of that line, instead of
   reading it in the window of `:Git blame`: the annotation follows the cursor
   and disappears while the buffer has unsaved changes, as `git blame` counts the
-  lines as they are on disk. `<Leader>gb` toggles it, and blaming the whole file
-  at once stays `:vertical Git blame -- %:p`.
+  lines as they are on disk. It starts off and `<Leader>gb` turns it on and off,
+  while blaming the whole file at once stays `:vertical Git blame -- %:p`.
 
 - Place what `<CR>` opens inside a Git patch by what it is: a commit goes full
   width below the log it was read from, while a file goes into a full height

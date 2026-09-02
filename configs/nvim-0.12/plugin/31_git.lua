@@ -120,7 +120,7 @@ end)
 -- - `<Leader>gs` - show information at cursor
 -- - `<Leader>gd` - show unstaged changes as a patch in separate tabpage
 -- - `<Leader>gL` - show Git log of current file
--- - `<Leader>gb` - show who last changed every line of current file
+-- - `<Leader>gb` - toggle who last changed the line under the cursor
 -- - `:Git help git` - show output of `git help git` inside Neovim
 --
 -- Output of `:Git` is shown in a scratch buffer with "git" or "diff" filetype.
@@ -277,8 +277,8 @@ later(function()
   -- Who last changed the line under the cursor, written at the end of the line
   -- itself instead of in a window: this is the reading wanted while writing
   -- code, and a window for one line costs the code half of the screen.
-  -- `<Leader>gb` toggles it, `:vertical Git blame -- %:p` still blames the
-  -- whole file. What is shown, in the layout `<Leader>gl` uses:
+  -- `<Leader>gb` turns it on and off, `:vertical Git blame -- %:p` still
+  -- blames the whole file. What is shown, in the layout `<Leader>gl` uses:
   -- `Gaetano Esposito │ 2026-09-02 │ fix(mini): patch fails below the root`
   --
   -- NOTE: `git blame` reads the file from disk, so nothing is shown while the
@@ -354,9 +354,12 @@ later(function()
   local blame_events = { 'CursorMoved', 'CursorMovedI', 'BufEnter' }
   Config.new_autocmd(blame_events, nil, blame_track, 'Blame current line')
 
-  -- Whether that annotation is shown at all. Example usage:
+  -- Whether that annotation is shown at all. It starts off: who wrote a line
+  -- is asked for at some point while reading, not at every one of them, and
+  -- until it is asked there is no reason to run `git` on every pause of the
+  -- cursor. Example usage:
   -- - `:lua Config.toggle_blame()` - what `<Leader>gb` does
-  Config.blame = true
+  Config.blame = false
   Config.toggle_blame = function()
     Config.blame = not Config.blame
     if not Config.blame then vim.tbl_map(blame_clear, vim.api.nvim_list_bufs()) end
