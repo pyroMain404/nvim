@@ -257,6 +257,15 @@ rimossa in 0.13, mentre `enable()` fa da sé la richiesta, il debounce e il ridi
 Vale la pena ricordarsene per i server che li usano molto (quelli con test runner
 integrato), dove sostituiscono un giro nel terminale.
 
+C'è poi una quarta condizione, che si manifesta solo dopo aver premuto: **un lens
+può risolversi in un comando che tocca al client eseguire**, non al server. Quando
+il messaggio è *"Language server `X` does not support command `Y`"*, quel `Y` va
+registrato in `vim.lsp.commands` — un registro globale, quindi la sede è
+`plugin/40_plugins.lua` e non `after/lsp/`, dove una funzione cancellerebbe quelle
+ereditate. Succede quando la config di 'nvim-lspconfig' dichiara al server, nelle
+`capabilities`, dei comandi che poi non registra: per `rust_analyzer` è il caso di
+`showReferences` e `debugSingle`.
+
 ### Navigazione e altre funzioni
 
 `vim.lsp.buf` offre più di quanto la config mappi: oltre a `definition()`,
