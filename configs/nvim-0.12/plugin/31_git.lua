@@ -204,6 +204,23 @@ later(function()
     return cword:find('^%x%x%x%x%x%x%x+$') ~= nil and cword == cword:lower()
   end
 
+  -- Move the window the entry was opened in and give the two their widths,
+  -- keeping the line 'mini.git' put the cursor on.
+  -- NOTE: the window is moved before it has ever been drawn, so its view still
+  -- starts at the first line while the cursor sits wherever it was set. Neovim
+  -- resolves the two by pulling the cursor into what the height can show, which
+  -- leaves every line past the height of the window on its last line - the
+  -- entry looks aligned for the first file of a patch and drifts for the ones
+  -- after it. Setting the position again after the move is what fixes it, and
+  -- `zz` is what makes the window show it from the middle.
+  local place_win = function(win_init, direction)
+    local pos = vim.api.nvim_win_get_cursor(0)
+    vim.cmd('wincmd ' .. direction)
+    if direction == 'L' then fit_git_column(win_init) end
+    pcall(vim.api.nvim_win_set_cursor, 0, pos)
+    vim.cmd('normal! zz')
+  end
+
   -- `MiniGit.show_diff_source()` always shows a scratch buffer with a copy of
   -- the file, also for the "after" state of a patch against the working tree.
   -- Reuse it to resolve path and line number of the entry at cursor, but then
@@ -218,8 +235,7 @@ later(function()
       at_repo_root(MiniGit.show_at_cursor, { split = split })
     end
     if vim.api.nvim_get_current_win() == win_init then return end
-    vim.cmd(is_commit and 'wincmd J' or 'wincmd L')
-    if not is_commit then fit_git_column(win_init) end
+    place_win(win_init, is_commit and 'J' or 'L')
 
     -- Only the working tree state is shown as `edit`. A state at some commit
     -- (`show <commit>:<path>`) has no file on disk, so it is left as it is.
@@ -246,8 +262,7 @@ later(function()
     local win_init = vim.api.nvim_get_current_win()
     at_repo_root(MiniGit.show_diff_source, { split = 'vertical' })
     if vim.api.nvim_get_current_win() == win_init then return end
-    vim.cmd('wincmd L')
-    fit_git_column(win_init)
+    place_win(win_init, 'L')
   end
 
   local setup_patch_buf = function()

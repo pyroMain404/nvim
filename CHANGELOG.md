@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-03
 
+- Put the cursor on the line asked for when a patch entry is opened with
+  `<CR>` or `gF`. The window is moved and resized before it is ever drawn, so
+  Neovim pulled the cursor back into the lines its height could show: the
+  first file of a patch looked right and every file after it landed on the
+  last visible line.
+
 - Open the references a Rust code lens counts. 'nvim-lspconfig' tells
   rust-analyzer that the client implements `rust-analyzer.showReferences` and
   then registers only `runSingle`, so running an "N implementations" or
