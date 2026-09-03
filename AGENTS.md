@@ -97,7 +97,7 @@ Language servers, formatters, linters and language runtimes are installed with [
 
 ## Code style
 
-- **Formatting follows `.stylua.toml`.** [StyLua](https://github.com/JohnnyMorganz/StyLua) is installed, so formatting is checked with `stylua --check <path>` and applied with `stylua <path>` — not by eye. Run it from inside the repository, since StyLua looks for `.stylua.toml` walking up from the file it is formatting; a file checked from elsewhere is silently formatted with StyLua's own defaults (tabs, double quotes) and the diff is meaningless.
+- **Formatting follows `.stylua.toml`.** [StyLua](https://github.com/JohnnyMorganz/StyLua) is installed, so formatting is applied with `stylua <path>` — not by eye. How to run the check so that its output means anything belongs to verification, and is therefore in the `nvim-config-testing` skill.
 
   Two settings exist so that a whole-config run is quiet and its output means something. `line_endings = "Windows"` matches the CRLF that `core.autocrlf` puts in the working tree — with the upstream `"Unix"` value StyLua rewrote every line of every file and the report was pure noise. `.styluaignore` excludes the generated color scheme, which is output and must not be reformatted.
 
@@ -240,7 +240,7 @@ Adapted from `MAINTAINING.md#typical-workflow-for-adding-change`, minus everythi
 1. Solve the problem, in `configs/nvim-0.12`. Keep the change as local as the problem is.
 2. Make sure it still reads well: comments updated, `:h` references still correct, file structure and separators intact, formatting per `.stylua.toml`.
 3. If the change is worth being seen later (a notable or breaking feature or fix), add an entry to `CHANGELOG.md` — in the **"Fork changes" section at the bottom of the file**, never at the top. See below.
-4. Verify (see next section). Do it once, at the end.
+4. Verify, following the `nvim-config-testing` skill. Do it once, at the end.
 5. Commit on `minimax-config`, following the message rules above, and push to `origin`.
 6. Never force-push, and never push to the `minimax` remote — it is upstream, read only. A change worth sending upstream is a separate matter: MiniMax's pull request template rejects changes based on personal taste (enabling a new option, installing a new plugin), which is exactly what belongs in this fork, so keep the two apart.
 
@@ -257,21 +257,9 @@ Follow the formatting of the entries already in the section: a `## YYYY-MM-DD` h
 
 ## Verifying a change
 
-There is no test suite in this repository. Verification is manual and deliberate.
+There is no test suite in this repository. Verification is manual, deliberate, and described in **one place only**: the `nvim-config-testing` skill (`.claude/skills/nvim-config-testing/`). It holds the rules (what is worth checking, when to check it, what to hand back to the user instead of simulating it), the known traps of headless checks on this config, the antipatterns already paid for, and a parameterised probe for every common operation.
 
-- **Do not run headless checks while working.** Concentrate every check into a single pass at the end of the task.
-- **Prefer giving the exact steps to run by hand** over reproducing an interactive behavior headlessly. UI, LSP and deferred plugins do not reproduce faithfully outside a real session.
-- The final pass covers both a clean startup and targeted checks for the files actually touched, including modules loaded through `later()` (force the load) and `:checkhealth` for the modules that changed.
-
-Known traps of headless checks on this config — account for them both when writing the command and when reading its output:
-
-| Trap | Remedy |
-|---|---|
-| `nvim --headless -l script.lua` **does not load `init.lua`**: no plugins, no autocommands, so waiting on any event times out | do not use `-l` to check the config; open the file as an argument and inject code with `-c "luafile ..."` |
-| Code inside `Config.later()` runs on a timer after startup, so an immediate `+qa` quits before it ever ran | force the load (`require()` the module, or assert inside `vim.defer_fn`) before quitting |
-| Exit code is 0 even when a `setup()` throws | grep stderr for `Failed to run` and Lua stack traces; in Lua checks exit with `vim.cmd('cquit! 1')` |
-| Asynchronous `TSUpdate` output lies ("up-to-date" with no parser installed) | use the synchronous variant and check for `.so`/`.dll` in `stdpath('data')/site/parser/` |
-| Deep test paths exceed MAX_PATH on Windows | false failures (failed git checkouts, ENOENT on luac cache); test under a short path |
+Nothing about *how* to verify is written here, or in any other document of this repository: a rule kept in two places diverges at the first update, and from then on neither copy can be trusted. Read the skill before the final pass, and record there whatever that pass taught you.
 
 ## Supported Neovim versions
 
@@ -299,6 +287,6 @@ This config targets the Neovim installed on this machine (currently 0.12), which
 - [ ] Problems are reported through `vim.notify` / `vim.notify_once` / a health check — never `error()`.
 - [ ] No generated file edited by hand.
 - [ ] `CHANGELOG.md` updated if the change is worth being seen later, in the "Fork changes" section at the bottom.
-- [ ] Verification done in one pass, with the traps above accounted for.
+- [ ] Verification done in one pass, as the `nvim-config-testing` skill prescribes.
 - [ ] One topic per commit; message has an allowed type, the Problem/Solution body, and `Signed-off-by`.
 - [ ] Committed on `minimax-config` and pushed to `origin`, never to `minimax`.

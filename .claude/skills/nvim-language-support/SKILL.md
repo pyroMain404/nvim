@@ -309,25 +309,24 @@ Gli altri scheletri in `assets/` coprono i file che ricorrono ogni volta —
 
 ## Verifica
 
-Vale la regola di `AGENTS.md`: una sola passata alla fine, e i passi interattivi si
-consegnano all'utente invece di simularli.
+Come si verifica — il criterio, le trappole, le sonde parametrizzate e la
+consegna dei passi manuali all'utente — sta tutto nella skill
+`nvim-config-testing`, e solo lì. Qui resta cosa un linguaggio deve coprire, che
+è un'altra domanda.
 
-Prima della lista, il criterio che la genera: **un controllo che passerebbe anche non
-avendo fatto niente non è un controllo.** "Il server si attacca" è vero anche senza il
-file in `after/lsp/`; "l'highlight funziona" è vero anche con il vecchio `syntax/`. Un
-controllo utile *può fallire*, e il suo fallimento accusa **un livello preciso**. I
-punti specifici del linguaggio si scrivono così nella sua reference — `rust.md` §8 è
-l'esempio: un solo client attaccato, un comando che esiste solo se il default di
-'nvim-lspconfig' è sopravvissuto, un lint che solo clippy emette.
+Gli assi da interrogare per un linguaggio, con la sonda che risponde:
 
-Le domande generali, da porre comunque:
+| Asse | Sonda |
+|---|---|
+| il filetype viene riconosciuto, e le opzioni del ftplugin sono quelle attese | `buffer_state`, `option_origin` |
+| il parser è installato e l'albero è quello atteso | `treesitter` |
+| il server si attacca, uno solo, con la configurazione voluta | `lsp` |
+| `makeprg` ed `errorformat` vengono dal file giusto, e un errore finisce nel quickfix | `quickfix`, `option_origin` |
+| le mapping `<Leader>l` fanno quello che promettono su un simbolo vero | `keymap` |
+| `:checkhealth config` dice il vero sulla toolchain | `health` |
 
-- il parser è installato e l'albero è quello atteso (`:InspectTree`);
-- il server si attacca senza errori (`:checkhealth vim.lsp`);
-- `makeprg` ed `errorformat` vengono dal file che ti aspetti, e un errore introdotto
-  apposta finisce nel quickfix;
-- le mapping `<Leader>l` fanno quello che promettono su un simbolo vero;
-- `:checkhealth config` dice il vero sulla toolchain.
+I controlli che valgono **solo** per quel linguaggio si scrivono nella sua
+reference, non qui: `rust.md` §8 è l'esempio da imitare.
 
 ## Fase 6 — Quello che hai imparato resta qui
 

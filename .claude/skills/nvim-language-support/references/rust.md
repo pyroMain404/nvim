@@ -284,7 +284,8 @@ disponibile.
 
 ## 8. Verifica
 
-Oltre ai punti generali di `SKILL.md`, quelli che valgono solo qui:
+Oltre a quanto prescrive la skill `nvim-config-testing`, i controlli che valgono
+solo qui:
 
 - `:verbose setlocal makeprg?` deve nominare `$VIMRUNTIME/compiler/cargo.vim`, non un
   file della config: se nomina la config, qualcosa è stato riscritto inutilmente;
