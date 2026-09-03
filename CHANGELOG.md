@@ -105,6 +105,11 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-03
 
+- Open a file from a patch (`<CR>` or `gF`) below the file opened before it,
+  instead of giving each of them a column of its own at the far right. Only
+  the first one takes that column; the ones after it share it, one under the
+  other, so that no file ends up too narrow for the code it shows.
+
 - Read a file opened at some commit (`<CR>` or `gF` inside a patch) as the
   change that commit made to it: the state right before it becomes the
   'mini.diff' reference of that buffer alone, so `[h` / `]h`, `gh` and the

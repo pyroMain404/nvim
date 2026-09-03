@@ -183,8 +183,10 @@ end)
 --   evolution of the line otherwise. Unlike `gF`, it opens the file itself when
 --   the patch is against the working tree (like in `<Leader>gd`/`<Leader>gh`).
 -- - `q` closes the output window.
--- Both `gF` and `<CR>` open in a vertical split, next to the patch they start
--- from, instead of in a new tabpage. A file opened at some commit references
+-- Both `gF` and `<CR>` open next to the patch they start from, instead of in
+-- a new tabpage: the first file takes a column of its own, every file after it
+-- is opened below the previous one (`:h :belowright`), so that they are all read
+-- in that same column. A file opened at some commit references
 -- the commit before it, so that `[h` / `]h`, `gh` and the overlay read what
 -- that commit did to it - the buffer scoped `<Leader>gR`, applied for free.
 --
@@ -231,8 +233,8 @@ later(function()
 
   -- `<CR>` shows either a commit or a file, and the two are read differently:
   -- a commit is detail of the log it was opened from, so it goes full width
-  -- below it, while a file is the thing being read, so it gets a full height
-  -- column at the far right, pushing the files opened before it to the left.
+  -- below it, while a file is the thing being read, so it gets the column at
+  -- the far right, shared with the files opened before it (`place_win()` below).
   -- Ask for the matching direction and not for the "auto" default of
   -- 'mini.git', which switches to a new tabpage as soon as a window of the
   -- current one holds a normal buffer, the case as soon as the first file has
@@ -262,6 +264,19 @@ later(function()
     Config.git.set_diff_ref(commit .. '~', buf_id)
   end
 
+  -- Only the first file opened from a patch takes a full height column of its
+  -- own at the far right (`wincmd L`). Every file after it is opened below the
+  -- one opened before it (`:h :belowright`) instead of taking yet another
+  -- column: they are all read in the same place, one under the other, and
+  -- a third column would leave none of them wide enough for code. Closing that
+  -- column starts a new one, as the next file has then nothing to open below.
+  local win_file = nil
+  local win_file_is_usable = function()
+    return win_file ~= nil
+      and vim.api.nvim_win_is_valid(win_file)
+      and vim.api.nvim_win_get_tabpage(win_file) == vim.api.nvim_win_get_tabpage(0)
+  end
+
   -- Move the window the entry was opened in and give the two their widths,
   -- keeping the line 'mini.git' put the cursor on.
   -- NOTE: the window is moved before it has ever been drawn, so its view still
@@ -273,8 +288,22 @@ later(function()
   -- `zz` is what makes the window show it from the middle.
   local place_win = function(win_init, direction)
     local pos = vim.api.nvim_win_get_cursor(0)
-    vim.cmd('wincmd ' .. direction)
-    if direction == 'L' then fit_git_column(win_init) end
+    if direction ~= 'L' then
+      vim.cmd('wincmd ' .. direction)
+    else
+      local win_id = vim.api.nvim_get_current_win()
+      if win_file_is_usable() then
+        local below = { vertical = false, rightbelow = true }
+        vim.fn.win_splitmove(win_id, win_file, below)
+      else
+        vim.cmd('wincmd L')
+      end
+      -- NOTE: `win_splitmove()` moves the window without following it, so the
+      -- one the entry was opened in has to be made current again by hand.
+      vim.api.nvim_set_current_win(win_id)
+      win_file = win_id
+      fit_git_column(win_init)
+    end
     pcall(vim.api.nvim_win_set_cursor, 0, pos)
     vim.cmd('normal! zz')
   end
