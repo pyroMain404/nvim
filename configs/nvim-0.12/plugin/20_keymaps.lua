@@ -220,6 +220,8 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 --   the source that actually attached in `vim.b.minidiff_summary.source_name`.
 -- - Hunks can not be applied (`gh`) while a revision is referenced: they would
 --   be staged against the index, which is not what is shown.
+-- - A file opened at some commit from a patch (`<CR>` / `gF`) references the
+--   commit before it on its own, so it is read as the change it received there.
 --
 -- The source providing that reference text and `Config.git.set_diff_ref()`,
 -- which these two mappings drive, are in 'plugin/31_git.lua' next to the

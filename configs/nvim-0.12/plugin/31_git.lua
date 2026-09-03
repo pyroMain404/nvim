@@ -25,6 +25,12 @@ local later = Config.later
 -- `later()` blocks below fill it in, each with the part it configures.
 Config.git = {}
 
+-- Root of the repository the current directory belongs to, `nil` outside one.
+-- Both parts of this file need it, as every path Git reports - in the output of
+-- a command and in the name of the buffers holding a file state at some commit
+-- - is relative to it, while Neovim runs below it (`:h vim.fs.root()`).
+local repo_root = function() return vim.fs.root(vim.fn.getcwd(), '.git') end
+
 -- Hunks ======================================================================
 
 -- Work with diff hunks that represent the difference between the buffer text and
@@ -57,14 +63,41 @@ later(function()
   -- the one that matters, as staging happens against the index and not `rev`.
   -- The Git source is kept as a fallback for files absent from that revision,
   -- and reused across calls because it watches '.git/index' on its own.
+  --
+  -- Which file a buffer holds is answered by `buf_git_location()`, because two
+  -- kinds of buffer are referenced this way: a file on disk, and the copy of
+  -- a file at some commit which 'mini.git' opens (`gF` and `<CR>` in the output
+  -- of `:Git`, see the "Repository" section below). The second has nothing on
+  -- disk, and keeps its path - relative to the root of the repository - inside
+  -- the buffer name, as "minigit://<id>/show <commit>:<path>".
+  local buf_git_location = function(buf_id)
+    local name = vim.api.nvim_buf_get_name(buf_id)
+    local path_at_commit = name:match('^minigit://%d+/.*show %x+~*:(.*)$')
+    if path_at_commit ~= nil then
+      local root = repo_root()
+      if root == nil then return nil end
+      return { cwd = root, path = path_at_commit, at_commit = true }
+    end
+    if vim.fn.filereadable(name) ~= 1 then return nil end
+    local dir, base = vim.fn.fnamemodify(name, ':h'), vim.fn.fnamemodify(name, ':t')
+    return { cwd = dir, path = base, at_commit = false }
+  end
+
   local diff_source_git = nil
   local diff_sources_at = function(rev)
     local attach = function(buf_id)
-      local path = vim.api.nvim_buf_get_name(buf_id)
-      if vim.fn.filereadable(path) ~= 1 then return false end
-      local cmd = { 'git', 'show', rev .. ':./' .. vim.fn.fnamemodify(path, ':t') }
-      local out = vim.system(cmd, { cwd = vim.fn.fnamemodify(path, ':h') }):wait()
-      if out.code ~= 0 then return false end
+      local loc = buf_git_location(buf_id)
+      if loc == nil then return false end
+      local cmd = { 'git', 'show', rev .. ':./' .. loc.path }
+      local out = vim.system(cmd, { cwd = loc.cwd }):wait()
+      if out.code ~= 0 then
+        -- A path the revision does not have is left to the Git source below.
+        -- For a state at some commit there is no such fallback, as the buffer
+        -- is not a file: read it as fully added, which is what the commit did
+        -- to that path if the one before it had nothing there.
+        if not loc.at_commit then return false end
+        return MiniDiff.set_ref_text(buf_id, '')
+      end
       -- Account for possible 'crlf' end of line in Git object
       MiniDiff.set_ref_text(buf_id, (out.stdout:gsub('\r\n', '\n')))
     end
@@ -103,9 +136,16 @@ later(function()
     -- Reference text is set while the source attaches, so reattach to apply it.
     -- Show the overlay wherever a revision is referenced, as reading the old text
     -- in place is the point of it. Reattaching resets it back to the config value.
+    --
+    -- 'mini.diff' enables itself only in buffers holding a file (`:h 'buftype'`),
+    -- so a state at some commit stays untouched by it and answers `[h` / `]h`
+    -- with an error. Enable it when that buffer is the one being asked for:
+    -- referencing a revision in it is the whole point of the call.
+    local force_enable = buf_id ~= nil and rev ~= nil
     for _, id in ipairs(bufs) do
-      if MiniDiff.get_buf_data(id) ~= nil then
-        MiniDiff.disable(id)
+      local is_enabled = MiniDiff.get_buf_data(id) ~= nil
+      if is_enabled then MiniDiff.disable(id) end
+      if is_enabled or force_enable then
         MiniDiff.enable(id)
         local data = MiniDiff.get_buf_data(id)
         local has_rev = (vim.b[id].diff_ref or Config.git.diff_ref) ~= nil
@@ -144,7 +184,9 @@ end)
 --   the patch is against the working tree (like in `<Leader>gd`/`<Leader>gh`).
 -- - `q` closes the output window.
 -- Both `gF` and `<CR>` open in a vertical split, next to the patch they start
--- from, instead of in a new tabpage.
+-- from, instead of in a new tabpage. A file opened at some commit references
+-- the commit before it, so that `[h` / `]h`, `gh` and the overlay read what
+-- that commit did to it - the buffer scoped `<Leader>gR`, applied for free.
 --
 -- See also:
 -- - `:h MiniGit-examples` - examples of common setups
@@ -163,7 +205,6 @@ later(function()
   -- restore the directory after, as `setup_auto_root()` sets it anew (on the next
   -- event loop tick) for the buffer that gets opened.
   -- Remove once 'mini.git' resolves the paths itself (still needed in 0.18.0).
-  local repo_root = function() return vim.fs.root(vim.fn.getcwd(), '.git') end
   local at_repo_root = function(f, opts)
     local root = repo_root()
     if root == nil then return f(opts) end
@@ -204,6 +245,23 @@ later(function()
     return cword:find('^%x%x%x%x%x%x%x+$') ~= nil and cword == cword:lower()
   end
 
+  -- A file state at some commit is opened to see what that commit did to it, so
+  -- reference the state right before it as soon as the buffer is there: hunk
+  -- navigation (`[h` / `]h`), the hunk textobject (`gh`) and the overlay then
+  -- work on that change, in the file itself, instead of on the patch it was
+  -- opened from. Only this buffer is referenced - what `<Leader>gR` does - so
+  -- the revision referenced everywhere else (`<Leader>gr`) is left alone.
+  -- NOTE: `<Leader>gR` in such a buffer restores the Git index like anywhere
+  -- else, which here leaves no reference at all: the buffer holds a copy, and
+  -- a copy has nothing in the index to be compared against. Opening the entry
+  -- again from the patch is what sets this reference back.
+  local diff_ref_at_parent = function(buf_id)
+    local name = vim.api.nvim_buf_get_name(buf_id)
+    local commit = name:match('^minigit://%d+/.*show (%x+~*):')
+    if commit == nil then return end
+    Config.git.set_diff_ref(commit .. '~', buf_id)
+  end
+
   -- Move the window the entry was opened in and give the two their widths,
   -- keeping the line 'mini.git' put the cursor on.
   -- NOTE: the window is moved before it has ever been drawn, so its view still
@@ -242,7 +300,7 @@ later(function()
     -- NOTE: 'mini.git' stores the path already escaped for a command, and
     -- relative to the repository root, hence the same resolution as above.
     local path = vim.api.nvim_buf_get_name(0):match('^minigit://%d+/edit (.*)$')
-    if path == nil then return end
+    if path == nil then return diff_ref_at_parent(0) end
     local root = repo_root()
     if root ~= nil then
       path = vim.fn.fnameescape(vim.fs.normalize(root)) .. '/' .. path
@@ -263,6 +321,7 @@ later(function()
     at_repo_root(MiniGit.show_diff_source, { split = 'vertical' })
     if vim.api.nvim_get_current_win() == win_init then return end
     place_win(win_init, 'L')
+    diff_ref_at_parent(0)
   end
 
   local setup_patch_buf = function()

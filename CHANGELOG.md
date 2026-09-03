@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-03
 
+- Read a file opened at some commit (`<CR>` or `gF` inside a patch) as the
+  change that commit made to it: the state right before it becomes the
+  'mini.diff' reference of that buffer alone, so `[h` / `]h`, `gh` and the
+  overlay work there. Until now 'mini.diff' was not even enabled in those
+  buffers - they hold a copy, not a file - and `]h` answered with an error.
+
 - Put the cursor on the line asked for when a patch entry is opened with
   `<CR>` or `gF`. The window is moved and resized before it is ever drawn, so
   Neovim pulled the cursor back into the lines its height could show: the
