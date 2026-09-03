@@ -216,11 +216,15 @@ non sia disponibile.
 
 Le FAQ di `mise` sono esplicite: su Windows nativo il supporto passa **solo dagli
 shim**, perché non esiste ancora l'attivazione per PowerShell. La conseguenza da
-tenere a mente è che **le variabili d'ambiente dichiarate in `mise.toml` non vengono
-applicate**: gli shim mettono i binari su `PATH`, ma non popolano l'ambiente. Se un
-tool ne ha bisogno — una `DATABASE_URL`, una variabile che il server legge — o lo si
-lancia con `mise x` / `mise run`, oppure quella variabile va impostata altrove: per un
-progetto, il suo `.nvim.lua` (`:h 'exrc'`, già abilitato).
+tenere a mente riguarda l'ambiente, e il confine non è dove sembra: **uno shim porta
+l'ambiente del progetto al programma che lancia — le variabili del tool e i blocchi
+`[env]` insieme — ma non alla shell** (verificato su questa macchina, contro quanto
+lascia intendere la documentazione). Quindi `mvn` invocato dallo shim vede il
+`JAVA_HOME` del JDK che il progetto pinna, mentre **tutto ciò che non passa da uno
+shim non vede niente**: un IDE, un doppio clic, e soprattutto un server di linguaggio
+avviato da Neovim, che Neovim esegue direttamente. Se un server ha bisogno di una
+variabile — una `DATABASE_URL`, un flag che legge all'avvio — la sede è il `.nvim.lua`
+del progetto (`:h 'exrc'`, già abilitato), non il suo `mise.toml`.
 
 E il `PATH` non se lo mettono da soli: la directory degli shim
 (`%LOCALAPPDATA%\mise\shims`) va aggiunta una volta al `PATH` di sistema, perché

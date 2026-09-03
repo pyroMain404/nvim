@@ -253,8 +253,9 @@ ha bisogno della stessa variabile che serve a `cargo`, o dei metadati offline
 dipendere da un database in CI. **Se il server segnala errori sulle `query!` mentre
 `cargo` compila, è quasi sempre questo.**
 
-La sede è il `.nvim.lua` del progetto — e su Windows lo è a maggior ragione, perché
-gli shim di `mise` non applicano le variabili dichiarate in `mise.toml`:
+La sede è il `.nvim.lua` del progetto, e **non** il suo `mise.toml`: quelle variabili
+arrivano soltanto ai programmi lanciati da uno shim di `mise`, mentre `rust-analyzer`
+lo avvia Neovim per conto proprio, attraverso il proxy di `rustup`.
 
 ```lua
 -- .nvim.lua nella radice del progetto
