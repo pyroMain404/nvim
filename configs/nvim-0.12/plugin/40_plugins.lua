@@ -124,6 +124,30 @@ now_if_args(function()
   -- `vim.lsp.codelens.refresh()` inside an autocommand: that is the older way,
   -- deprecated in 0.12 and removed in 0.13.
   vim.lsp.codelens.enable(true)
+
+  -- HACK: 'nvim-lspconfig' announces `rust-analyzer.showReferences` among the
+  -- commands the client implements, and then registers only `runSingle`. So
+  -- every "N implementations" / "N references" lens ends in "Language server
+  -- `rust_analyzer` does not support command". The command is client-side by
+  -- design: the server hands over the locations it has already computed, and
+  -- the editor decides how to show them. The gap is the same one the comment
+  -- on `lens.debug` in 'after/lsp/rust_analyzer.lua' describes, except this
+  -- one is worth filling instead of turning off. Still missing in
+  -- 'nvim-lspconfig' ee1e369 (2026-09-01); delete this once it ships a handler.
+  vim.lsp.commands['rust-analyzer.showReferences'] = function(command, ctx)
+    -- Arguments are `{ uri, position, locations }`; only the third is needed.
+    local locations = command.arguments and command.arguments[3] or {}
+    local encoding = vim.lsp.get_client_by_id(ctx.client_id).offset_encoding
+    if #locations == 0 then
+      vim.notify(command.title, vim.log.levels.INFO)
+    elseif #locations == 1 then
+      vim.lsp.util.show_document(locations[1], encoding, { reuse_win = true })
+    else
+      local items = vim.lsp.util.locations_to_items(locations, encoding)
+      vim.fn.setqflist({}, ' ', { title = command.title, items = items })
+      vim.cmd('copen')
+    end
+  end
 end)
 
 -- Formatting =================================================================

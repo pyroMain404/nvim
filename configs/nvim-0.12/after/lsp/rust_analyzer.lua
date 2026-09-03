@@ -42,10 +42,11 @@ return {
       -- then reports it as errors.
       procMacro = { enable = true },
 
-      -- 'nvim-lspconfig' turns every code lens on, but implements only
-      -- `runSingle`: `debugSingle` is announced in the capabilities with no
-      -- handler behind it, so the "Debug" lens fails when run. Turn it back on
-      -- together with a DAP client, not before.
+      -- 'nvim-lspconfig' turns every code lens on and tells the server that
+      -- three client commands are implemented, while only `runSingle` is.
+      -- `showReferences` is filled in by 'plugin/40_plugins.lua'; `debugSingle`
+      -- asks for a debugger and not a handful of lines, so the "Debug" lens
+      -- fails when run. Turn it back on together with a DAP client, not before.
       lens = { debug = { enable = false } },
     },
   },

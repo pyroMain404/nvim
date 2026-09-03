@@ -103,6 +103,15 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-03
+
+- Open the references a Rust code lens counts. 'nvim-lspconfig' tells
+  rust-analyzer that the client implements `rust-analyzer.showReferences` and
+  then registers only `runSingle`, so running an "N implementations" or
+  "N references" lens answered that the server does not support the command.
+  The locations the server already sent now go to the quickfix list, or
+  straight to the place when there is only one.
+
 ## 2026-09-02
 
 - Ask language servers for code lens and show them above the code they belong
