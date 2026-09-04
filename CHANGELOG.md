@@ -113,6 +113,13 @@ a merge from 'minimax' conflict-free.
   a contrast of 1.07:1 against `Normal`, which made the 85 column ruler
   effectively invisible; under `purplehue` the same ruler sits at about 2.16:1.
 
+## 2026-09-05
+
+- Read a '*.component.html' inside an Angular project as an Angular template
+  and not as a web page. Neovim recognises the `htmlangular` filetype only by
+  reading the file for `@if` or `*ngIf`, so a template made of `{{ }}` bindings
+  alone stayed `html` - with the wrong parser and the wrong server.
+
 ## 2026-09-04
 
 - Attach `lua_ls` to Lua buffers: the server was configured in
