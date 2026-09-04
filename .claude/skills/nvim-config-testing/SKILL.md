@@ -160,6 +160,10 @@ Da tenere presenti sia quando scrivi il comando sia quando ne leggi l'output.
 | `:make` con un `errorformat` che non riconosce niente lascia il quickfix vuoto, identico a una build riuscita | rompi qualcosa apposta, e pretendi una voce con file e riga |
 | L'output asincrono di `TSUpdate` mente ("up-to-date" senza parser installato) | usa la variante sincrona e cerca i `.so` / `.dll` in `stdpath('data')/site/parser/` |
 | Percorsi profondi superano MAX_PATH su Windows | falsi fallimenti (checkout falliti, ENOENT sulla cache luac): prova sotto un percorso corto |
+| All'avvio `v:errmsg` contiene `Couldn't find a watcher matching key and callback`, e la sonda `startup` fallisce | è rumore preesistente, non della modifica: passa `allow = @('watcher matching key')`, oppure confrontalo con la baseline prima di indagare |
+| `vim.b.minidiff_summary` è `nil` subito dopo aver referenziato una revisione | l'attach di 'mini.diff' è asincrono: `vim.wait(800, function() return (vim.b.minidiff_summary or {}).source_name ~= nil end)` prima di leggerlo |
+| `gF` dentro un patch contro il working tree apre `minigit://.../edit <file>` e non `show <commit>:<file>` | non è un guasto: lo stato "after" di quel patch è il file su disco. Per lo stato a un commit parti da un patch di commit (`Git show HEAD`, `Git log -p`) |
+| La sonda `command` esegue `after` solo quando le è stato dato anche `run` | uno snippet che deve girare comunque va passato come `before` |
 | `stylua --check` va eseguito **dalla radice del repository** | StyLua cerca `.stylua.toml` a partire dalla directory corrente: da altrove applica i suoi default (tab, doppi apici) e il diff non significa niente |
 | Un file scritto con line ending LF fa segnalare a StyLua **l'intero file** | il repo è CRLF (`line_endings = "Windows"` più `core.autocrlf`): converti prima di rileggere il diff |
 | Le heredoc di Bash su questa macchina collassano `\\` in `\`, e un `'\''` dentro una stringa Python la tronca | non generare file con backslash da script (usa `vim.fs.dirname`, `[char]92`), e rileggi sempre la riga scritta |
@@ -182,6 +186,8 @@ ipotesi: sono il motivo per cui questa skill esiste.
 | Testare in una directory che non è un repository git, per una funzione git | ogni comando fallisce per il motivo sbagliato | verifica il presupposto per primo (`git -C <dir> rev-parse`), o usa questo repository |
 | Implementare prima di aver deciso quale delle due letture della richiesta sia quella giusta | si verifica benissimo la cosa sbagliata | vedi Regola 1: se non sai cosa distinguerebbe il successo dal fallimento, chiedi |
 | Prendere per guasto della config un'aspettativa sbagliata della sonda | si va a cercare un bug che non c'è | quando una sonda fallisce, il primo sospetto è il parametro che le hai dato (un `pattern` sensibile alle maiuscole, un server non abilitato) |
+| Indagare un `FAIL` senza sapere se esisteva già prima della modifica | si cerca la causa nel proprio lavoro, dove non c'è | tieni una baseline accanto: `git worktree add --detach <tmp> HEAD`, una junction da `%LOCALAPPDATA%
+vim-baseline` alla sua `configs/nvim-0.12` e una da `nvim-baseline-data` a `nvim-data` (stessi plugin, nessun download), poi la stessa sonda con `-Appname nvim-baseline`. Due output affiancati dicono in un colpo solo se il comportamento è cambiato |
 
 ## Chiudere la verifica
 

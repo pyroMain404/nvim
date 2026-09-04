@@ -11,7 +11,9 @@
 ---   run      arguments to run it with ('diff HEAD~1'); omit to only check
 ---   expect   pattern the definition must match
 ---   before   snippet run first
----   after    snippet run once the command has run, to report its effect
+---   after    snippet run once the command has run, to report its effect;
+---            it is skipped when `run` was not given, so a snippet that has
+---            to run in any case belongs to `before`
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
