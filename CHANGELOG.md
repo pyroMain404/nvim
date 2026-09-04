@@ -119,6 +119,15 @@ a merge from 'minimax' conflict-free.
 - Report the Lua toolchain in `:checkhealth config`: the language server with
   its version, and whether the tree-sitter parser is installed.
 
+## 2026-09-04
+
+- Format only the lines that changed, in every language: `<Leader>lf` now runs
+  the formatter over the hunks 'mini.diff' reports against its reference
+  instead of over the whole buffer, so a one line fix stops arriving as a
+  reformatted file. `<Leader>lF` formats everything when that is the intent,
+  and a Visual `<Leader>lf` still formats the selection. The rule lives in
+  'plugin/42_format.lua', behind `Config.format`.
+
 ## 2026-09-03
 
 - Make the Git workflow a part of its own, 'plugin/41_git.lua', reachable

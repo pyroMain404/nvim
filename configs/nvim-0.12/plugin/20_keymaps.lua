@@ -251,6 +251,10 @@ xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 -- - `<Leader>ld` - show more diagnostic details in a floating window
 -- - `<Leader>lr` - perform rename via LSP
 -- - `<Leader>ls` - navigate to source definition of symbol under cursor
+-- - `<Leader>lf` - format the lines changed since the diff reference;
+--   `<Leader>lF` formats the whole buffer, and over a Visual selection
+--   `<Leader>lf` formats exactly that. See 'plugin/42_format.lua' for why the
+--   default is the changed lines and not the file.
 --
 -- NOTE: most LSP mappings represent a more structured way of replacing built-in
 -- LSP mappings (like `:h gra` and others). This is needed because `gr` is mapped
@@ -271,7 +275,8 @@ xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 -- still running, and `:h 'autowrite'` so a stale buffer is never compiled.
 nmap_leader('la', '<Cmd>lua vim.lsp.buf.code_action()<CR>',     'Actions')
 nmap_leader('ld', '<Cmd>lua vim.diagnostic.open_float()<CR>',   'Diagnostic popup')
-nmap_leader('lf', '<Cmd>lua require("conform").format()<CR>',   'Format')
+nmap_leader('lf', '<Cmd>lua Config.format.changed()<CR>',       'Format changed')
+nmap_leader('lF', '<Cmd>lua Config.format.buffer()<CR>',        'Format buffer')
 nmap_leader('li', '<Cmd>lua vim.lsp.buf.implementation()<CR>',  'Implementation')
 nmap_leader('lh', '<Cmd>lua vim.lsp.buf.hover()<CR>',           'Hover')
 nmap_leader('ll', '<Cmd>lua vim.lsp.codelens.run()<CR>',        'Lens')
