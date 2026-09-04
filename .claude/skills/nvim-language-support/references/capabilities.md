@@ -103,6 +103,15 @@ file è troppo ambiguo per una regola sensata: meglio una modeline nei tre file 
 contano che un `pattern` che sbaglia altrove. Il limite da conoscere: le modeline
 sono lette solo entro `'modelines'` righe dall'inizio o dalla fine del file.
 
+**Una regola può rispondere "dipende".** Il valore di `extension`, `filename` e
+`pattern` può essere una funzione `fun(path, bufnr)`, e **se ritorna `nil` il
+rilevamento prosegue come se la regola non ci fosse**. È ciò che permette di
+riattivare una regola per nome che il runtime ha scartato perché troppo larga,
+restringendola al contesto in cui è vera: `vim.fs.root(path, { <marker> })` dice se
+quel file sta dentro il tipo di progetto giusto, e altrove la funzione tace. Costa
+una risalita di directory per file aperto, cioè lo stesso ordine di lavoro che il
+rilevamento fa già.
+
 Se un filetype nuovo deve usare un parser tree-sitter esistente con un altro nome,
 serve `vim.treesitter.language.register()`, non un parser nuovo.
 
@@ -316,6 +325,25 @@ invece che subite:
 Due client dello **stesso** server sullo stesso progetto non sono invece mai voluti:
 vuol dire che `root_dir` ha risposto due volte in modo diverso.
 
+### Il server che carica una libreria del progetto
+
+Alcuni server sono un guscio: l'eseguibile è installato una volta e a ogni progetto
+carica il **pacchetto del framework** che quel progetto ha in `node_modules` (o
+equivalente). `angularls` è il caso di riferimento, ma la forma ricorre ovunque il
+framework spedisca il proprio servizio di linguaggio come dipendenza.
+
+La conseguenza è una regola di versione che non esiste per un `rust-analyzer` o un
+`lua_ls`: **la major dell'eseguibile deve essere quella del progetto**. Un server più
+recente chiama un'API che la libreria vecchia non ha, e il guasto è muto nel modo
+peggiore — il client si attacca, `:checkhealth vim.lsp` lo mostra sano, e nessuna
+diagnostica arriva mai. La sola traccia è in `:LspLog`, dove ogni `didOpen` fallisce.
+
+Da qui due cose pratiche: installare `@latest` è la scelta sbagliata di default, e il
+health check deve stampare la versione del **progetto** accanto al comando che
+installa quella giusta. Per lavorare su progetti di major diverse la sede è il
+`mise.toml` del progetto: lo shim risolve in base alla directory corrente, e Neovim
+avvia il server proprio attraverso lo shim.
+
 ## 5. Diagnostica
 
 `vim.diagnostic` è già configurato globalmente in 'plugin/10_options.lua' con una
@@ -347,6 +375,29 @@ Guardare lì è sempre il primo passo.
 Un `errorformat` che cattura anche il **fallimento dei test**, non solo gli errori di
 compilazione, trasforma `:make test` in navigazione dei test falliti — ed è la
 differenza tra un compiler plugin utile e uno che serve solo a compilare.
+
+### L'output colorato è la causa più comune di una quickfix vuota
+
+Molti strumenti moderni colorano le diagnostiche, e **una sequenza di escape in
+mezzo ai campi fa fallire ogni pattern** senza un messaggio: la lista resta vuota,
+che è indistinguibile da una build riuscita. Prima di sospettare l'`errorformat`,
+guarda i byte: nella sonda `quickfix` l'output del comando è in stderr, e un
+`^[[91m` si vede a occhio.
+
+Due cose rendono il sintomo insidioso:
+
+- **provare il comando in una shell non lo riproduce**, perché lì l'output è una
+  pipe e molti strumenti si spengono da soli; sotto `:make` no. Il contrario
+  succede altrettanto spesso, con strumenti che colorano *sempre* e ignorano
+  `--no-color`, `NO_COLOR` e `--pretty false` — verificato su `ngc`, che formatta
+  con la funzione colorata di TypeScript senza guardare niente;
+- l'opzione per spegnere il colore, quando c'è, va **verificata**, non dedotta dalla
+  documentazione.
+
+Quando lo strumento non si lascia spegnere, la strada è un `errorformat` che vede
+attraverso il colore: `\%(\e\[[0-9;]*m\)*` fra un campo e l'altro. Come si scrive
+in un compiler plugin — dove due livelli di escaping si sovrappongono — è in
+`assets/compiler.lua`.
 
 ### Quickfix e location list non sono la stessa lista
 
@@ -462,6 +513,15 @@ distinta: valgono per il server, non per la directory corrente.
   plugin. Si può anche aggiungere un array di snippet solo per un buffer con
   `vim.b.minisnippets_config`, e mappare un linguaggio su file diversi con
   `lang_patterns`.
+
+> **"C'è in 'friendly-snippets'" non vuol dire che si carichi.**
+> `gen_loader.from_lang()` cerca `snippets/<lang>.json` e `snippets/<lang>/*.json`
+> sul `runtimepath`, mentre la collezione annida per famiglia: i suoi snippet
+> Angular stanno in `snippets/frameworks/angular/`, e sono per giunta dichiarati
+> per un "linguaggio" `angular` che non è un filetype di Neovim. Nessuno dei due
+> arriva. Il controllo che risponde davvero è il `globpath` della Fase 1, non
+> l'elenco dei file del plugin: se torna vuoto, quel linguaggio non ha snippet,
+> per quanti ne contenga il repository.
 
 > **`MiniSnippets.start_lsp_server()` è commentato** in `plugin/30_mini.lua`.
 > Attivarlo espone gli snippet come un vero server LSP, così i candidati arrivano

@@ -32,6 +32,24 @@ vim.cmd([[CompilerSet makeprg=mytool\ $*]])
 -- Read `:h errorformat` before writing this line: it is scanf-like, matched in
 -- order, and a wrong pattern silently yields an empty quickfix list.
 --
+-- It also accepts a Vim regular expression, which is what makes it able to cope
+-- with output nobody designed for it - colour escapes above all. Three escapes
+-- decide whether such a pattern matches, and getting one wrong produces the
+-- same silence as no pattern at all, so check them against a real line first:
+-- - `%#` is the regex star; a bare `*` is a literal asterisk, and `%[` a
+--   literal bracket (a bare `[` opens a character class);
+-- - `%\%(` opens a NON capturing group. A capturing `%\(` competes with the
+--   groups `errorformat` builds for `%f` and friends and hands back the wrong
+--   text - and enough of them raise `E872: Too many '('`;
+-- - `CompilerSet` is `:set`, which eats one backslash of every pair, so a
+--   backslash meant for the pattern is written doubled - the reason
+--   '$VIMRUNTIME/compiler/tsc.vim' writes `\\,` for a comma inside its format.
+--
+-- Writing the format in Lua and passing it to `vim.cmd()` is what keeps it
+-- readable once these stack: build the repeated part once, name it, and
+-- concatenate. `vim.fn.setqflist({}, ' ', { lines = ..., efm = ... })` is the
+-- cheapest way to try one - it needs no build, no config, and no `:set`.
+--
 -- Three things are worth the effort, and they are what separates a useful compiler
 -- plugin from one that only compiles:
 -- - the file, line and column of each message, so that `]q` jumps to the spot;

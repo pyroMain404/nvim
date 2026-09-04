@@ -33,8 +33,12 @@ filetype viene effettivamente impostato.
 :=vim.filetype.match({ filename = 'esempio.xyz' })
 
 " Quali file del runtime sono già attivi per questo filetype?
-:=vim.fn.globpath(vim.o.rtp, 'ftplugin/<ft>.{vim,lua}')
-:=vim.fn.globpath(vim.o.rtp, 'indent/<ft>.{vim,lua}')
+" NOTE: `*` e non `{vim,lua}`. Le graffe le espande la shell, e `cmd.exe` non le
+" conosce: su Windows `globpath(&rtp, 'ftplugin/html.{vim,lua}')` risponde stringa
+" vuota — cioè "il runtime non ha niente" — mentre `'ftplugin/html.*'` trova il
+" file. Verificato con `-u NONE`, quindi non è una regola della config.
+:=vim.fn.globpath(vim.o.rtp, 'ftplugin/<ft>.*')
+:=vim.fn.globpath(vim.o.rtp, 'indent/<ft>.*')
 
 " Quali compiler plugin esistono, senza scorrere le directory
 :=vim.fn.getcompletion('', 'compiler')
@@ -75,6 +79,12 @@ runnable, comandi utente.
 " Quali snippet arrivano da 'friendly-snippets' (un `<lang>.json`, o una directory)
 :=vim.fn.globpath(vim.o.rtp, 'snippets/<lang>*', false, true)
 ```
+
+Tutte e tre valgono **solo dopo** che il plugin è sul `runtimepath`, e
+'friendly-snippets' e 'conform.nvim' arrivano da `Config.later()`: chiesto troppo
+presto, `globpath` risponde vuoto e la risposta si legge come "il plugin non dà
+niente". Aspetta l'evento, non un numero — è la stessa regola della skill
+`nvim-config-testing`, e qui costa un asse dichiarato mancante per sbaglio.
 
 Da qui esce la lista di **cosa manca**. Riportala all'utente prima di implementare:
 spesso è la parte più sorprendente del lavoro. E ciò che questi comandi mostrano non
@@ -412,6 +422,9 @@ guasto di questo elenco è un livello che ne ha sovrascritto un altro.
   reference di linguaggio.
 - `references/lua.md` — Lua, cioè il linguaggio in cui questa config è scritta: un
   runtime che non lascia buchi, e un server la cui `library` decide quanto sa.
+- `references/angular.md` — Angular, cioè una piattaforma e non un linguaggio: un
+  filetype che il runtime non riconosce, due server che si dividono il lavoro, uno
+  di essi legato alla versione del progetto, e un compilatore che colora sempre.
 - `assets/` — gli scheletri dei file da creare.
 
 ### La forma di una reference di linguaggio
