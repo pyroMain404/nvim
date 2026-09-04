@@ -133,6 +133,10 @@ a merge from 'minimax' conflict-free.
   `lua_ls` was starting with no root - in single file mode, where it publishes
   no diagnostics at all.
 
+- Set 'textwidth' to 85 in Lua buffers, the `column_width` of '.stylua.toml',
+  so 'colorcolumn' draws the limit that `stylua --check` enforces and `gq`
+  reflows comments to it.
+
 ## 2026-09-03
 
 - Make the Git workflow a part of its own, 'plugin/41_git.lua', reachable
