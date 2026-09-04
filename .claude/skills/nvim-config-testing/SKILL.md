@@ -105,7 +105,57 @@ Parametri del driver, validi per tutte le sonde: `-File` (il buffer da aprire:
 senza, niente ftplugin e niente LSP), `-Params` (quelli della sonda), `-Wait`
 (millisecondi per il caricamento differito), `-Columns` / `-Lines` (headless
 parte a 80x24, troppo piccolo per dire il vero su un layout), `-TimeoutSec`,
-`-Cwd`, `-Appname`, `-Clean`, `-Json`, `-Show`.
+`-Cwd`, `-Appname`, `-Clean`, `-Json`, `-Show`, più `-Session` / `-Reset` /
+`-StopSession` per riusare un'istanza.
+
+### Riusare un'istanza, quando l'attesa è il costo
+
+Ogni sonda in più è un Neovim in più, e per certe verifiche l'avvio non è il
+costo: lo è ciò che deve succedere **dentro** prima che ci sia qualcosa da
+guardare. Un server di linguaggio indicizza il workspace una volta per
+processo, quindi dieci sonde one-shot pagano dieci indicizzazioni.
+
+`-Session <nome>` avvia un'istanza che resta viva e le manda le sonde sul
+socket RPC (`:h --listen`, `:h --remote-expr`); la sonda non esce, lascia il
+suo rapporto in `g:probe_result` e il driver lo rilegge. Misurato su questa
+config con `lua_ls`: **14 s la prima sonda, 2-4 s ognuna delle successive**,
+contro i 40-60 s di ciascuna sonda one-shot.
+
+```powershell
+$R = '.claude/skills/nvim-config-testing/assets/run.ps1'
+& $R lsp_request -File 'configs/nvim-0.12/plugin/20_keymaps.lua' -Session lua `
+    -Cwd $repo -Reset -Params @{ find = "^nmap_leader\('ba'"; count = 2 }
+& $R diagnostics -File 'configs/nvim-0.12/lua/config/health.lua' -Session lua `
+    -Cwd $repo -Reset -Params @{ insert = @('local _x = Nope'); expect = 'Nope' }
+& $R -StopSession -Session lua   # l'istanza sopravvive alla shell: va chiusa
+```
+
+Cosa cambia rispetto a una sonda one-shot, e va tenuto a mente:
+
+- **lo stato resta**: buffer aperti, modifiche non salvate, finestre. È il
+  motivo per cui la sessione è veloce, ed è anche ciò che rende il secondo
+  risultato diverso dal primo. `-Reset` ripulisce i buffer prima della sonda;
+  quando serve uno stato davvero pulito, la sessione è lo strumento sbagliato;
+- **i path relativi non sono affidabili** fra una sonda e l'altra: il driver
+  rende assoluto `-File` proprio per questo (vedi la trappola su `auto_root`);
+- l'esito è sempre un exit code, ma la riga finale dice che l'istanza è ancora
+  viva: se un giro finisce senza `-StopSession`, il processo resta.
+
+### Aspettare un evento, non un numero
+
+Un `-Wait` più alto non è mai la risposta giusta a "non era ancora pronto": è
+una scommessa che costa a ogni esecuzione e che sbaglia comunque il giorno che
+la macchina è lenta. Quasi tutto ciò che è asincrono in Neovim ha un segnale, e
+`lib.lua` lo incapsula:
+
+| Helper | Aspetta | Segnale |
+|---|---|---|
+| `P.wait_event(evento, opts)` | un autocomando qualsiasi | `:h events`, con `pattern` e `buffer` |
+| `P.wait_lsp(opts)` | client attaccato **e** server non più occupato | `:h vim.lsp.status()`, silenzio prolungato |
+| `P.wait_diagnostics(opts)` | le diagnostiche pubblicate e assestate | `DiagnosticChanged`, silenzio prolungato |
+
+Tutti restituiscono anche i millisecondi impiegati: è quello che distingue
+"lento" da "bloccato", e nessuna attesa fissa lo dirà mai.
 
 Parametri che tutte le sonde leggono: `wait` (come `-Wait`) e `json`. Quasi
 tutte accettano inoltre uno **snippet Lua** come parametro (`before`, `between`,
@@ -135,6 +185,8 @@ incatenare le sonde senza rileggerle a occhio.
 | `highlight` | quale gruppo colora davvero quel punto, e con che colore? | `find`, `row`/`col`, `group`, `fg`/`bg`, `link` |
 | `treesitter` | il parser c'è e l'albero è quello atteso? | `lang`, `find`, `node`, `capture`, `injected` |
 | `lsp` | quale server ha risposto, e con quale configurazione? | `server`, `clients`, `methods`, `settings`, `timeout` |
+| `lsp_request` | e cosa risponde, su un simbolo vero? | `method`, `find`, `col`, `count`, `expect`, `resolve` |
+| `diagnostics` | il server segnala quello che deve, e tace su quello che deve? | `insert`, `count`, `expect`, `absent`, `severity` |
 | `quickfix` | `:make` produce voci navigabili? | `make`, `makeprg`, `errorformat`, `min`, `pattern` |
 | `health` | `:checkhealth` in forma che uno script può far fallire | `sections`, `fail_on`, `allow`, `show` |
 | `startuptime` | quanto costa l'avvio, file per file? | `file`, `budget`, `top`, `filter` |
@@ -146,6 +198,12 @@ parametri: leggila prima di aggiungerne uno, e aggiungilo lì quando manca.
 guasto di questa config: la prima (`:verbose set`) è l'unica che nomina il file
 responsabile, la seconda distingue "non attaccato" da "non ancora attaccato". La
 maggior parte dei problemi qui è un livello che ne ha sovrascritto un altro.
+
+Le tre sonde LSP rispondono a domande diverse e si usano in quest'ordine: `lsp`
+dice **se e come** il server è configurato, `lsp_request` cosa risponde su un
+simbolo preciso (ed è quella che smaschera una `library` incompleta o una
+`settings` mai arrivata), `diagnostics` cosa segnala sul buffer — con `absent`,
+che è l'unico modo di provare che un globale dichiarato **non** viene segnalato.
 
 ## Trappole
 
@@ -172,6 +230,11 @@ Da tenere presenti sia quando scrivi il comando sia quando ne leggi l'output.
 | Le heredoc di Bash su questa macchina collassano `\\` in `\`, e un `'\''` dentro una stringa Python la tronca | non generare file con backslash da script (usa `vim.fs.dirname`, `[char]92`), e rileggi sempre la riga scritta |
 | `Start-Process -ArgumentList` unisce gli argomenti con uno spazio e non ne quota nessuno | un argomento con spazi arriva spezzato: quotalo tu (`Format-Argv` in `run.ps1`) |
 | `--startuptime` produce righe a due e a tre colonne, con la prima cumulativa | ordinare tutto insieme mette in cima la fine dell'avvio: classifica solo le righe "sourcing" |
+| `:h vim.lsp.status()` vuoto **non** vuol dire "ha finito": un server apre più token di progresso di seguito (`lua_ls` uno per scope) e fra due token lo stato è vuoto | pretendi un silenzio prolungato, non il primo buco: è ciò che fa `P.wait_lsp()` con `quiet` |
+| `nvim --server ... --remote-expr` senza `--headless` **sul client** restituisce il valore sepolto nelle sequenze di escape del terminale | `--headless` anche sul client: `Invoke-Remote` in 'run.ps1' lo fa |
+| Aprire un file cambia la directory corrente (`MiniMisc.setup_auto_root()` in 'plugin/30_mini.lua'), quindi un path relativo significa un'altra cosa alla sonda successiva | passa path assoluti; in sessione il driver li rende assoluti da solo |
+| Il parametro `find` è una **regexp di Vim**, non un pattern Lua: lì `(` è letterale e `\(` apre un gruppo — un pattern sbagliato lancia `E54` | scrivi `^nmap_leader('ba'`, non `^nmap_leader\('ba'`; la sonda riporta l'errore come parametro invalido, non come guasto |
+| In PowerShell le variabili sono case-insensitive: una locale `$json` **è** lo switch `-Json` dello script, e assegnarla lancia una conversione fallita al binding | dai alle locali un nome che non collida con i parametri (`$payload`) |
 | Un server interrogato in polling con `buf_request_sync` non finisce mai di caricarsi: `lua_ls` ha risposto `Workspace loading: 294 / 330` per tre minuti, mentre da solo chiude in trenta secondi | le richieste sincrone in ciclo affamano il caricamento. Aspetta una volta (`vim.wait`), poi manda **una** richiesta; il log dice quando il preload è finito (`$/progress` con `kind = "end"`, dopo `vim.lsp.log.set_level('debug')` su un buffer di altro filetype e `:edit` del file vero) |
 
 ## Antipattern
