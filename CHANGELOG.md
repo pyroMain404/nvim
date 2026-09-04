@@ -105,6 +105,18 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-03
 
+- Make the Git workflow a part of its own, 'plugin/41_git.lua', reachable
+  through a single `Config.git` API: the revision toggles of `<Leader>gr` and
+  `<Leader>gR`, the log of `<Leader>gl`, the `HEAD~N` patch of `<Leader>gh`,
+  the blame of `<Leader>gb`, the 'lazygit' window of `<Leader>tl` and the
+  upstream merge of `<Leader>ou`. They used to be locals of the file that
+  happened to define them, split between 'plugin/31_git.lua' (now gone) and
+  'plugin/20_keymaps.lua', where mappings now carry no logic at all.
+
+- Configure 'mini.diff' and 'mini.git' in 'plugin/30_mini.lua' again, with
+  every other MINI module. Their `setup()` had followed the Git integration
+  out of that file, which made the one place to look for a module setup two.
+
 - Open a file from a patch (`<CR>` or `gF`) below the file opened before it,
   instead of giving each of them a column of its own at the far right. Only
   the first one takes that column; the ones after it share it, one under the

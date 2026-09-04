@@ -52,9 +52,9 @@ nvim-pack-lock.json      `vim.pack` lockfile — generated, never edited by hand
 plugin/10_options.lua    Built-in Neovim behavior
 plugin/20_keymaps.lua    Custom mappings, mostly under `<Leader>`
 plugin/30_mini.lua       MINI configuration
-plugin/31_git.lua        Git integration: 'mini.diff', 'mini.git', and what
-                         is built on them
 plugin/40_plugins.lua    Plugins outside of MINI
+plugin/41_git.lua        Git workflow built on 'mini.diff' and 'mini.git',
+                         behind the `Config.git` API
 lua/config/health.lua    `:checkhealth config` — the only file under `lua/`
 snippets/                User defined snippets
 after/ftplugin/          Per filetype behavior
@@ -78,7 +78,8 @@ Two files in the config are output, not source. They are read to know the curren
 
 - **An option of Neovim itself** → `plugin/10_options.lua`.
 - **A mapping** → `plugin/20_keymaps.lua`, under the existing `<Leader>` group that matches its meaning, with a `mini.clue` description.
-- **A MINI module or its config** → `plugin/30_mini.lua`, in the same step as comparable modules (see below). The one exception is Git: `plugin/31_git.lua` holds 'mini.diff', 'mini.git' and the integration built on them, because that area outgrew a module setup — two modules answering the same question plus the code making them work together. Nothing else moves out of `plugin/30_mini.lua` for being long.
+- **A MINI module or its config** → `plugin/30_mini.lua`, in the same step as comparable modules (see below). This holds for every module without exception, 'mini.diff' and 'mini.git' included: a `setup()` call belongs there and nowhere else, and no module moves out of that file for being long.
+- **Behavior built on top of MINI modules, which is not a setting of any of them** → its own `plugin/NN_name.lua`. There is one today: `plugin/41_git.lua`, the Git workflow — the revision used as diff reference, the navigation inside the output of `:Git`, the blame of the current line, the Git client. It reads as a plugin: state, behavior, and a single `Config.git` API through which mappings and the rest of the config talk to it. Adding a file like this is justified only when the code is an area of its own rather than the configuration of something that already exists; the test is whether it would still make sense if it were a plugin installed from elsewhere.
 - **A non-MINI plugin** → `plugin/40_plugins.lua`, added through `vim.pack.add()`.
 - **Behavior for one filetype or one language server** → `after/ftplugin/` or `after/lsp/`, never the shared files.
 - **A new external program the config depends on** → installed through `mise`, and reported by the health check. See below.

@@ -193,7 +193,7 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 --
 -- Inside the output of these commands `gf` works on the patch paths, `<CR>`
 -- shows more data about the entry at cursor, `zm` / `zr` adjust folds, and
--- `q` closes the window. See 'plugin/30_mini.lua' for how this is set up.
+-- `q` closes the window. See 'plugin/41_git.lua' for how this is set up.
 -- What `<CR>` opens is placed by what it is: a commit goes full width below
 -- the log it was read from, a file goes into a column at the far right.
 --
@@ -223,59 +223,27 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- - A file opened at some commit from a patch (`<CR>` / `gF`) references the
 --   commit before it on its own, so it is read as the change it received there.
 --
--- The source providing that reference text and `Config.git.set_diff_ref()`,
--- which these two mappings drive, are in 'plugin/31_git.lua' next to the
--- 'mini.diff' setup they configure.
-local git_log_cmd = [[Git log --pretty=format:\%h\ \%as\ │\ \%s --topo-order]]
-local git_log_buf_cmd = git_log_cmd .. ' --follow -- %:p'
+-- Everything these mappings call lives in 'plugin/41_git.lua', under
+-- `Config.git`, next to the 'mini.diff' and 'mini.git' setup it configures.
+-- The two revision toggles are named here only to keep the block below aligned.
+local git_ref = '<Cmd>lua Config.git.toggle_diff_ref()<CR>'
+local git_ref_buf = '<Cmd>lua Config.git.toggle_diff_ref("buf")<CR>'
 
-local git_diff_head = function(postfix)
-  return function() vim.cmd('Git diff HEAD~' .. vim.v.count1 .. (postfix or '')) end
-end
-
--- Call `Config.git.set_diff_ref()` with `HEAD~[count]`, or with a commit picked from
--- the log when there is no `[count]`. Restore the Git index instead when
--- a revision is already referenced.
--- NOTE: `choose` runs while the picker is still the current buffer, hence the
--- buffer identifier resolved before starting it.
-local diff_ref_toggle = function(scope)
-  return function()
-    local buf_id, cur_ref = nil, Config.git.diff_ref
-    if scope == 'buf' then
-      buf_id, cur_ref = vim.api.nvim_get_current_buf(), vim.b.diff_ref
-    end
-    if cur_ref ~= nil then return Config.git.set_diff_ref(nil, buf_id) end
-
-    local count = vim.v.count
-    if count > 0 then return Config.git.set_diff_ref('HEAD~' .. count, buf_id) end
-
-    local path = nil
-    if scope == 'buf' then
-      path = vim.api.nvim_buf_get_name(0)
-      if vim.fn.filereadable(path) ~= 1 then
-        return vim.notify('Buffer is not a file on disk', vim.log.levels.WARN)
-      end
-    end
-    local choose = function(item) Config.git.set_diff_ref(item:match('^%S+'), buf_id) end
-    MiniExtra.pickers.git_commits({ path = path }, { source = { choose = choose } })
-  end
-end
-
-nmap_leader('ga', '<Cmd>Git diff --cached<CR>',             'Added diff')
-nmap_leader('gA', '<Cmd>Git diff --cached -- %:p<CR>',      'Added diff buffer')
-nmap_leader('gb', '<Cmd>lua Config.git.toggle_blame()<CR>', 'Blame line (toggle)')
-nmap_leader('gc', '<Cmd>Git commit<CR>',                    'Commit')
-nmap_leader('gC', '<Cmd>Git commit --amend<CR>',            'Commit amend')
-nmap_leader('gd', '<Cmd>Git diff<CR>',                      'Diff')
-nmap_leader('gD', '<Cmd>Git diff -- %:p<CR>',               'Diff buffer')
-nmap_leader('gh', git_diff_head(),                          'HEAD~N diff')
-nmap_leader('gH', git_diff_head(' -- %:p'),                 'HEAD~N diff buffer')
-nmap_leader('gl', '<Cmd>' .. git_log_cmd .. '<CR>',         'Log')
-nmap_leader('gL', '<Cmd>' .. git_log_buf_cmd .. '<CR>',     'Log buffer')
-nmap_leader('go', '<Cmd>lua MiniDiff.toggle_overlay()<CR>', 'Toggle overlay')
-nmap_leader('gr', diff_ref_toggle('all'),                   'Reference revision')
-nmap_leader('gR', diff_ref_toggle('buf'),                   'Reference revision buffer')
-nmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>',  'Show at cursor')
+nmap_leader('ga', '<Cmd>Git diff --cached<CR>',               'Added diff')
+nmap_leader('gA', '<Cmd>Git diff --cached -- %:p<CR>',        'Added diff buffer')
+nmap_leader('gb', '<Cmd>lua Config.git.toggle_blame()<CR>',   'Blame line (toggle)')
+nmap_leader('gc', '<Cmd>Git commit<CR>',                      'Commit')
+nmap_leader('gC', '<Cmd>Git commit --amend<CR>',              'Commit amend')
+nmap_leader('gd', '<Cmd>Git diff<CR>',                        'Diff')
+nmap_leader('gD', '<Cmd>Git diff -- %:p<CR>',                 'Diff buffer')
+nmap_leader('gh', '<Cmd>lua Config.git.diff_head()<CR>',      'HEAD~N diff')
+nmap_leader('gH', '<Cmd>lua Config.git.diff_head("buf")<CR>', 'HEAD~N diff buffer')
+nmap_leader('gl', '<Cmd>lua Config.git.log()<CR>',            'Log')
+nmap_leader('gL', '<Cmd>lua Config.git.log("buf")<CR>',       'Log buffer')
+nmap_leader('go', '<Cmd>lua MiniDiff.toggle_overlay()<CR>',   'Toggle overlay')
+nmap_leader('gr', git_ref,                                    'Reference revision')
+nmap_leader('gR', git_ref_buf,                                'Reference revision buffer')
+nmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>',    'Show at cursor')
 
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 
@@ -331,54 +299,13 @@ nmap_leader('mt', '<Cmd>lua MiniMap.toggle()<CR>',       'Toggle')
 -- read only, so its work arrives here only through a merge. Doing it from the
 -- editor keeps "am I behind upstream?" one keypress away instead of a shell
 -- session, and it is the first thing to answer when something misbehaves.
---
--- Everything is left to Git itself, called asynchronously (`:h vim.system()`)
--- so the editor stays usable while fetching: Git already refuses to merge on a
--- dirty work tree and stops on conflicts, and its own message says more than a
--- reimplemented check would. The confirmation exists because the files being
--- rewritten are the ones this Neovim is running from.
+-- Being a Git operation like the others, it is written in 'plugin/41_git.lua'.
 -- NOTE: plugins are a separate matter, updated with `:h vim.pack.update()`.
-local upstream_merge = function()
-  -- `stdpath('config')` is inside the fork's repository, so `-C` finds it no
-  -- matter the current directory
-  local git = function(args, on_done)
-    local cmd = vim.list_extend({ 'git', '-C', vim.fn.stdpath('config') }, args)
-    vim.system(cmd, { text = true }, vim.schedule_wrap(on_done))
-  end
-  -- Which stream carries the reason depends on the subcommand ('merge' reports
-  -- a conflict on stdout), so report whichever one spoke
-  local is_ok = function(out)
-    if out.code == 0 then return true end
-    local msg = vim.trim(out.stderr) ~= '' and out.stderr or out.stdout
-    vim.notify(vim.trim(msg), vim.log.levels.ERROR)
-  end
-
-  vim.notify('Fetching `minimax`...')
-  git({ 'fetch', 'minimax' }, function(fetched)
-    if not is_ok(fetched) then return end
-    git({ 'rev-list', '--count', 'HEAD..minimax/main' }, function(counted)
-      if not is_ok(counted) then return end
-
-      local n = tonumber(vim.trim(counted.stdout))
-      if n == 0 then return vim.notify('Already up to date with `minimax/main`') end
-
-      local prompt = n .. ' new commit(s) upstream. Merge? (y/n) '
-      vim.ui.input({ prompt = prompt }, function(answer)
-        if (answer or ''):lower() ~= 'y' then return end
-        git({ 'merge', '--no-edit', 'minimax/main' }, function(merged)
-          if not is_ok(merged) then return end
-          -- Reload the config files the merge changed on disk
-          vim.cmd('checktime')
-          vim.notify('Merged ' .. n .. ' commit(s) from `minimax/main`')
-        end)
-      end)
-    end)
-  end)
-end
+local git_update_config = '<Cmd>lua Config.git.update_config()<CR>'
 
 nmap_leader('or', '<Cmd>lua MiniMisc.resize_window()<CR>', 'Resize to default width')
 nmap_leader('ot', '<Cmd>lua MiniTrailspace.trim()<CR>',    'Trim trailspace')
-nmap_leader('ou', upstream_merge,                          'Update from upstream')
+nmap_leader('ou', git_update_config,                       'Update from upstream')
 nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
 
 -- s is for 'Session'. Common usage:
@@ -396,43 +323,11 @@ nmap_leader('sw', '<Cmd>lua MiniSessions.write()<CR>',          'Write current')
 -- t is for 'Terminal'. Common usage:
 -- - `<Leader>tt` / `<Leader>tT` - terminal in vertical/horizontal split
 -- - `<Leader>tl` - 'lazygit' in a centered floating window. Quit it as usual
---   (`q`) to close the window and reload files it changed on disk.
-local term_lazygit = function()
-  if vim.fn.executable('lazygit') ~= 1 then
-    return vim.notify('`lazygit` is not available', vim.log.levels.WARN)
-  end
-
-  -- Cover most of the editor while keeping some context visible around.
-  -- Border comes from `:h 'winborder'` set in 'plugin/10_options.lua'.
-  local height = math.floor(0.9 * vim.o.lines)
-  local width = math.floor(0.9 * vim.o.columns)
-  local win_config = {
-    relative = 'editor',
-    height = height,
-    width = width,
-    row = math.floor(0.5 * (vim.o.lines - height)),
-    col = math.floor(0.5 * (vim.o.columns - width)),
-    title = ' lazygit ',
-    title_pos = 'center',
-  }
-  local buf_id = vim.api.nvim_create_buf(false, true)
-  local win_id = vim.api.nvim_open_win(buf_id, true, win_config)
-
-  local on_exit = vim.schedule_wrap(function()
-    pcall(vim.api.nvim_win_close, win_id, true)
-    pcall(vim.api.nvim_buf_delete, buf_id, { force = true })
-    -- Reload buffers changed by 'lazygit' (checkout, discard, stash, ...)
-    vim.cmd('checktime')
-  end)
-
-  -- Runs in current directory, which 'mini.misc' keeps at the project root
-  vim.fn.jobstart('lazygit', { term = true, on_exit = on_exit })
-  vim.cmd('startinsert')
-end
-
-nmap_leader('tl', term_lazygit,               'Lazygit')
-nmap_leader('tT', '<Cmd>horizontal term<CR>', 'Terminal (horizontal)')
-nmap_leader('tt', '<Cmd>vertical term<CR>',   'Terminal (vertical)')
+--   (`q`) to close the window and reload files it changed on disk. It is the
+--   Git client of this config, so it is set up in 'plugin/41_git.lua'.
+nmap_leader('tl', '<Cmd>lua Config.git.lazygit()<CR>', 'Lazygit')
+nmap_leader('tT', '<Cmd>horizontal term<CR>',          'Terminal (horizontal)')
+nmap_leader('tt', '<Cmd>vertical term<CR>',            'Terminal (vertical)')
 
 -- v is for 'Visits'. Common usage:
 -- - `<Leader>vv` - add    "core" label to current file.

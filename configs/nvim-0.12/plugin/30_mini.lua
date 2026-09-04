@@ -473,9 +473,46 @@ later(function() require('mini.comment').setup() end)
 -- Uncomment next line (use `gcc`) to enable.
 -- later(function() require('mini.cursorword').setup() end)
 
--- 'mini.diff' and 'mini.git' are configured in 'plugin/31_git.lua', together
--- with the Git integration built on top of them: reading the repository is the
--- one area of this config that outgrew a module setup.
+-- Work with diff hunks that represent the difference between the buffer text and
+-- some reference text set by a source. Default source uses text from Git index.
+-- Also provides summary info used in developer section of 'mini.statusline'.
+-- Example usage:
+-- - `ghip` - apply hunks (`gh`) within *i*nside *p*aragraph
+-- - `gHG` - reset hunks (`gH`) from cursor until end of buffer (`G`)
+-- - `ghgh` - apply (`gh`) hunk at cursor (`gh`)
+-- - `gHgh` - reset (`gH`) hunk at cursor (`gh`)
+-- - `<Leader>go` - toggle overlay
+--
+-- Nothing about the source is passed here: 'plugin/41_git.lua' attaches its own
+-- when a revision is referenced (`<Leader>gr`), and the default one is what
+-- reading against the Git index means.
+--
+-- See also:
+-- - `:h MiniDiff-overview` - overview of how module works
+-- - `:h MiniDiff-diff-summary` - available summary information
+-- - `:h MiniDiff.gen_source` - available built-in sources
+later(function() require('mini.diff').setup() end)
+
+-- Git integration for more straightforward Git actions based on Neovim's state.
+-- It is not meant as a fully featured Git client, only to provide helpers that
+-- integrate better with Neovim. Example usage:
+-- - `<Leader>gs` - show information at cursor
+-- - `<Leader>gd` - show unstaged changes as a patch in separate tabpage
+-- - `<Leader>gL` - show Git log of current file
+-- - `:Git help git` - show output of `git help git` inside Neovim
+--
+-- See also:
+-- - `:h MiniGit-examples` - examples of common setups
+-- - `:h :Git` - more details about `:Git` user command
+-- - `:h MiniGit.show_at_cursor()` - what information at cursor is shown
+later(function() require('mini.git').setup() end)
+
+-- These two modules answer the same question - what changed, when, and by whom
+-- - and what makes them answer it together is a whole area of its own: the
+-- revision used as diff reference, the navigation inside the output of `:Git`,
+-- the blame of the line under the cursor. That code is not a module setup, so
+-- it is not here: it is 'plugin/41_git.lua', which builds on the two `setup()`
+-- calls above and exposes `Config.git`. Their configuration stays here.
 
 -- Highlight patterns in text. Like `TODO`/`NOTE` or color hex codes.
 -- Example usage:

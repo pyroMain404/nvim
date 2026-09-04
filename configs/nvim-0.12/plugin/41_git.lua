@@ -1,0 +1,653 @@
+-- ┌─────────────────┐
+-- │ Git integration │
+-- └─────────────────┘
+--
+-- This file is the Git workflow of this config, and it is a plugin in every
+-- way but the name: it has its state, its behavior, and one API through which
+-- everything else talks to it. What it provides is the reading of a repository
+-- from inside the editor - the revision used as diff reference, the navigation
+-- inside the output of `:Git`, the blame of the line under the cursor, the Git
+-- client - none of which is a setting of a module.
+--
+-- What it builds on is 'mini.diff' and 'mini.git', configured in
+-- 'plugin/30_mini.lua' like every other MINI module: their `setup()` belongs
+-- there, everything this config makes them do together belongs here. That is
+-- the whole division, and it is why no `setup()` call appears below.
+--
+-- Everything this file offers is reachable through `Config.git`, and nothing
+-- else of it is global. That single entry point is what tells the Git
+-- integration apart from the rest of the config, both while reading it here and
+-- while typing `:lua Config.git.` in the command line:
+--
+-- - `Config.git.diff_ref` - revision used as 'mini.diff' reference text in every
+--   buffer, `nil` for the Git index. Per buffer it is `vim.b.diff_ref`.
+-- - `Config.git.set_diff_ref(rev, buf_id)` - reference `rev` in every buffer, or
+--   in a single one.
+-- - `Config.git.toggle_diff_ref(scope)` - reference a revision, or restore the
+--   Git index when one is already referenced.
+-- - `Config.git.blame` - whether the line under the cursor is blamed.
+-- - `Config.git.toggle_blame()` - turn that annotation on and off.
+-- - `Config.git.log(scope)` - Git log of the repository or of the buffer.
+-- - `Config.git.diff_head(scope)` - patch of the latest `[count]` commits.
+-- - `Config.git.lazygit()` - Git client in a floating window.
+-- - `Config.git.update_config()` - merge upstream changes into this config.
+--
+-- Mappings carry no logic of their own: 'plugin/20_keymaps.lua' only binds keys
+-- to these functions, under the `<Leader>g` group plus `<Leader>tl` and
+-- `<Leader>ou`. Read that file for what the workflow looks like from the
+-- keyboard; read this one for how it is implemented.
+--
+-- The functions are defined as this file is sourced, and only the autocommands
+-- of the last section wait for `later()`: an API that appears once a deferred
+-- callback has run would answer differently depending on when it is called.
+-- Calling one before the modules are enabled is the one thing that does not
+-- work, and nothing does that - a mapping is pressed long after startup.
+local later = Config.later
+
+Config.git = {}
+
+-- Repository =================================================================
+
+-- Root of the repository the current directory belongs to, `nil` outside one.
+-- Every part of this file needs it, as every path Git reports - in the output of
+-- a command and in the name of the buffers holding a file state at some commit
+-- - is relative to it, while Neovim runs below it (`:h vim.fs.root()`).
+local repo_root = function() return vim.fs.root(vim.fn.getcwd(), '.git') end
+
+-- HACK: paths inside a patch are relative to the root of the repository, while
+-- 'mini.git' resolves them against the current directory, as the notes of
+-- `:h MiniGit.show_diff_source()` state. The two differ whenever Neovim runs
+-- below the root, which is the normal case here as the `setup_auto_root()` call
+-- of 'plugin/30_mini.lua' stops at the config directory: showing an entry of
+-- a patch against the working tree then fails with `:h E484`. Run those calls
+-- from the root instead and restore the directory after, as `setup_auto_root()`
+-- sets it anew (on the next event loop tick) for the buffer that gets opened.
+-- Remove once 'mini.git' resolves the paths itself (still needed in 0.18.0).
+local at_repo_root = function(f, opts)
+  local root = repo_root()
+  if root == nil then return f(opts) end
+  local cwd = vim.fn.getcwd()
+  vim.fn.chdir(root)
+  local ok, err = pcall(f, opts)
+  vim.fn.chdir(cwd)
+  if not ok then error(err, 0) end
+end
+
+-- Diff reference =============================================================
+
+-- Beside the default source of 'mini.diff', which compares the buffer text
+-- against the Git index, this config can use the file content at some revision
+-- as reference text: that is what makes the latest commits readable as if they
+-- were not committed yet.
+--
+-- Which file a buffer holds is answered by `buf_git_location()`, because two
+-- kinds of buffer are referenced this way: a file on disk, and the copy of
+-- a file at some commit which 'mini.git' opens (`gF` and `<CR>` in the output
+-- of `:Git`, see the "Patch navigation" section below). The second has nothing
+-- on disk, and keeps its path - relative to the root of the repository - inside
+-- the buffer name, as "minigit://<id>/show <commit>:<path>".
+local buf_git_location = function(buf_id)
+  local name = vim.api.nvim_buf_get_name(buf_id)
+  local path_at_commit = name:match('^minigit://%d+/.*show %x+~*:(.*)$')
+  if path_at_commit ~= nil then
+    local root = repo_root()
+    if root == nil then return nil end
+    return { cwd = root, path = path_at_commit, at_commit = true }
+  end
+  if vim.fn.filereadable(name) ~= 1 then return nil end
+  local dir, base = vim.fn.fnamemodify(name, ':h'), vim.fn.fnamemodify(name, ':t')
+  return { cwd = dir, path = base, at_commit = false }
+end
+
+-- 'mini.diff' source using file content at `rev` as reference text.
+-- Every field is set because a buffer-local config is merged field by field
+-- into the global one (`:h mini.nvim-buffer-local-config`): a field left out
+-- would be silently taken from the source this one replaces. `apply_hunks` is
+-- the one that matters, as staging happens against the index and not `rev`.
+-- The Git source is kept as a fallback for files absent from that revision,
+-- and reused across calls because it watches '.git/index' on its own.
+local diff_source_git = nil
+local diff_sources_at = function(rev)
+  local attach = function(buf_id)
+    local loc = buf_git_location(buf_id)
+    if loc == nil then return false end
+    local cmd = { 'git', 'show', rev .. ':./' .. loc.path }
+    local out = vim.system(cmd, { cwd = loc.cwd }):wait()
+    if out.code ~= 0 then
+      -- A path the revision does not have is left to the Git source below.
+      -- For a state at some commit there is no such fallback, as the buffer
+      -- is not a file: read it as fully added, which is what the commit did
+      -- to that path if the one before it had nothing there.
+      if not loc.at_commit then return false end
+      return MiniDiff.set_ref_text(buf_id, '')
+    end
+    -- Account for possible 'crlf' end of line in Git object
+    MiniDiff.set_ref_text(buf_id, (out.stdout:gsub('\r\n', '\n')))
+  end
+  local apply_hunks = function()
+    error('Hunks are shown against ' .. rev .. '. Restore the index to apply.')
+  end
+
+  diff_source_git = diff_source_git or MiniDiff.gen_source.git()
+  local source = {
+    name = 'git-' .. rev,
+    attach = attach,
+    detach = function(_) end,
+    apply_hunks = apply_hunks,
+  }
+  return { source, diff_source_git }
+end
+
+-- Revision used as 'mini.diff' reference text, `nil` for the Git index: in
+-- `Config.git.diff_ref` for every buffer, in `vim.b.diff_ref` for a single one.
+-- Change it through `set_diff_ref()`, as the source has to be attached anew:
+-- - `:lua Config.git.set_diff_ref('v0.15.0')` - reference a tag everywhere
+-- - `:lua Config.git.set_diff_ref(nil, 0)` - restore the index in current buffer
+Config.git.diff_ref = nil
+Config.git.set_diff_ref = function(rev, buf_id)
+  local source = rev ~= nil and diff_sources_at(rev) or nil
+  local bufs = vim.api.nvim_list_bufs()
+  if buf_id == nil then
+    Config.git.diff_ref, MiniDiff.config.source = rev, source
+  else
+    buf_id = buf_id == 0 and vim.api.nvim_get_current_buf() or buf_id
+    vim.b[buf_id].diff_ref = rev
+    vim.b[buf_id].minidiff_config = source ~= nil and { source = source } or nil
+    bufs = { buf_id }
+  end
+
+  -- Reference text is set while the source attaches, so reattach to apply it.
+  -- Show the overlay wherever a revision is referenced, as reading the old text
+  -- in place is the point of it. Reattaching resets it back to the config value.
+  --
+  -- 'mini.diff' enables itself only in buffers holding a file (`:h 'buftype'`),
+  -- so a state at some commit stays untouched by it and answers `[h` / `]h`
+  -- with an error. Enable it when that buffer is the one being asked for:
+  -- referencing a revision in it is the whole point of the call.
+  local force_enable = buf_id ~= nil and rev ~= nil
+  for _, id in ipairs(bufs) do
+    local is_enabled = MiniDiff.get_buf_data(id) ~= nil
+    if is_enabled then MiniDiff.disable(id) end
+    if is_enabled or force_enable then
+      MiniDiff.enable(id)
+      local data = MiniDiff.get_buf_data(id)
+      local has_rev = (vim.b[id].diff_ref or Config.git.diff_ref) ~= nil
+      local show_overlay = has_rev and data ~= nil and not data.overlay
+      if show_overlay then MiniDiff.toggle_overlay(id) end
+    end
+  end
+
+  local scope = buf_id ~= nil and ' (buffer)' or ''
+  vim.notify('Diff reference' .. scope .. ': ' .. (rev or 'Git index'))
+end
+
+-- Reference `HEAD~[count]`, or a commit picked from the log when there is no
+-- `[count]`. Restore the Git index instead when a revision is already
+-- referenced, which is what makes this a toggle. `scope` is "buf" for the
+-- current buffer alone, anything else for every buffer. Example usage:
+-- - `:lua Config.git.toggle_diff_ref()` - what `<Leader>gr` does
+-- - `:lua Config.git.toggle_diff_ref('buf')` - what `<Leader>gR` does
+-- NOTE: `choose` runs while the picker is still the current buffer, hence the
+-- buffer identifier resolved before starting it.
+Config.git.toggle_diff_ref = function(scope)
+  local buf_id, cur_ref = nil, Config.git.diff_ref
+  if scope == 'buf' then
+    buf_id, cur_ref = vim.api.nvim_get_current_buf(), vim.b.diff_ref
+  end
+  if cur_ref ~= nil then return Config.git.set_diff_ref(nil, buf_id) end
+
+  local count = vim.v.count
+  if count > 0 then return Config.git.set_diff_ref('HEAD~' .. count, buf_id) end
+
+  local path = nil
+  if scope == 'buf' then
+    path = vim.api.nvim_buf_get_name(0)
+    if vim.fn.filereadable(path) ~= 1 then
+      return vim.notify('Buffer is not a file on disk', vim.log.levels.WARN)
+    end
+  end
+  local choose = function(item) Config.git.set_diff_ref(item:match('^%S+'), buf_id) end
+  MiniExtra.pickers.git_commits({ path = path }, { source = { choose = choose } })
+end
+
+-- Patch navigation ===========================================================
+
+-- What `:Git` writes is a patch or a log, and both are read to get somewhere:
+-- to the file an entry belongs to, to the commit a hash names. This is that
+-- step, mapped in the scratch buffers of 'mini.nvim' itself by
+-- `setup_patch_buf()` at the end of the section:
+-- - `gf` and friends (`<C-w>f`, `[f`, ...) open the file under cursor, ignoring
+--   the "a/" and "b/" prefixes which Git adds to paths inside a patch.
+-- - `gF` opens the file of the patch entry at cursor in the state it had at
+--   that commit, with cursor on the corresponding line.
+-- - `<CR>` shows data at cursor: full commit if it is a hash (like in the
+--   output of `:Git log`), the file of the patch entry if it is inside a patch,
+--   evolution of the line otherwise. Unlike `gF`, it opens the file itself when
+--   the patch is against the working tree (like in `<Leader>gd`/`<Leader>gh`).
+-- - `zm` / `zr` fold and unfold by hunk, then by file, then by log entry.
+--   Nothing is folded initially, as 'foldlevel' starts at the deepest level.
+-- - `q` closes the output window.
+--
+-- Both `gF` and `<CR>` open next to the patch they start from, instead of in
+-- a new tabpage: the first file takes a column of its own, every file after it
+-- is opened below the previous one (`:h :belowright`), so that they are all read
+-- in that same column. A file opened at some commit references the commit
+-- before it, so that `[h` / `]h`, `gh` and the overlay read what that commit
+-- did to it - the buffer scoped `<Leader>gR`, applied for free.
+--
+-- See also `:h MiniGit.show_at_cursor()` for what information at cursor is
+-- shown, and `:h MiniGit.diff_foldexpr()` for how the folds are computed.
+
+-- The output of Git is read next to the code, so its column is given a fixed
+-- width and everything left goes to the file. It is the width the config
+-- files themselves are written to, which a commit subject and a patch are
+-- meant to fit in. Never take more than half of the screen: a fixed width is
+-- a bad deal on a narrow terminal.
+-- NOTE: `textoff` is what the line numbers and the signs take, so that the
+-- text gets the full width and not the window.
+local git_column_width = 85
+local fit_git_column = function(win_id)
+  if not vim.api.nvim_win_is_valid(win_id) then return end
+  local width = math.min(git_column_width, math.floor(0.5 * vim.o.columns))
+  vim.api.nvim_win_set_width(win_id, width + vim.fn.getwininfo(win_id)[1].textoff)
+end
+
+-- `<CR>` shows either a commit or a file, and the two are read differently:
+-- a commit is detail of the log it was opened from, so it goes full width
+-- below it, while a file is the thing being read, so it gets the column at
+-- the far right, shared with the files opened before it (`place_win()` below).
+-- Ask for the matching direction and not for the "auto" default of
+-- 'mini.git', which switches to a new tabpage as soon as a window of the
+-- current one holds a normal buffer, the case as soon as the first file has
+-- been opened this way.
+-- NOTE: which of the two is shown is decided by 'mini.git' from the word at
+-- cursor (`:h MiniGit.show_at_cursor()`), while the direction has to be known
+-- before the call, hence the same test repeated here.
+local is_commit_at_cursor = function()
+  local cword = vim.fn.expand('<cword>')
+  return cword:find('^%x%x%x%x%x%x%x+$') ~= nil and cword == cword:lower()
+end
+
+-- A file state at some commit is opened to see what that commit did to it, so
+-- reference the state right before it as soon as the buffer is there: hunk
+-- navigation (`[h` / `]h`), the hunk textobject (`gh`) and the overlay then
+-- work on that change, in the file itself, instead of on the patch it was
+-- opened from. Only this buffer is referenced - what `<Leader>gR` does - so
+-- the revision referenced everywhere else (`<Leader>gr`) is left alone.
+-- NOTE: `<Leader>gR` in such a buffer restores the Git index like anywhere
+-- else, which here leaves no reference at all: the buffer holds a copy, and
+-- a copy has nothing in the index to be compared against. Opening the entry
+-- again from the patch is what sets this reference back.
+local diff_ref_at_parent = function(buf_id)
+  local name = vim.api.nvim_buf_get_name(buf_id)
+  local commit = name:match('^minigit://%d+/.*show (%x+~*):')
+  if commit == nil then return end
+  Config.git.set_diff_ref(commit .. '~', buf_id)
+end
+
+-- Only the first file opened from a patch takes a full height column of its
+-- own at the far right (`wincmd L`). Every file after it is opened below the
+-- one opened before it (`:h :belowright`) instead of taking yet another
+-- column: they are all read in the same place, one under the other, and
+-- a third column would leave none of them wide enough for code. Closing that
+-- column starts a new one, as the next file has then nothing to open below.
+local win_file = nil
+local win_file_is_usable = function()
+  return win_file ~= nil
+    and vim.api.nvim_win_is_valid(win_file)
+    and vim.api.nvim_win_get_tabpage(win_file) == vim.api.nvim_win_get_tabpage(0)
+end
+
+-- Move the window the entry was opened in and give the two their widths,
+-- keeping the line 'mini.git' put the cursor on.
+-- NOTE: the window is moved before it has ever been drawn, so its view still
+-- starts at the first line while the cursor sits wherever it was set. Neovim
+-- resolves the two by pulling the cursor into what the height can show, which
+-- leaves every line past the height of the window on its last line - the
+-- entry looks aligned for the first file of a patch and drifts for the ones
+-- after it. Setting the position again after the move is what fixes it, and
+-- `zz` is what makes the window show it from the middle.
+local place_win = function(win_init, direction)
+  local pos = vim.api.nvim_win_get_cursor(0)
+  if direction ~= 'L' then
+    vim.cmd('wincmd ' .. direction)
+  else
+    local win_id = vim.api.nvim_get_current_win()
+    if win_file_is_usable() then
+      local below = { vertical = false, rightbelow = true }
+      vim.fn.win_splitmove(win_id, win_file, below)
+    else
+      vim.cmd('wincmd L')
+    end
+    -- NOTE: `win_splitmove()` moves the window without following it, so the
+    -- one the entry was opened in has to be made current again by hand.
+    vim.api.nvim_set_current_win(win_id)
+    win_file = win_id
+    fit_git_column(win_init)
+  end
+  pcall(vim.api.nvim_win_set_cursor, 0, pos)
+  vim.cmd('normal! zz')
+end
+
+-- `MiniGit.show_diff_source()` always shows a scratch buffer with a copy of
+-- the file, also for the "after" state of a patch against the working tree.
+-- Reuse it to resolve path and line number of the entry at cursor, but then
+-- edit the file itself to get a fully functional buffer ('mini.diff', LSP).
+local show_at_cursor = function()
+  local win_init = vim.api.nvim_get_current_win()
+  local is_commit = is_commit_at_cursor()
+  local split = is_commit and 'horizontal' or 'vertical'
+  at_repo_root(MiniGit.show_at_cursor, { target = 'after', split = split })
+  if vim.api.nvim_get_current_win() == win_init then
+    -- There is no "after" state if the file was deleted: show "before" one
+    at_repo_root(MiniGit.show_at_cursor, { split = split })
+  end
+  if vim.api.nvim_get_current_win() == win_init then return end
+  place_win(win_init, is_commit and 'J' or 'L')
+
+  -- Only the working tree state is shown as `edit`. A state at some commit
+  -- (`show <commit>:<path>`) has no file on disk, so it is left as it is.
+  -- NOTE: 'mini.git' stores the path already escaped for a command, and
+  -- relative to the repository root, hence the same resolution as above.
+  local path = vim.api.nvim_buf_get_name(0):match('^minigit://%d+/edit (.*)$')
+  if path == nil then return diff_ref_at_parent(0) end
+  local root = repo_root()
+  if root ~= nil then
+    path = vim.fn.fnameescape(vim.fs.normalize(root)) .. '/' .. path
+  end
+  local lnum = vim.api.nvim_win_get_cursor(0)[1]
+
+  -- Keep the patch as alternate file and drop the fold options which the new
+  -- window inherited from it, as they only make sense inside a patch
+  vim.cmd('keepalt edit ' .. path)
+  vim.cmd('setlocal foldmethod< foldexpr< foldlevel<')
+  vim.api.nvim_win_set_cursor(0, { lnum, 0 })
+  vim.cmd('normal! zv')
+end
+
+-- A state at some commit is always shown as a copy, in the same column
+local show_diff_source = function()
+  local win_init = vim.api.nvim_get_current_win()
+  at_repo_root(MiniGit.show_diff_source, { split = 'vertical' })
+  if vim.api.nvim_get_current_win() == win_init then return end
+  place_win(win_init, 'L')
+  diff_ref_at_parent(0)
+end
+
+local setup_patch_buf = function()
+  -- Resolve "a/path" and "b/path" of a patch to a real file for `:h gf`.
+  -- Add repository root to `:h 'path'` for patches shown from a subdirectory,
+  -- escaped because space and comma separate the entries of 'path'.
+  vim.bo.includeexpr = [[substitute(v:fname, '^[abciwo]/', '', '')]]
+  local root = repo_root()
+  if root ~= nil then
+    root = vim.fn.escape(vim.fs.normalize(root), ' ,')
+    vim.bo.path = root .. ',' .. vim.bo.path
+  end
+
+  -- Fold by file entry (level 1), hunk (2), and hunk body (3). Start at the
+  -- deepest level, as with the global 'foldlevel' of 10 the first several
+  -- `zm` would do nothing at all (see 'plugin/10_options.lua').
+  vim.wo.foldmethod, vim.wo.foldexpr = 'expr', 'v:lua.MiniGit.diff_foldexpr()'
+  vim.wo.foldlevel = 3
+
+  -- Navigation is mapped only in scratch buffers of 'mini.nvim' itself (both
+  -- "minigit://" of `:Git` and "miniextra://" of `:Pick git_commits`), as it
+  -- would shadow useful defaults inside a regular patch or commit file
+  if not vim.api.nvim_buf_get_name(0):find('^mini%a+://') then return end
+  local bmap = function(lhs, rhs, desc)
+    vim.keymap.set('n', lhs, rhs, { buffer = 0, desc = desc })
+  end
+  bmap('<CR>', show_at_cursor, 'Show at cursor')
+  bmap('gF', show_diff_source, 'Show diff source')
+  bmap('q', '<Cmd>silent! close<CR>', 'Close output')
+end
+
+-- History ====================================================================
+
+-- Git log, of the repository or of the file in the current buffer, in the
+-- layout the blame annotation uses. Example usage:
+-- - `:lua Config.git.log()` - what `<Leader>gl` does
+-- - `:lua Config.git.log('buf')` - what `<Leader>gL` does
+-- NOTE: the backslashes keep 'mini.git' from expanding `%h`, `%as` and `%s` as
+-- the name of the current file with a modifier (`:h cmdline-special`).
+local git_log_cmd = [[Git log --pretty=format:\%h\ \%as\ │\ \%s --topo-order]]
+Config.git.log = function(scope)
+  local postfix = scope == 'buf' and ' --follow -- %:p' or ''
+  vim.cmd(git_log_cmd .. postfix)
+end
+
+-- Patch of the latest `[count]` (default 1) commits, of the repository or of
+-- the file in the current buffer. Example usage:
+-- - `:lua Config.git.diff_head()` - what `<Leader>gh` does
+-- - `3<Leader>gh` - patch of the latest 3 commits
+Config.git.diff_head = function(scope)
+  local postfix = scope == 'buf' and ' -- %:p' or ''
+  vim.cmd('Git diff HEAD~' .. vim.v.count1 .. postfix)
+end
+
+-- Blame ======================================================================
+
+-- Who last changed the line under the cursor, written at the end of the line
+-- itself instead of in a window: this is the reading wanted while writing
+-- code, and a window for one line costs the code half of the screen.
+-- `<Leader>gb` turns it on and off, `:vertical Git blame -- %:p` still
+-- blames the whole file. What is shown, in the layout `Config.git.log()` uses:
+-- `Gaetano Esposito │ 2026-09-02 │ fix(mini): patch fails below the root`
+--
+-- NOTE: `git blame` reads the file from disk, so nothing is shown while the
+-- buffer is modified: past the first unsaved edit the line numbers are no
+-- longer the ones on disk and lines would be credited to the wrong commit.
+local blame_ns = vim.api.nvim_create_namespace('custom-config-blame')
+local blame_timer = vim.uv.new_timer()
+local blame_last = {}
+
+local blame_clear = function(buf_id)
+  if not vim.api.nvim_buf_is_valid(buf_id) then return end
+  vim.api.nvim_buf_clear_namespace(buf_id, blame_ns, 0, -1)
+end
+
+local blame_show = function(buf_id, lnum)
+  local root = (MiniGit.get_buf_data(buf_id) or {}).root
+  if root == nil or vim.bo[buf_id].modified then return end
+
+  local range = lnum .. ',' .. lnum
+  local path = vim.api.nvim_buf_get_name(buf_id)
+  local cmd = { 'git', 'blame', '--porcelain', '-L', range, '--', path }
+  local on_done = function(out)
+    -- An answer for a line the cursor has left is of no interest anymore
+    local is_current = blame_last.buf_id == buf_id and blame_last.lnum == lnum
+    if out.code ~= 0 or not is_current then return end
+
+    -- A line not committed yet is reported with a hash of only zeros
+    local text = 'Not committed yet'
+    if out.stdout:find('^0+ ') == nil then
+      local author = out.stdout:match('\nauthor ([^\n]*)') or '?'
+      local summary = out.stdout:match('\nsummary ([^\n]*)') or '?'
+      local time = tonumber(out.stdout:match('\nauthor%-time (%d+)'))
+      local date = time ~= nil and os.date('%Y-%m-%d', time) or '?'
+      text = author .. ' │ ' .. date .. ' │ ' .. summary
+    end
+    -- NOTE: `hl_mode` defaults to "replace", which would keep the annotation
+    -- on the background of 'Normal' while the line it belongs to is
+    -- highlighted by `:h 'cursorline'`, making it look cut out of the line.
+    -- "combine" keeps the foreground of 'Comment' over whichever background
+    -- the line has.
+    -- The leading space is one column more than `virt_text_pos` leaves, so
+    -- that the annotation does not read as part of the line it follows.
+    -- `virt_text_win_col` would pin it to a fixed window column instead,
+    -- landing inside the code on every line longer than that column.
+    local opts = {
+      virt_text = { { ' ' .. text, 'Comment' } },
+      virt_text_pos = 'eol',
+      hl_mode = 'combine',
+    }
+    pcall(vim.api.nvim_buf_set_extmark, buf_id, blame_ns, lnum - 1, 0, opts)
+  end
+  vim.system(cmd, { cwd = root, text = true }, vim.schedule_wrap(on_done))
+end
+
+-- Blame a line only once the cursor rests on it, as holding `j` would
+-- otherwise start a `git` process for every line passed through
+local blame_track = function()
+  local buf_id, lnum = vim.api.nvim_get_current_buf(), vim.fn.line('.')
+  local tick = vim.b[buf_id].changedtick
+  local is_same = blame_last.buf_id == buf_id and blame_last.lnum == lnum
+  if is_same and blame_last.tick == tick then return end
+  -- Left as it is, the annotation of the previous buffer stays readable in
+  -- whatever split still shows it, as if the cursor had never left
+  if blame_last.buf_id ~= nil then blame_clear(blame_last.buf_id) end
+  blame_last = { buf_id = buf_id, lnum = lnum, tick = tick }
+
+  blame_clear(buf_id)
+  blame_timer:stop()
+  if not Config.git.blame then return end
+  local show = function() blame_show(buf_id, lnum) end
+  blame_timer:start(150, 0, vim.schedule_wrap(show))
+end
+
+-- Whether that annotation is shown at all. It starts off: who wrote a line
+-- is asked for at some point while reading, not at every one of them, and
+-- until it is asked there is no reason to run `git` on every pause of the
+-- cursor. Example usage:
+-- - `:lua Config.git.toggle_blame()` - what `<Leader>gb` does
+Config.git.blame = false
+Config.git.toggle_blame = function()
+  Config.git.blame = not Config.git.blame
+  if not Config.git.blame then vim.tbl_map(blame_clear, vim.api.nvim_list_bufs()) end
+  blame_last = {}
+  blame_track()
+  vim.notify('Blame line: ' .. (Config.git.blame and 'on' or 'off'))
+end
+
+-- Align output of `:vertical Git blame` with the window it was called from and
+-- make both windows scroll together. See `:h MiniGit-examples`.
+local align_blame = function(au_data)
+  if au_data.data.git_subcommand ~= 'blame' then return end
+  local win_src = au_data.data.win_source
+  vim.wo.wrap = false
+  vim.fn.winrestview({ topline = vim.fn.line('w0', win_src) })
+  vim.api.nvim_win_set_cursor(0, { vim.fn.line('.', win_src), 0 })
+  vim.wo[win_src].scrollbind, vim.wo.scrollbind = true, true
+end
+
+-- Client =====================================================================
+
+-- What this config deliberately does not do: changing what Git stores (staging,
+-- branching, stashing, rebasing) is left to 'lazygit', which is a Git client
+-- already, while everything above only reads the repository. It is shown in
+-- a floating window covering most of the editor. Quit it as usual (`q`) to
+-- close the window and reload the files it changed on disk. Example usage:
+-- - `:lua Config.git.lazygit()` - what `<Leader>tl` does
+Config.git.lazygit = function()
+  if vim.fn.executable('lazygit') ~= 1 then
+    return vim.notify('`lazygit` is not available', vim.log.levels.WARN)
+  end
+
+  -- Cover most of the editor while keeping some context visible around.
+  -- Border comes from `:h 'winborder'` set in 'plugin/10_options.lua'.
+  local height = math.floor(0.9 * vim.o.lines)
+  local width = math.floor(0.9 * vim.o.columns)
+  local win_config = {
+    relative = 'editor',
+    height = height,
+    width = width,
+    row = math.floor(0.5 * (vim.o.lines - height)),
+    col = math.floor(0.5 * (vim.o.columns - width)),
+    title = ' lazygit ',
+    title_pos = 'center',
+  }
+  local buf_id = vim.api.nvim_create_buf(false, true)
+  local win_id = vim.api.nvim_open_win(buf_id, true, win_config)
+
+  local on_exit = vim.schedule_wrap(function()
+    pcall(vim.api.nvim_win_close, win_id, true)
+    pcall(vim.api.nvim_buf_delete, buf_id, { force = true })
+    -- Reload buffers changed by 'lazygit' (checkout, discard, stash, ...)
+    vim.cmd('checktime')
+  end)
+
+  -- Runs in current directory, which 'mini.misc' keeps at the project root
+  vim.fn.jobstart('lazygit', { term = true, on_exit = on_exit })
+  vim.cmd('startinsert')
+end
+
+-- Config repository ==========================================================
+
+-- The one function here which does not look at the repository being edited but
+-- at the one this config lives in: it is a fork of 'MiniMax', the `minimax`
+-- remote is upstream and read only, so its work arrives here only through
+-- a merge. Doing it from the editor keeps "am I behind upstream?" one keypress
+-- away instead of a shell session. Example usage:
+-- - `:lua Config.git.update_config()` - what `<Leader>ou` does
+--
+-- Everything is left to Git itself, called asynchronously (`:h vim.system()`)
+-- so the editor stays usable while fetching: Git already refuses to merge on a
+-- dirty work tree and stops on conflicts, and its own message says more than
+-- a reimplemented check would. The confirmation exists because the files being
+-- rewritten are the ones this Neovim is running from.
+-- NOTE: plugins are a separate matter, updated with `:h vim.pack.update()`.
+Config.git.update_config = function()
+  -- `stdpath('config')` is inside the fork's repository, so `-C` finds it no
+  -- matter the current directory
+  local git = function(args, on_done)
+    local cmd = vim.list_extend({ 'git', '-C', vim.fn.stdpath('config') }, args)
+    vim.system(cmd, { text = true }, vim.schedule_wrap(on_done))
+  end
+  -- Which stream carries the reason depends on the subcommand ('merge' reports
+  -- a conflict on stdout), so report whichever one spoke
+  local is_ok = function(out)
+    if out.code == 0 then return true end
+    local msg = vim.trim(out.stderr) ~= '' and out.stderr or out.stdout
+    vim.notify(vim.trim(msg), vim.log.levels.ERROR)
+  end
+
+  vim.notify('Fetching `minimax`...')
+  git({ 'fetch', 'minimax' }, function(fetched)
+    if not is_ok(fetched) then return end
+    git({ 'rev-list', '--count', 'HEAD..minimax/main' }, function(counted)
+      if not is_ok(counted) then return end
+
+      local n = tonumber(vim.trim(counted.stdout))
+      if n == 0 then return vim.notify('Already up to date with `minimax/main`') end
+
+      local prompt = n .. ' new commit(s) upstream. Merge? (y/n) '
+      vim.ui.input({ prompt = prompt }, function(answer)
+        if (answer or ''):lower() ~= 'y' then return end
+        git({ 'merge', '--no-edit', 'minimax/main' }, function(merged)
+          if not is_ok(merged) then return end
+          -- Reload the config files the merge changed on disk
+          vim.cmd('checktime')
+          vim.notify('Merged ' .. n .. ' commit(s) from `minimax/main`')
+        end)
+      end)
+    end)
+  end)
+end
+
+-- Autocommands ===============================================================
+
+-- What the two modules do not do by themselves, hooked to the events that
+-- bring it about. It is deferred like their `setup()` calls in
+-- 'plugin/30_mini.lua', so that nothing here runs before the modules exist:
+-- `MiniGit` is what fills the buffers this makes navigable, and what reports
+-- the root a line is blamed against.
+--
+-- - Output of `:Git` is a scratch buffer with "git" or "diff" filetype, which
+--   `setup_patch_buf()` turns into something navigable instead of a wall of
+--   text: folds by file, hunk and hunk body (`zm` / `zr`), `gf` on the "a/"
+--   and "b/" paths of a patch, `<CR>` and `gF` on the entry at cursor, `q` to
+--   close. See `:h MiniGit.diff_foldexpr()` for how the folds are computed.
+-- - The cursor resting on a line is what asks for its blame, and only while
+--   `Config.git.blame` is on.
+-- - `MiniGitCommandSplit` is emitted by 'mini.git' when `:vertical Git blame`
+--   opens its window, which is where it gets aligned with the code.
+later(function()
+  local ft_patch = { 'git', 'diff' }
+  Config.new_autocmd('FileType', ft_patch, setup_patch_buf, 'Navigable Git output')
+
+  local blame_events = { 'CursorMoved', 'CursorMovedI', 'BufEnter' }
+  Config.new_autocmd(blame_events, nil, blame_track, 'Blame current line')
+
+  Config.new_autocmd('User', 'MiniGitCommandSplit', align_blame, 'Align Git blame')
+end)
