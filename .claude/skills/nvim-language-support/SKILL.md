@@ -389,6 +389,7 @@ un'impressione.
 | Highlight assente o povero | parser non installato | `:InspectTree`, `:Inspect` |
 | Highlight che *era* completo e ora è parziale | query che ha sostituito quella del plugin | la **prima riga** dei file in `after/queries/`: manca `; extends` |
 | Il server non si attacca | eseguibile assente, o `root_dir` che non trova la radice | `:checkhealth vim.lsp`, `:=vim.lsp.config['<server>']` |
+| `method "..." is not supported by any server activated for this buffer` | non è il metodo a mancare: **nessun client è attaccato**, e quasi sempre il server non è nella lista abilitata | `:=vim.lsp.enable` in `plugin/40_plugins.lua`, poi `:checkhealth vim.lsp` |
 | Due client dello stesso server sullo stesso progetto | `root_dir` sovrascritto da `after/lsp/` | `:checkhealth vim.lsp` |
 | Un'impostazione di `settings` non ha effetto | nome sbagliato, **o una funzione ereditata sovrascritta** | il manuale del server, e `:=vim.lsp.config['<server>']` |
 | Un comando o una mapping del server è sparito | `on_attach` ereditato sovrascritto | `:=vim.lsp.config['<server>']` |
@@ -409,6 +410,8 @@ guasto di questo elenco è un livello che ne ha sovrascritto un altro.
   come scoprire se è già coperto, quali moduli MINI lo toccano.
 - `references/rust.md` — Rust come caso completo, e modello per la struttura di una
   reference di linguaggio.
+- `references/lua.md` — Lua, cioè il linguaggio in cui questa config è scritta: un
+  runtime che non lascia buchi, e un server la cui `library` decide quanto sa.
 - `assets/` — gli scheletri dei file da creare.
 
 ### La forma di una reference di linguaggio

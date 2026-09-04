@@ -110,7 +110,10 @@ parte a 80x24, troppo piccolo per dire il vero su un layout), `-TimeoutSec`,
 Parametri che tutte le sonde leggono: `wait` (come `-Wait`) e `json`. Quasi
 tutte accettano inoltre uno **snippet Lua** come parametro (`before`, `between`,
 `after`): è quello che le rende riusabili, perché lo stato da cui parte la
-verifica è un dato, non l'ennesima copia della sonda.
+verifica è un dato, non l'ennesima copia della sonda. Uno snippet gira fuori
+dallo scope della sonda e **non vede `P`**: quello che deve arrivare nel
+rapporto o si lascia in un `vim.b.<nome>` letto con `vars`, o si stampa con
+`print()`, che finisce in stderr.
 
 L'esito è una lista di `PASS` / `FAIL` / `INFO` con l'evidenza sotto, e un **exit
 code** che vale 0 solo se nessun controllo è fallito: è quello che permette di
@@ -169,6 +172,7 @@ Da tenere presenti sia quando scrivi il comando sia quando ne leggi l'output.
 | Le heredoc di Bash su questa macchina collassano `\\` in `\`, e un `'\''` dentro una stringa Python la tronca | non generare file con backslash da script (usa `vim.fs.dirname`, `[char]92`), e rileggi sempre la riga scritta |
 | `Start-Process -ArgumentList` unisce gli argomenti con uno spazio e non ne quota nessuno | un argomento con spazi arriva spezzato: quotalo tu (`Format-Argv` in `run.ps1`) |
 | `--startuptime` produce righe a due e a tre colonne, con la prima cumulativa | ordinare tutto insieme mette in cima la fine dell'avvio: classifica solo le righe "sourcing" |
+| Un server interrogato in polling con `buf_request_sync` non finisce mai di caricarsi: `lua_ls` ha risposto `Workspace loading: 294 / 330` per tre minuti, mentre da solo chiude in trenta secondi | le richieste sincrone in ciclo affamano il caricamento. Aspetta una volta (`vim.wait`), poi manda **una** richiesta; il log dice quando il preload è finito (`$/progress` con `kind = "end"`, dopo `vim.lsp.log.set_level('debug')` su un buffer di altro filetype e `:edit` del file vero) |
 
 ## Antipattern
 
@@ -184,6 +188,7 @@ ipotesi: sono il motivo per cui questa skill esiste.
 | Guardare l'output e dire "sembra giusto" | quello che non torna è proprio quello che non si guarda | fai dire alla sonda `PASS`/`FAIL`, con l'evidenza accanto |
 | Due passate di verifica perché la prima non copriva un caso | tempo doppio, e l'utente lo vede | elenca i casi **prima** (primo file, secondo file, dopo la chiusura), poi scrivi una sonda sola |
 | Testare in una directory che non è un repository git, per una funzione git | ogni comando fallisce per il motivo sbagliato | verifica il presupposto per primo (`git -C <dir> rev-parse`), o usa questo repository |
+| Verificare un server LSP in una directory scratch senza root marker | il server si attacca e risponde alle richieste, ma resta in single-file mode e per certi server (`lua_ls`) non manda **nessuna** diagnostica: identico a una config sbagliata, e si indaga un guasto che non c'è | dai una radice alla directory di prova (`git init`) o verifica dentro questo repository, e conferma la root letta con `client.root_dir` |
 | Implementare prima di aver deciso quale delle due letture della richiesta sia quella giusta | si verifica benissimo la cosa sbagliata | vedi Regola 1: se non sai cosa distinguerebbe il successo dal fallimento, chiedi |
 | Prendere per guasto della config un'aspettativa sbagliata della sonda | si va a cercare un bug che non c'è | quando una sonda fallisce, il primo sospetto è il parametro che le hai dato (un `pattern` sensibile alle maiuscole, un server non abilitato) |
 | Indagare un `FAIL` senza sapere se esisteva già prima della modifica | si cerca la causa nel proprio lavoro, dove non c'è | tieni una baseline accanto: `git worktree add --detach <tmp> HEAD`, una junction da `%LOCALAPPDATA%
