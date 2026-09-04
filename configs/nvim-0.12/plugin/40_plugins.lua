@@ -175,6 +175,12 @@ later(function()
     -- Map of filetype to formatters
     -- Make sure that necessary CLI tool is available
     formatters_by_ft = {
+      -- The formatter this repository is already checked with: it reads the
+      -- '.stylua.toml' at the root, so `<Leader>lf` and the `stylua --check`
+      -- that `AGENTS.md` requires before a commit agree on every rule. Without
+      -- it `<Leader>lf` fell back to the server, which does not format at all
+      -- unless told to and would not know about that file anyway.
+      lua = { 'stylua' },
       -- The official formatter of the language, so that `<Leader>lf`, the
       -- command line and CI agree. The server would format too, but through
       -- its own copy: `rustfmt` is the one that reads the project's

@@ -112,6 +112,10 @@ a merge from 'minimax' conflict-free.
   in `workspace.library`, `Config` among the declared globals, and the module
   path Neovim itself uses to resolve a `require()`.
 
+- Format Lua with `stylua` on `<Leader>lf`. It reads the '.stylua.toml' at the
+  root, so the editor and the check required before a commit apply the same
+  rules; the LSP fallback used neither.
+
 ## 2026-09-03
 
 - Make the Git workflow a part of its own, 'plugin/41_git.lua', reachable

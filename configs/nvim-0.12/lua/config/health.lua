@@ -77,7 +77,7 @@ local function check_external_tools()
   -- `stylua --check .` to pass before a change is finished
   report(
     'stylua',
-    'config formatting can not be checked',
+    'config formatting can not be checked, and `<Leader>lf` does nothing in Lua',
     'Install it with `mise use -g stylua@latest`'
   )
   -- 'nvim-treesitter' shells out to this to build a parser, so a missing CLI
