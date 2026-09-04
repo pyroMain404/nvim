@@ -136,12 +136,45 @@ Non c'è `:make`: il ciclo è il server per gli errori, `<Leader>lf` per la form
 `:checkhealth config` per l'ambiente, e `:source %` o un riavvio per provare la
 modifica.
 
-**Il primo minuto di ogni sessione va conosciuto.** All'attacco, `lua_ls` carica la
-`library` prima di poter rispondere: circa 330 file (`VIMRUNTIME` più 'mini.nvim'),
-una trentina di secondi su questa macchina. Durante quel tempo `<Leader>lh` risponde
-`Workspace loading: 294 / 330` invece della firma, mentre le diagnostiche del file
-aperto arrivano già. Non è un guasto e non è un motivo per svuotare la `library`: è
-il prezzo del completamento sulle API di Neovim, ed è una volta per sessione.
+**I primi secondi di ogni sessione vanno conosciuti.** All'attacco, `lua_ls` carica
+la `library` prima di poter rispondere a una richiesta di posizione: 330 file circa
+(`VIMRUNTIME` più 'mini.nvim'), meno di dieci secondi a cache calda su questa
+macchina. Durante quel tempo `<Leader>lh` risponde `Workspace loading: 294 / 330`
+invece della firma, mentre le diagnostiche del file aperto arrivano già. Non è un
+guasto e non è un motivo per svuotare la `library`.
+
+Tre conseguenze visibili, tutte del server e nessuna della config:
+
+- **il caricamento è annunciato due volte** (`lua_ls: Loading workspace (100%)` in
+  fila). Sono due token di progresso distinti — uno per scope: nel log si vedono
+  arrivare `330` e `276` — con lo stesso titolo, e 'mini.notify' li mostra
+  entrambi. Non sono due client: `:checkhealth vim.lsp` ne conta uno;
+- un `lua_ls: Searching in files... (100%)` compare ogni tanto durante la
+  navigazione: è lo stesso meccanismo, per la ricerca che serve a `<Leader>lR` e
+  alle code lens;
+- **`<Leader>ls` su una funzione locale dà due risultati** — `local f = function()`
+  è una variabile *e* un valore, e il server nomina entrambi: la riga della
+  variabile e il blocco `function ... end`. Il quickfix con due voci è la risposta
+  corretta, non un client duplicato.
+
+### Due cose da sapere prima di premere il tasto
+
+**`<Leader>ll` non ha niente da eseguire.** Le code lens di LuaLS sono un contatore:
+risolte, valgono `title = "1 references"` e `command = ""`. Neovim risolve la lens e
+poi prova a eseguirla, quindi ne esce il messaggio ``Language server `lua_ls` does
+not support command ``` con il nome vuoto. Il conteggio in virtual text è tutto
+quello che quelle lens offrono; per andare ai riferimenti c'è `<Leader>lR`.
+Spegnerle (`settings.Lua.codeLens.enable = false`) toglie il messaggio insieme al
+conteggio.
+
+**Aprire la config dal percorso di installazione crea un secondo client.** Su questa
+macchina `%LOCALAPPDATA%\nvim` è una junction verso `configs/nvim-0.12`, e
+`<Leader>ei` (`:edit $MYVIMRC`) apre il file **da lì**. Risalendo da quel percorso
+non ci sono né `.git` né `.stylua.toml`, quindi `lua_ls` parte una seconda volta con
+`root_dir = nil`, cioè in single file mode: nessuna diagnostica, e un altro
+caricamento del workspace. Lo stesso file aperto dal percorso reale del repository
+riusa il client giusto. `vim.fn.resolve()` risolve la junction anche su Windows
+(verificato), ed è quindi il rimedio quando lo si vuole chiudere.
 
 ## 7. Health check
 
@@ -167,8 +200,9 @@ qui:
   restituire la forma di StyLua. Se non cambia niente, il primo sospetto è che il
   buffer non sia sintatticamente valido: StyLua non formatta ciò che non parsa, e non
   lo dice;
-- `<Leader>ll` deve trovare code lens in un file della config
-  (`:=#vim.lsp.codelens.get(0)` ne dà quattro in `plugin/40_plugins.lua`);
+- `<Leader>ll` deve trovare code lens in un file della config (quattro in
+  `plugin/40_plugins.lua`), e risolte devono avere `command = ""`: se un giorno ne
+  arriva una con un comando vero, il messaggio descritto in §5 non è più atteso;
 - `:verbose setlocal commentstring? includeexpr?` deve nominare
   `$VIMRUNTIME/ftplugin/lua.vim`: la config non ha un `after/ftplugin/lua.lua` e non
   deve averne uno per sbaglio.
@@ -178,3 +212,8 @@ diagnostiche per un file che non sta in un workspace. In uno scratch senza
 `.luarc.json`, `.stylua.toml` né `.git` il server si attacca, risponde a `definition`
 e `hover`, e non manda **nessuna** diagnostica — indistinguibile da una config
 sbagliata. Un `git init` nella directory di prova rimette tutto a posto.
+
+**E una che non riguarda il linguaggio ma si paga qui**: interrogare il server in
+polling mentre carica lo tiene occupato e il caricamento non finisce mai. Le sonde
+`lsp_request` e `diagnostics` aspettano `vim.lsp.status()` una volta sola per
+questo; il resto è nella skill `nvim-config-testing`.
