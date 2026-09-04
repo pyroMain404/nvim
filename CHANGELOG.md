@@ -116,6 +116,9 @@ a merge from 'minimax' conflict-free.
   root, so the editor and the check required before a commit apply the same
   rules; the LSP fallback used neither.
 
+- Report the Lua toolchain in `:checkhealth config`: the language server with
+  its version, and whether the tree-sitter parser is installed.
+
 ## 2026-09-03
 
 - Make the Git workflow a part of its own, 'plugin/41_git.lua', reachable

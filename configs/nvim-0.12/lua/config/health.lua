@@ -95,6 +95,30 @@ end
 -- something does not work: is the toolchain there, which version is active in
 -- this session, is the language server reachable, is the parser installed.
 
+-- Lua is both a language this config supports and the language it is written
+-- in, so this section is also what says whether the config can be worked on.
+local function check_lua()
+  health.start('config: Lua')
+
+  -- 'after/lsp/lua_ls.lua' is inert without it, and `<Leader>lh`, `<Leader>lR`
+  -- and `<Leader>la` report that no server supports the method
+  report(
+    'lua-language-server',
+    'Lua buffers lose completion, diagnostics, rename and go to definition',
+    'Install it with `mise use -g lua-language-server@latest`'
+  )
+  -- Neovim bundles this parser, so a missing one means a broken install rather
+  -- than a language left uninstalled
+  if #vim.api.nvim_get_runtime_file('parser/lua.*', false) == 0 then
+    health.warn('tree-sitter parser for `lua` is not installed', {
+      'It ships with Neovim: reinstall it, or run `:TSInstall lua`',
+      'Highlighting falls back to the legacy syntax file',
+    })
+  else
+    health.ok('tree-sitter parser `lua`: installed')
+  end
+end
+
 local function check_rust()
   health.start('config: Rust')
 
@@ -147,6 +171,7 @@ end
 
 function M.check()
   check_external_tools()
+  check_lua()
   check_rust()
 end
 
