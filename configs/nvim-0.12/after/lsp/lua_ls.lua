@@ -1,15 +1,40 @@
--- ┌────────────────────┐
--- │ LSP config example │
--- └────────────────────┘
+-- ┌────────┐
+-- │ lua_ls │
+-- └────────┘
 --
--- This file contains configuration of 'lua_ls' language server.
+-- This file contains configuration of the Lua language server.
 -- Source: https://github.com/LuaLS/lua-language-server
+-- Install: `mise use -g lua-language-server@latest`.
 --
 -- It is used by `:h vim.lsp.enable()` and `:h vim.lsp.config()`.
 -- See `:h vim.lsp.Config` and `:h vim.lsp.ClientConfig` for all available fields.
 --
--- This config is designed for Lua's activity around Neovim. It provides only
--- basic config and can be further improved.
+-- What is inherited from 'nvim-lspconfig' and not repeated here: `cmd`,
+-- `filetypes`, the `root_markers` that make '.luarc.json', '.stylua.toml' or
+-- '.git' the workspace root, and `settings.Lua` with code lens and inlay hints
+-- already enabled. Unlike the Rust one, that file defines no function, so the
+-- `on_attach` below adds behavior instead of deleting some: read it with
+-- `:=vim.lsp.config['lua_ls']` before adding anything of that kind here.
+--
+-- The settings are tuned for editing this config, which is the Lua written here:
+-- Neovim's own API, 'mini.nvim' and the `Config` helpers of 'init.lua'.
+-- Their structure comes from LuaLS, not from Neovim: https://luals.github.io/wiki/settings/
+
+-- Directories whose Lua is read for definitions and completion, but never
+-- reported on. Only what is actually used is listed: pulling in the whole
+-- 'runtimepath' is much slower and makes the server stumble over the config
+-- being edited (see the comment in 'nvim-lspconfig' own 'lsp/lua_ls.lua').
+local library = {
+  -- Neovim's API: what makes `vim.api`, `vim.fn` and `vim.o` known
+  vim.env.VIMRUNTIME,
+  -- `vim.uv` is `luv`, whose annotations LuaLS ships as a third party library
+  -- and resolves through this placeholder (`:h vim.uv`)
+  '${3rd}/luv/library',
+}
+-- 'mini.nvim' is where the `MiniXxx` globals and every `setup()` table of
+-- 'plugin/30_mini.lua' are defined
+vim.list_extend(library, vim.api.nvim_get_runtime_file('lua/mini', true))
+
 return {
   on_attach = function(client, buf_id)
     -- Reduce very long list of triggers for better 'mini.completion' experience
@@ -19,17 +44,29 @@ return {
     -- Use this function to define buffer-local mappings and behavior that depend
     -- on attached client or only makes sense if there is language server attached.
   end,
-  -- LuaLS Structure of these settings comes from LuaLS, not Neovim
   settings = {
     Lua = {
-      -- Define runtime properties. Use 'LuaJIT', as it is built into Neovim.
-      runtime = { version = 'LuaJIT', path = vim.split(package.path, ';') },
+      runtime = {
+        -- The Lua built into Neovim
+        version = 'LuaJIT',
+        -- How Neovim itself resolves `require('config.health')`, so that `gd`
+        -- on a `require()` lands in the same file the editor would load
+        -- (`:h lua-module-load`). The default of LuaLS is the `package.path` of
+        -- a standalone interpreter, which points nowhere here.
+        path = { 'lua/?.lua', 'lua/?/init.lua' },
+      },
       workspace = {
         -- Don't analyze code from submodules
         ignoreSubmodules = true,
-        -- Add Neovim's methods for easier code writing
-        library = { vim.env.VIMRUNTIME },
+        library = library,
+        -- Without this the server asks, in a prompt that blocks until answered,
+        -- whether to set up the environment for each third party library it
+        -- recognizes. The `library` above already answers that question.
+        checkThirdParty = false,
       },
+      -- `Config` is defined in 'init.lua' of this config and used by every
+      -- 'plugin/' file, so it is a global on purpose, not a typo to report
+      diagnostics = { globals = { 'Config' } },
     },
   },
 }

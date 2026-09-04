@@ -103,6 +103,15 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-04
+
+- Attach `lua_ls` to Lua buffers: the server was configured in
+  'after/lsp/lua_ls.lua' but never listed in `vim.lsp.enable()`, so every
+  `<Leader>l` mapping either did nothing or reported that no server supports the
+  method. Its settings now know about this config: Neovim's API and 'mini.nvim'
+  in `workspace.library`, `Config` among the declared globals, and the module
+  path Neovim itself uses to resolve a `require()`.
+
 ## 2026-09-03
 
 - Make the Git workflow a part of its own, 'plugin/41_git.lua', reachable

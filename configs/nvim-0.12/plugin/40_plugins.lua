@@ -111,6 +111,8 @@ now_if_args(function()
   -- A name here needs the server installed to do anything: enabling one that is
   -- missing fails silently, which is why the health check reports the toolchain.
   vim.lsp.enable({
+    -- Installed with `mise`, configured in 'after/lsp/lua_ls.lua'
+    'lua_ls',
     -- Installed with `rustup`, configured in 'after/lsp/rust_analyzer.lua'
     'rust_analyzer',
   })
