@@ -102,8 +102,19 @@ nmap_leader('bW', '<Cmd>lua MiniBufremove.wipeout(0, true)<CR>', 'Wipeout!')
 -- - `<Leader>ef` - open directory of current file (needs to be present on disk)
 -- - `<Leader>ei` - edit 'init.lua'
 -- - All mappings that use `edit_plugin_file` - edit 'plugin/' config files
+-- `:h stdpath()` answers with the directory Neovim was started from, which
+-- here is a junction to the config inside the repository. Opening a file
+-- through it gives a path from which no root marker ('.git', '.stylua.toml')
+-- is reachable, so a language server starts a second time with no root - in
+-- single file mode, where `lua_ls` publishes no diagnostics at all. Resolving
+-- it once, here, is what keeps every `<Leader>e` mapping on the real path and
+-- on the client that is already running (`:h resolve()`).
+local config_file = function(relative)
+  local path = vim.fn.resolve(vim.fn.stdpath('config') .. '/' .. relative)
+  return string.format('<Cmd>edit %s<CR>', vim.fn.fnameescape(path))
+end
 local edit_plugin_file = function(filename)
-  return string.format('<Cmd>edit %s/plugin/%s<CR>', vim.fn.stdpath('config'), filename)
+  return config_file('plugin/' .. filename)
 end
 local explore_at_file = '<Cmd>lua MiniFiles.open(vim.api.nvim_buf_get_name(0))<CR>'
 local explore_quickfix = function()
@@ -115,7 +126,7 @@ end
 
 nmap_leader('ed', '<Cmd>lua MiniFiles.open()<CR>',          'Directory')
 nmap_leader('ef', explore_at_file,                          'File directory')
-nmap_leader('ei', '<Cmd>edit $MYVIMRC<CR>',                 'init.lua')
+nmap_leader('ei', config_file('init.lua'),                  'init.lua')
 nmap_leader('ek', edit_plugin_file('20_keymaps.lua'),       'Keymaps config')
 nmap_leader('em', edit_plugin_file('30_mini.lua'),          'MINI config')
 nmap_leader('en', '<Cmd>lua MiniNotify.show_history()<CR>', 'Notifications')

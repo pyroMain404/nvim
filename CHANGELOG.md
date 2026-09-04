@@ -128,6 +128,11 @@ a merge from 'minimax' conflict-free.
   and a Visual `<Leader>lf` still formats the selection. The rule lives in
   'plugin/42_format.lua', behind `Config.format`.
 
+- Open the config from its real path in every `<Leader>e` mapping. Through the
+  junction that `:h stdpath()` reports, no root marker is reachable, so a second
+  `lua_ls` was starting with no root - in single file mode, where it publishes
+  no diagnostics at all.
+
 ## 2026-09-03
 
 - Make the Git workflow a part of its own, 'plugin/41_git.lua', reachable
