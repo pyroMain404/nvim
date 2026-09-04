@@ -139,6 +139,11 @@ a merge from 'minimax' conflict-free.
   nothing for an error inside one; the Angular compiler reports it at its
   line and column in the '.html' file, and `]q` now jumps there.
 
+- Format the files of an Angular project with `prettier` on `<Leader>lf`,
+  which is what such a project already runs in CI and the only one that
+  reads its '.prettierrc'. Without it the mapping fell back to whichever
+  server answered first, and to its own rules.
+
 ## 2026-09-04
 
 - Attach `lua_ls` to Lua buffers: the server was configured in

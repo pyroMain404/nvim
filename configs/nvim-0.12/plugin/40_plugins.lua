@@ -228,6 +228,20 @@ later(function()
       -- its own copy: `rustfmt` is the one that reads the project's
       -- 'rustfmt.toml' and comes with the active toolchain.
       rust = { 'rustfmt' },
+      -- `prettier` is what the Angular CLI puts in a new project and what its
+      -- CI runs, so declaring it here is what keeps `<Leader>lf` from
+      -- disagreeing with the command line. It also reads the project's
+      -- '.prettierrc', which neither server would. `htmlangular` is listed
+      -- next to `html` because it is a different filetype to Neovim and would
+      -- otherwise fall through to the server (`prettier` itself sees a '.html'
+      -- file either way).
+      typescript = { 'prettier' },
+      javascript = { 'prettier' },
+      html = { 'prettier' },
+      htmlangular = { 'prettier' },
+      css = { 'prettier' },
+      scss = { 'prettier' },
+      json = { 'prettier' },
     },
   })
 end)
