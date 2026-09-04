@@ -130,6 +130,33 @@ now_if_args(function()
     'lua_ls',
     -- Installed with `rustup`, configured in 'after/lsp/rust_analyzer.lua'
     'rust_analyzer',
+    -- Angular takes two servers, because they answer different questions and
+    -- neither answers the other's. `angularls` is the one that knows a
+    -- template: it type checks `{{ }}` against the component class, completes
+    -- a property inside a binding, and follows a selector to the component
+    -- that declares it. It knows nothing about TypeScript as a language, so on
+    -- its own a '.ts' file gets no diagnostics at all.
+    --
+    -- `ts_ls` is that half. Both attach to a `typescript` buffer, which Neovim
+    -- handles by asking every attached client and merging the answers
+    -- (`:h lsp-defaults`). Which of them formats is not left to chance:
+    -- `prettier` below is declared for these filetypes, so 'conform.nvim'
+    -- never reaches its `lsp_format` fallback.
+    --
+    -- Neither is configured in 'after/lsp/': what 'nvim-lspconfig' ships is
+    -- already right, and `angularls` in particular computes its `cmd` from the
+    -- project - the probe paths into its 'node_modules' and the Angular
+    -- version read from its 'package.json'. There is nothing to add that
+    -- would not be a copy.
+    --
+    -- NOTE: `ngserver` loads the `@angular/language-service` of the project it
+    -- opens, so its major has to be the project's. A newer server calls into
+    -- an API that older service does not have, and the failure is quiet: the
+    -- client attaches, and every `didOpen` fails inside `:LspLog` while no
+    -- diagnostic ever arrives. `:checkhealth config` prints the project's
+    -- version and the `mise` line that matches it.
+    'angularls',
+    'ts_ls',
   })
 
   -- Code lens are actions a server announces at a precise place in the code:

@@ -127,6 +127,12 @@ a merge from 'minimax' conflict-free.
   decorator is parsed too, through an injection into the backtick string,
   and so are inline `styles`.
 
+- Attach `angularls` and `ts_ls` to Angular buffers. The first is the only
+  one that type checks a template against its component class; the second
+  is what makes a '.ts' file behave like TypeScript at all. `ngserver` has
+  to be the same major as the project's Angular, and `:checkhealth config`
+  now says which one that is.
+
 ## 2026-09-04
 
 - Attach `lua_ls` to Lua buffers: the server was configured in
