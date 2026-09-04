@@ -220,11 +220,25 @@ if ($Session -ne '') {
       $body += "vim.cmd('edit ' .. vim.fn.fnameescape([[$edit]]))"
     }
     $body += "dofile([[$path]])"
+    # Wrapped, so that a failure of the setup - `:edit` refusing to leave a
+    # modified buffer is the common one - comes back as a report instead of an
+    # error on the socket that reads like a hung session.
+    $body = @('local ok, err = pcall(function()') + $body + @(
+      'end)',
+      'if not ok then',
+      "  vim.g.probe_result = 'FAIL the session could not run this probe' ..",
+      "    string.char(10) .. '      ' .. tostring(err) ..",
+      "    string.char(10) .. '      try -Reset, or -StopSession to start over'",
+      '  vim.g.probe_failed = 1',
+      'end'
+    )
     Set-Content -LiteralPath $driver -Value ($body -join "`n") -Encoding UTF8
 
     try {
       $sent = Invoke-Remote $address "luaeval('dofile([[$($driver.Replace([char]92, '/'))]])')" $TimeoutSec
-      if ($null -eq $sent) { throw "the probe did not return - session '$Session' may be stuck" }
+      if ($null -eq $sent) {
+        throw "no answer from session '$Session' within ${TimeoutSec}s: it is busy or stuck. -StopSession to end it"
+      }
       $result = Invoke-Remote $address "get(g:, 'probe_result', '')" 30
       $failed = Invoke-Remote $address "get(g:, 'probe_failed', 0)" 30
       if ($result) { Write-Output $result.TrimEnd() }
