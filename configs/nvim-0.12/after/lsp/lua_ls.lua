@@ -67,6 +67,13 @@ return {
       -- `Config` is defined in 'init.lua' of this config and used by every
       -- 'plugin/' file, so it is a global on purpose, not a typo to report
       diagnostics = { globals = { 'Config' } },
+      -- NOTE: the code lens 'nvim-lspconfig' enables for this server are a
+      -- reference counter and nothing else: resolved, they carry
+      -- `title = "N references"` and an empty `command`. Neovim resolves the
+      -- lens under the cursor and then runs it, so `<Leader>ll` answers
+      -- "does not support command ``" with an empty name. The count in virtual
+      -- text is what they are for; `<Leader>lR` is what goes to the references.
+      -- Setting `codeLens = { enable = false }` here removes both together.
     },
   },
 }
