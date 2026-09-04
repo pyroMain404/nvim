@@ -120,6 +120,13 @@ a merge from 'minimax' conflict-free.
   reading the file for `@if` or `*ngIf`, so a template made of `{{ }}` bindings
   alone stayed `html` - with the wrong parser and the wrong server.
 
+- Highlight Angular templates with tree-sitter, wherever they are written.
+  The `angular` parser knows `{{ }}`, `*ngIf`, `(click)` and `[prop]`;
+  `typescript`, `html`, `css`, `scss` and `json` cover the other files a
+  component is made of. A template written inline in the `@Component`
+  decorator is parsed too, through an injection into the backtick string,
+  and so are inline `styles`.
+
 ## 2026-09-04
 
 - Attach `lua_ls` to Lua buffers: the server was configured in

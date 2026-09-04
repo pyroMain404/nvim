@@ -66,6 +66,21 @@ now_if_args(function()
     -- Only used through the injection in 'after/queries/rust/injections.scm',
     -- which parses the SQL inside the `sqlx` macros
     'sql',
+    -- The Angular file set. `angular` is the parser for a component template,
+    -- and it is what knows about `{{ }}`, `*ngIf`, `(click)` and `[prop]`,
+    -- which the plain `html` parser reads as ordinary text and attribute
+    -- names. It declares filetypes `angular` and `htmlangular`, so the
+    -- autocommand below only reaches a template once 'ftdetect/htmlangular.lua'
+    -- has said that is what the file is.
+    'angular',
+    'typescript',
+    -- `html` for templates outside a component, `css` and `scss` for the
+    -- styles a component carries next to it, `json` for 'angular.json' and
+    -- the 'tsconfig.json' family
+    'html',
+    'css',
+    'scss',
+    'json',
   }
   local isnt_installed = function(lang)
     return #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0
