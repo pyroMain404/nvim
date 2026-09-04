@@ -169,10 +169,95 @@ local function check_rust()
   end
 end
 
+local function check_angular()
+  health.start('config: Angular')
+
+  -- Everything below runs through Node, so a missing one explains all the rest
+  report(
+    'node',
+    'neither language server starts, and `:make` has no `npx` to call',
+    'Install it with `mise use -g node@20`'
+  )
+
+  -- `ngserver --version` is not a way to ask: the binary refuses to start
+  -- without the `--tsProbeLocations` that 'nvim-lspconfig' computes from the
+  -- project, so presence is all this can honestly report. Which major is
+  -- installed matters more than that anyway, and the next check is what says it
+  if vim.fn.executable('ngserver') ~= 1 then
+    health.warn('`ngserver` is not available', {
+      'Install it with `mise use -g npm:@angular/language-server@<major>`',
+      'Templates lose completion, diagnostics and go to definition',
+    })
+  else
+    health.ok('ngserver: ' .. vim.fn.exepath('ngserver'))
+  end
+  -- `angularls` answers about templates and not about TypeScript, so without
+  -- this one a '.ts' buffer gets no diagnostics at all
+  report(
+    'typescript-language-server',
+    'TypeScript buffers lose completion, diagnostics, rename and go to definition',
+    'Install it with `mise use -g npm:typescript-language-server@latest`'
+  )
+  -- Declared in 'plugin/40_plugins.lua' for every filetype an Angular project
+  -- holds, so `<Leader>lf` silently falls back to a server without it
+  report(
+    'prettier',
+    '`<Leader>lf` falls back to a language server that formats differently',
+    'Install it with `mise use -g npm:prettier@latest`'
+  )
+
+  -- `angularls` probes the project's own 'node_modules' for the Angular
+  -- language service, and `:make` runs the project's own compiler through
+  -- `npx`. Both fail in a checkout where nobody ran the install, and the
+  -- failure looks like a broken config rather than a missing directory.
+  local root = vim.fs.root(0, { 'angular.json', 'nx.json' })
+  if root == nil then
+    health.info('not inside an Angular project: nothing else to check here')
+  elseif vim.uv.fs_stat(vim.fs.joinpath(root, 'node_modules')) == nil then
+    health.warn("'" .. root .. "' has no 'node_modules'", {
+      'Run `npm install` there',
+      '`angularls` finds no language service to load, and `:make` no compiler',
+    })
+  else
+    health.ok('project dependencies: installed in ' .. root)
+    -- The server is one program and the language service it loads is another,
+    -- taken from this project: a server newer than the project calls into an
+    -- API that is not there yet. The failure is loud in ':LspLog' and silent
+    -- everywhere else — the client attaches, and no diagnostic ever arrives.
+    local manifest = vim.fs.joinpath(root, 'package.json')
+    local ok, blob = pcall(vim.fn.readblob, manifest)
+    local deps = ok and (vim.json.decode(blob) or {}).dependencies or {}
+    local version = (deps['@angular/core'] or ''):match('%d+')
+    if version == nil then
+      health.info('no `@angular/core` in ' .. manifest)
+    else
+      local fix = 'mise use -g npm:@angular/language-server@' .. version
+      health.info(
+        ('project is on Angular %s, so `ngserver` has to be that '):format(version)
+          .. ('major: `%s`'):format(fix)
+      )
+    end
+  end
+
+  -- The parser has to be installed, not merely available. `angular` is the one
+  -- that reads a template; the rest are the other files a component is made of
+  for _, lang in ipairs({ 'angular', 'typescript', 'html', 'css', 'scss', 'json' }) do
+    if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
+      health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
+        "Restart Neovim once with '" .. lang .. "' in `languages`, and wait",
+        'Highlighting falls back to the legacy syntax file',
+      })
+    else
+      health.ok('tree-sitter parser `' .. lang .. '`: installed')
+    end
+  end
+end
+
 function M.check()
   check_external_tools()
   check_lua()
   check_rust()
+  check_angular()
 end
 
 return M

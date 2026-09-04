@@ -144,6 +144,11 @@ a merge from 'minimax' conflict-free.
   reads its '.prettierrc'. Without it the mapping fell back to whichever
   server answered first, and to its own rules.
 
+- Report the Angular toolchain in `:checkhealth config`: Node, `ngserver`,
+  `typescript-language-server`, `prettier`, the parsers, whether the
+  project's 'node_modules' is there at all, and the Angular major the
+  language server has to match.
+
 ## 2026-09-04
 
 - Attach `lua_ls` to Lua buffers: the server was configured in
