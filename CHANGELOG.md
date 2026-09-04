@@ -133,6 +133,12 @@ a merge from 'minimax' conflict-free.
   to be the same major as the project's Angular, and `:checkhealth config`
   now says which one that is.
 
+- Make `:make` compile an Angular project and fill the quickfix list, in a
+  TypeScript buffer and in a template alike, through the new `ngc` compiler
+  plugin. `tsc`, the one Neovim ships, does not read templates and reports
+  nothing for an error inside one; the Angular compiler reports it at its
+  line and column in the '.html' file, and `]q` now jumps there.
+
 ## 2026-09-04
 
 - Attach `lua_ls` to Lua buffers: the server was configured in

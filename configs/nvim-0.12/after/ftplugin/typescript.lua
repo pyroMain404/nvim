@@ -1,0 +1,15 @@
+-- ┌──────────────────────┐
+-- │ TypeScript behaviour │
+-- └──────────────────────┘
+--
+-- On top of '$VIMRUNTIME/ftplugin/typescript.vim', which already sets
+-- `commentstring=// %s` and a `suffixesadd` that lets `gf` follow an import
+-- without its extension. `:verbose setlocal commentstring? suffixesadd?` says
+-- who set what; nothing of that is repeated here.
+--
+-- What the runtime leaves empty is `makeprg`: TypeScript has no compiler plugin
+-- selected by the ftplugin, and the `tsc` one it ships does not read Angular
+-- templates. 'compiler/ngc.lua' explains the choice; here it is only selected.
+-- `:compiler` has no Lua API — it defines its options through a command it
+-- creates and deletes — so `vim.cmd()` is the call, not a shortcut.
+vim.cmd('compiler ngc')
