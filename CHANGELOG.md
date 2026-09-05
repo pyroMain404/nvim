@@ -103,6 +103,16 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-06
+
+- Load `purplehue`, this config's own color scheme, instead of `catppuccin`. The
+  scheme is generated into 'colors/purplehue.lua' and documented as the one this
+  fork ships, but 'plugin/40_plugins.lua' asked for `catppuccin` by name while
+  the plugin providing it stayed commented out - so Neovim quietly loaded the
+  copy bundled in its own runtime. The visible cost was `ColorColumn`, drawn at
+  a contrast of 1.07:1 against `Normal`, which made the 85 column ruler
+  effectively invisible; under `purplehue` the same ruler sits at about 2.16:1.
+
 ## 2026-09-04
 
 - Attach `lua_ls` to Lua buffers: the server was configured in
