@@ -166,6 +166,11 @@ a merge from 'minimax' conflict-free.
   `]q` walks them. Java buffers also indent by four, as the language does, and
   fold by class and method.
 
+- Report the Java toolchain in `:checkhealth config`: which JDK this session
+  sees and from where, whether it is recent enough for the server, `javac`,
+  `mvn`, the language server with the `mise` line that installs it, the Python
+  its launcher needs, and whether the two parsers are installed.
+
 - Show the full first line of a version in `:checkhealth config`. A program
   printing several CRLF lines left a carriage return in the middle of the
   report and broke the entry in two.

@@ -259,11 +259,83 @@ local function check_angular()
   end
 end
 
+local function check_java()
+  health.start('config: Java')
+
+  -- Which JDK answers here. `mise` resolves it through its shims, so a project
+  -- with its own 'mise.toml' can change the answer without changing anything
+  -- in this config
+  local version = first_line({ 'java', '--version' })
+  if version == nil then
+    return health.warn('`java` is not available', {
+      'Install it with `mise use -g java@temurin-21`',
+      "Nothing in 'after/lsp/jdtls.lua' can start without a JDK",
+    })
+  end
+  health.ok('java: ' .. version .. ' (' .. vim.fn.exepath('java') .. ')')
+  -- jdtls 1.61 refuses to start on anything older, and says so only in a log
+  local major = tonumber(version:match('(%d+)'))
+  if major ~= nil and major < 21 then
+    health.warn('the JDK in this session is older than 21', {
+      'Install a newer one with `mise use -g java@temurin-21`',
+      'jdtls refuses to start on it, whatever the project targets',
+    })
+  end
+
+  report(
+    'javac',
+    "`:make` does nothing in a file that belongs to no build ('compiler/javac')",
+    'It comes with the JDK: `mise use -g java@temurin-21`'
+  )
+  report(
+    'mvn',
+    '`:make test` and `:make compile` do nothing in a Maven project',
+    'Install it with `mise use -g maven@3.9`'
+  )
+
+  -- Presence only, on purpose: 'jdtls' has no `--version`, and its Windows
+  -- wrapper ends with a `pause` that would wait for a key nobody can press.
+  -- The version is the one pinned in the `mise` line below
+  local install_jdtls = 'Install it with `mise use -g '
+    .. '"http:jdtls[url=https://download.eclipse.org/jdtls/milestones/1.61.0/'
+    .. 'jdt-language-server-1.61.0-202609031315.tar.gz,bin_path=bin]@1.61.0"`'
+  if vim.fn.executable('jdtls') ~= 1 then
+    health.warn('`jdtls` is not available', {
+      install_jdtls,
+      'Java buffers lose completion, diagnostics, rename and go to definition',
+    })
+  else
+    health.ok('jdtls: ' .. vim.fn.exepath('jdtls'))
+    -- The server is a JVM program, but what starts it is 'bin/jdtls.py'
+    report(
+      'python',
+      'the `jdtls` launcher is a Python script and never starts the server',
+      'Install it with `mise use -g python@3.12`'
+    )
+  end
+
+  -- The parser has to be installed, not merely available. This is the same
+  -- check 'plugin/40_plugins.lua' uses to decide what to install.
+  -- `xml` is here for 'pom.xml', which a Maven project is read from as often
+  -- as its sources
+  for _, lang in ipairs({ 'java', 'xml' }) do
+    if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
+      health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
+        "Restart Neovim once with '" .. lang .. "' in `languages`, and wait",
+        'Highlighting falls back to the legacy syntax file',
+      })
+    else
+      health.ok('tree-sitter parser `' .. lang .. '`: installed')
+    end
+  end
+end
+
 function M.check()
   check_external_tools()
   check_lua()
   check_rust()
   check_angular()
+  check_java()
 end
 
 return M
