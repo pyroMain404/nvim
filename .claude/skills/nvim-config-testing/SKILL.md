@@ -241,6 +241,10 @@ Da tenere presenti sia quando scrivi il comando sia quando ne leggi l'output.
 | `Start-Process -ArgumentList @('--cmd', 'set columns=200 lines=60', ...)` spezza l'argomento: Neovim apre un buffer chiamato `columns=200`, il file vero non viene mai caricato, e l'inventario risponde "nessun filetype" | passa a `-ArgumentList` **una stringa sola** già quotata, come fa `Format-Argv` in 'run.ps1'. E ripulisci lo swap che quel buffer fantasma lascia in `stdpath('data')/swap` |
 | `globpath(&rtp, 'ftplugin/<ft>.{vim,lua}')` risponde vuoto su Windows: le graffe le espande la shell, e `cmd.exe` non le conosce | usa `'ftplugin/<ft>.*'`. Verificato con `-u NONE`, quindi non dipende dalla config |
 | `vim.inspect(s:gsub(...))` lancia `attempt to index local 'options' (a number value)`: `gsub` ritorna **due** valori e il secondo finisce nel parametro `options` | metti la chiamata fra parentesi, `(s:gsub(...))` |
+| Il watchdog di `run.ps1` uccide Neovim, **non il server di linguaggio che ha avviato**: dopo un giro di sonde su `jdtls` restavano due JVM vive, e `Get-Process nvim` diceva che era tutto pulito | a fine giro cerca anche il processo del server (`Get-CimInstance Win32_Process` per vedere la riga di comando), non solo `nvim` |
+| `methods` della sonda `lsp` dice `false` per un server che registra le capability **dopo** l'attach (`client/registerCapability`), e il rapporto è identico a quello di una config rotta | passa `ready = true`, che aspetta la fine del caricamento prima di leggerle; senza, un client appena attaccato non ha ancora quasi niente |
+| `vim.opt_local.errorformat:prepend()` **corrompe** l'opzione: `vim.opt` la tratta come una lista di elementi separati da virgola e spezza anche le virgole protette (`%l\,%c`), rimettendole insieme come voci nuove. Il risultato è `E372: Too many %f in format string` da un `errorformat` che funzionava | usa `vim.cmd('setlocal errorformat^=...')`, che passa dal parser di `:set` e rispetta l'escape; nel comando servono `\\` per il backslash e `\ ` per lo spazio |
+| Un `%-G` aggiunto a un `errorformat` con messaggi multi-riga non "salta la riga e basta": **chiude il messaggio pendente**. Scartare i frame di stack dei framework per far cadere il `%Z` sul frame del progetto perde anche quel frame | non filtrare dentro un blocco multi-riga: se la voce giusta non si ottiene, il limite è del formato e va documentato, non aggirato |
 | Un server interrogato in polling con `buf_request_sync` non finisce mai di caricarsi: `lua_ls` ha risposto `Workspace loading: 294 / 330` per tre minuti, mentre da solo chiude in trenta secondi | le richieste sincrone in ciclo affamano il caricamento. Aspetta una volta (`vim.wait`), poi manda **una** richiesta; il log dice quando il preload è finito (`$/progress` con `kind = "end"`, dopo `vim.lsp.log.set_level('debug')` su un buffer di altro filetype e `:edit` del file vero) |
 
 ## Antipattern
@@ -267,7 +271,8 @@ vim-baseline` alla sua `configs/nvim-0.12` e una da `nvim-baseline-data` a `nvim
 
 Prima di dire che è finita:
 
-- nessun processo lasciato in giro (`Get-Process nvim`, e i job in background);
+- nessun processo lasciato in giro (`Get-Process nvim`, i job in background, e
+  **il processo del server di linguaggio**, che sopravvive a Neovim);
 - `git diff --stat` mostra solo quello che intendevi cambiare;
 - `stylua --check <file>` dalla radice, sui file Lua toccati;
 - l'esito è riportato per quello che è: se un controllo non è stato eseguito, si

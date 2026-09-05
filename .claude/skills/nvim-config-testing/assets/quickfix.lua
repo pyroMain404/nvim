@@ -11,7 +11,12 @@
 ---   errorformat  same, for the error format
 ---   before    snippet run before (to open a file that fails to compile)
 ---   min       minimum number of entries expected, default 1
----   valid     require the first entry to have a buffer and a line, default true
+---   valid     require an entry to have a buffer and a line, default true
+---   entry     which entry that has to be, default 1, or 'any'. A build tool
+---             that opens its report with a banner ('[ERROR] COMPILATION
+---             ERROR :' from Maven) puts a legitimately fileless entry first,
+---             and demanding it of entry 1 fails on the message rather than on
+---             the format
 ---   pattern   pattern the text of some entry must match
 ---   entries   how many entries to print, default 5
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
@@ -38,12 +43,23 @@ P.run(function()
   local min = P.param('min', 1)
   P.check(('at least %d entries'):format(min), #list >= min, #list)
 
+  local which = P.param('entry', 1)
   if P.param('valid', true) and list[1] ~= nil then
-    local first = list[1]
+    local located = function(e)
+      return e ~= nil and e.bufnr ~= 0 and e.lnum > 0
+    end
+    local found = nil
+    for index, entry in ipairs(list) do
+      if located(entry) and (which == 'any' or which == index) then
+        found = entry
+        break
+      end
+    end
+    local shown = found or list[which ~= 'any' and which or 1] or list[1]
     P.check(
-      'the first entry points at a file and a line',
-      first.bufnr ~= 0 and first.lnum > 0,
-      vim.inspect({ bufnr = first.bufnr, lnum = first.lnum, text = first.text })
+      ('entry %s points at a file and a line'):format(which),
+      found ~= nil,
+      vim.inspect({ bufnr = shown.bufnr, lnum = shown.lnum, text = shown.text })
     )
   end
 

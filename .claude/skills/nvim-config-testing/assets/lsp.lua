@@ -15,6 +15,12 @@
 ---   expect    pattern the value at `settings` must match
 ---   wait      grace period for the deferred configuration, in ms
 ---   timeout   how long to wait for a client to attach, default 10000 ms
+---   ready     wait for the server to finish loading before reading its
+---             capabilities, default false. Needed for every server that
+---             registers capabilities dynamically instead of announcing them
+---             in the reply to `initialize`: `jdtls` does, so `methods` reads
+---             false for definition, rename and formatting until the project
+---             has been imported, which looks exactly like a broken config
 ---
 --- The file to open is given to the driver (`-File`), because a server only
 --- attaches to a buffer of a filetype it was enabled for.
@@ -33,6 +39,13 @@ P.run(function()
     function() return #vim.lsp.get_clients({ bufnr = 0 }) > 0 end
   )
   local attached = vim.lsp.get_clients({ bufnr = 0 })
+
+  -- A capability registered with `client/registerCapability` only exists once
+  -- the server has done its first pass over the project.
+  if P.param('ready', false) and #attached > 0 then
+    local idle, ms, note = P.wait_lsp({ timeout = P.param('timeout', 10000) })
+    P.check('the server finished loading', idle, ('%dms - %s'):format(ms, note))
+  end
 
   -- When nothing attached, the answer is almost always one of these two: the
   -- server was never enabled, or its executable is not on the PATH Neovim
