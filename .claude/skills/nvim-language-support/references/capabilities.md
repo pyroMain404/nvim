@@ -36,7 +36,7 @@ un'altra domanda:
 |---|---|
 | Quanto vale questa opzione, adesso? | `:=vim.bo.<opt>` / `:=vim.wo.<opt>` — il valore, senza rumore |
 | **Chi** ha impostato questo valore? | `:verbose setlocal <opt>?` — è l'unico che nomina il file responsabile |
-| Quali file del runtime esistono per questo filetype? | `vim.fn.globpath(vim.o.rtp, 'ftplugin/<ft>.{vim,lua}')` |
+| Quali file del runtime esistono per questo filetype? | `vim.fn.globpath(vim.o.rtp, 'ftplugin/<ft>.*')` — con `.*`, mai con `.{vim,lua}`: vedi sotto |
 | Quali compiler / filetype / helptag esistono? | `vim.fn.getcompletion('', 'compiler')` — legge la stessa lista del completamento a riga di comando |
 | Quali script sono stati eseguiti in questa sessione? | `vim.fn.getscriptinfo()` |
 | Cosa conosce il registry dei filetype? | `vim.filetype.inspect()` |
@@ -44,6 +44,15 @@ un'altra domanda:
 `:verbose` e `vim.bo` non sono alternative: il primo dice **da dove viene** un
 valore, il secondo **qual è**. Nella Fase 1 servono entrambi, e `:verbose` è quello
 che chiude la domanda "devo scriverlo io o c'è già".
+
+> **Le graffe di `globpath()` non funzionano su questa macchina.** Misurato:
+> `globpath(&rtp, 'ftplugin/lua.{vim,lua}')` restituisce **la stringa vuota**,
+> mentre `ftplugin/lua.vim` e `ftplugin/lua.lua` interrogati separatamente
+> trovano entrambi il loro file, e `ftplugin/lua.*` li trova tutti e tre
+> (runtime più `after/` della config). Windows con `shell=cmd.exe`, Neovim
+> 0.12.4. È la risposta peggiore possibile perché è **vuota e non un errore**:
+> si legge come "il runtime non ha niente per questo filetype", che è la
+> premessa da cui parte una config che riscrive quello che già c'era.
 
 > **Sulla presunta lentezza di `globpath()`**: misurata su questa macchina, 50
 > chiamate a `globpath(&rtp, 'ftplugin/lua.{vim,lua}')` costano **6,2 ms**, contro
@@ -228,6 +237,18 @@ linguaggio, ma i **riferimenti a colori dentro il testo** — un `#ff0000` o un
 Ha senso nei linguaggi dove i colori si scrivono a mano (CSS e affini) ed è per
 questo che l'esempio è quello; altrove il server semplicemente non segnala niente.
 Poiché è già attivo, l'unica azione possibile è **disattivarlo**, su `LspAttach`.
+
+> **Una capability può comparire dopo, e prima di allora "non c'è" e "non c'è
+> ancora" si somigliano.** Oltre a quelle annunciate nella risposta a
+> `initialize`, un server può registrarne altre più tardi con
+> `client/registerCapability`, di solito quando ha finito di leggere il
+> progetto. `jdtls` fa proprio questo: subito dopo l'attach
+> `client:supports_method('textDocument/definition')` — e lo stesso per
+> `rename`, `formatting`, `codeAction`, `signatureHelp` — risponde **`false`**,
+> e diventa `true` a import concluso. Interrogare le capability appena il client
+> esiste produce quindi un quadro falso, identico a quello di un server
+> configurato male. Il momento giusto è dopo `vim.lsp.status()` silenzioso, che
+> è ciò che fa `P.wait_lsp()` della skill `nvim-config-testing`.
 
 ### Cosa va abilitato esplicitamente
 

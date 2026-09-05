@@ -37,6 +37,10 @@ filetype viene effettivamente impostato.
 " conosce: su Windows `globpath(&rtp, 'ftplugin/html.{vim,lua}')` risponde stringa
 " vuota — cioè "il runtime non ha niente" — mentre `'ftplugin/html.*'` trova il
 " file. Verificato con `-u NONE`, quindi non è una regola della config.
+" NOTE: `.*` e non `.{vim,lua}`. Su questa macchina (Windows, `shell=cmd.exe`)
+" l'espansione delle graffe in `globpath()` non restituisce niente, nemmeno per
+" un file che esiste: la risposta vuota si legge come "il runtime non ha niente"
+" ed è il modo più rapido di riscrivere ciò che c'è già.
 :=vim.fn.globpath(vim.o.rtp, 'ftplugin/<ft>.*')
 :=vim.fn.globpath(vim.o.rtp, 'indent/<ft>.*')
 
@@ -220,7 +224,22 @@ mise install                         # installa tutto ciò che è dichiarato
 Quando il registry non conosce un nome, quasi sempre lo copre un backend:
 `aqua:owner/repo` per i binari da GitHub release, più `npm:`, `cargo:`, `go:`,
 `pipx:`. Verifica con `mise registry | grep <nome>` prima di concludere che un tool
-non sia disponibile.
+non sia disponibile, e con `mise backends ls` quali backend ha la versione
+installata.
+
+**Quando nessun backend a nome lo copre, resta `http:`**, e non è un ripiego: è
+la via per gli strumenti che si distribuiscono come archivio da un sito proprio
+invece che da una release GitHub — il caso di `jdtls`, che `aqua:` non conosce e
+per cui `ubi:` elenca i tag di un repository che non pubblica asset.
+
+```bash
+mise use -g "http:<nome>[url=<url dell'archivio>,bin_path=<dir dentro l'archivio>]@<versione>"
+```
+
+`mise` scarica, estrae, calcola il checksum e mette `bin_path` sugli shim. La
+versione è un'etichetta arbitraria e serve solo a pinnare, quindi va scelta uguale
+a quella dell'archivio: un URL con dentro un timestamp resta pinnato, un URL
+`...-latest.tar.gz` no, e quello è l'errore da non fare.
 
 ### Su Windows, gli shim non sono una preferenza
 
@@ -269,7 +288,11 @@ funzionalità che c'era e non c'è più.
 
 La riga dell'LSP è quella che sorprende, perché il danno non si vede. Definire
 `on_attach`, `before_init` o `root_dir` **cancella la funzione ereditata**, non la
-affianca. Se 'nvim-lspconfig' usava `before_init` per riempire le
+affianca. E l'elenco dei campi da temere non è chiuso: anche **`cmd` può essere
+una funzione** — per `jdtls` è quella che dà a ogni progetto la propria directory
+di lavoro — quindi scriverlo come la solita lista è lo stesso errore, in un campo
+che sembra innocuo. La regola operativa non cambia: `:=vim.lsp.config['<server>']`
+prima di scrivere, e in `after/lsp/` solo ciò che `type()` dice essere una tabella. Se 'nvim-lspconfig' usava `before_init` per riempire le
 `initializationOptions` — cioè per far arrivare al server proprio le `settings` che
 hai appena scritto — quelle impostazioni smettono di arrivare, e il server continua a
 funzionare come se non le avessi mai messe.
@@ -425,6 +448,9 @@ guasto di questo elenco è un livello che ne ha sovrascritto un altro.
 - `references/angular.md` — Angular, cioè una piattaforma e non un linguaggio: un
   filetype che il runtime non riconosce, due server che si dividono il lavoro, uno
   di essi legato alla versione del progetto, e un compilatore che colora sempre.
+- `references/java.md` — Java: un runtime completo a cui manca solo la scelta del
+  compiler, un server che va installato con il backend `http:` di `mise`, e le
+  capability che compaiono solo a caricamento finito.
 - `assets/` — gli scheletri dei file da creare.
 
 ### La forma di una reference di linguaggio
