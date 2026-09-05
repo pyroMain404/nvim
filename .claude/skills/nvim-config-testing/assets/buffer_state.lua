@@ -16,9 +16,13 @@
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
+-- NOTE: the `ok and value or '<none>'` idiom cannot be used here. A boolean
+-- option that is genuinely `false` makes `ok and value` false, so the fallback
+-- wins and the probe reports `<none>` - "not set" - for a value it did read.
 local function option(name)
   local ok, value = pcall(vim.api.nvim_get_option_value, name, { scope = 'local' })
-  return ok and value or '<none>'
+  if not ok then return '<none>' end
+  return value
 end
 
 P.run(function()
