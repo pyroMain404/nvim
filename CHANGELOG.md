@@ -166,6 +166,10 @@ a merge from 'minimax' conflict-free.
   `]q` walks them. Java buffers also indent by four, as the language does, and
   fold by class and method.
 
+- Show the full first line of a version in `:checkhealth config`. A program
+  printing several CRLF lines left a carriage return in the middle of the
+  report and broke the entry in two.
+
 ## 2026-09-04
 
 - Attach `lua_ls` to Lua buffers: the server was configured in

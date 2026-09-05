@@ -32,10 +32,16 @@ local M = {}
 local health = vim.health
 
 -- Read the first line of `cmd` output, or `nil` if it can not be run
+--
+-- NOTE: the second `trim` is what removes the carriage return of a program
+-- that prints CRLF, which every Windows console tool does. Trimming the whole
+-- output only reaches the last line, so a one line answer looked clean while
+-- a multi line one (`java --version`, `mvn --version`) carried a `\r` into
+-- the middle of the health report and broke it in two.
 local function first_line(cmd)
   local ok, out = pcall(function() return vim.system(cmd):wait() end)
   if not ok or out.code ~= 0 then return nil end
-  return vim.split(vim.trim(out.stdout), '\n')[1]
+  return vim.trim(vim.split(vim.trim(out.stdout), '\n')[1] or '')
 end
 
 -- Report an external program: its version when present, what breaks when not
