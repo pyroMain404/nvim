@@ -15,7 +15,9 @@
 -- (set to '+1' in 'plugin/10_options.lua', hence relative to this) draw the
 -- limit while typing, instead of leaving it to be discovered by a failing check.
 --
--- What it does not do is reflow code: the runtime ftplugin removes `t` from
--- 'formatoptions' and keeps `c`, so only comments are wrapped - which is the
--- part of a file in this config that is meant to be read as prose.
+-- What it does not do is wrap anything while typing: the runtime ftplugin removes
+-- `t` from 'formatoptions', and the `FileType` autocommand in
+-- 'plugin/10_options.lua' removes `c` from every buffer, so neither code nor
+-- comments are broken automatically. The 85 columns feed 'colorcolumn' and an
+-- explicit `gq`/`gw`, and nothing else.
 vim.bo.textwidth = 85
