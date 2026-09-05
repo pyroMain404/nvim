@@ -162,6 +162,8 @@ now_if_args(function()
     -- version and the `mise` line that matches it.
     'angularls',
     'ts_ls',
+    -- Installed with `mise`, configured in 'after/lsp/jdtls.lua'
+    'jdtls',
   })
 
   -- Code lens are actions a server announces at a precise place in the code:

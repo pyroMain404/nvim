@@ -152,6 +152,13 @@ a merge from 'minimax' conflict-free.
   `xml` parser: highlighting, folds and textobjects stop falling back to the
   legacy syntax files.
 
+- Attach `jdtls` to Java buffers, with the settings whose default leaves them
+  off: the build configuration reread without asking, the sources of a
+  dependency downloaded so that `<Leader>ls` lands in real code instead of a
+  decompiled stub, and the signature help 'mini.completion' shows while typing
+  a call. The server is installed with `mise`; `:checkhealth config` has the
+  command.
+
 ## 2026-09-04
 
 - Attach `lua_ls` to Lua buffers: the server was configured in
