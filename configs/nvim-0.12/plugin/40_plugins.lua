@@ -81,6 +81,11 @@ now_if_args(function()
     'css',
     'scss',
     'json',
+    'java',
+    -- Manifest of a Maven project: 'pom.xml' is where its dependencies, its
+    -- plugins and the test configuration live, so it is read as often as the
+    -- code. Neovim detects it as `xml`, not as a filetype of its own
+    'xml',
   }
   local isnt_installed = function(lang)
     return #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0

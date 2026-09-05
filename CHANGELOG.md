@@ -148,6 +148,9 @@ a merge from 'minimax' conflict-free.
   `typescript-language-server`, `prettier`, the parsers, whether the
   project's 'node_modules' is there at all, and the Angular major the
   language server has to match.
+- Parse Java with tree-sitter, and the 'pom.xml' of a Maven project with the
+  `xml` parser: highlighting, folds and textobjects stop falling back to the
+  legacy syntax files.
 
 ## 2026-09-04
 
