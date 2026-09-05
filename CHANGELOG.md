@@ -159,6 +159,13 @@ a merge from 'minimax' conflict-free.
   a call. The server is installed with `mise`; `:checkhealth config` has the
   command.
 
+- Build and test Java from the editor: `:make` in a Java buffer now runs the
+  build tool of the project - `maven` under a 'pom.xml', `ant` under a
+  'build.xml', `javac` for a file that belongs to no build - so compilation
+  errors arrive in the quickfix list with their file, line and column, and
+  `]q` walks them. Java buffers also indent by four, as the language does, and
+  fold by class and method.
+
 ## 2026-09-04
 
 - Attach `lua_ls` to Lua buffers: the server was configured in
