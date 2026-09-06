@@ -420,6 +420,7 @@ un'impressione.
 |---|---|---|
 | Non si carica niente: né ftplugin, né parser, né server | il filetype, che viene prima di tutto | `:=vim.bo.filetype`, `:=vim.filetype.match({ filename = '…' })` |
 | Highlight assente o povero | parser non installato | `:InspectTree`, `:Inspect` |
+| Un parser non si installa e **nessun messaggio lo dice**: `install()` riporta successo senza scaricare niente | 'nvim-treesitter' lo crede già presente | `get_installed()` conta anche i nomi in `site/queries/`, e lì un symlink **rotto** vale come installato, così `install_lang()` esce con `return true` prima di provarci. Confronta quella cartella con `site/parser/`, togli le voci morte, poi reinstalla con `{ force = true }` |
 | Highlight che *era* completo e ora è parziale | query che ha sostituito quella del plugin | la **prima riga** dei file in `after/queries/`: manca `; extends` |
 | Il server non si attacca | eseguibile assente, o `root_dir` che non trova la radice | `:checkhealth vim.lsp`, `:=vim.lsp.config['<server>']` |
 | `method "..." is not supported by any server activated for this buffer` | non è il metodo a mancare: **nessun client è attaccato**, e quasi sempre il server non è nella lista abilitata | `:=vim.lsp.enable` in `plugin/40_plugins.lua`, poi `:checkhealth vim.lsp` |
