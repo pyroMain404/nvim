@@ -88,21 +88,39 @@ livelli sovrapposti (`SKILL.md`) vale in pieno.
 
 ## 3. Fase 4 — installazione
 
+Nel `mise.toml` **del progetto**, ed è qui che sta la versione che conta:
+
 ```bash
-mise use -g npm:@angular/language-server@17   # la major DEL PROGETTO, non @latest
+mise use npm:@angular/language-server@17      # la major di QUESTO progetto
+```
+
+Nella config **globale**, come fallback per un progetto che non la fissa, e per i
+tool la cui versione non dipende dal progetto:
+
+```bash
+mise use -g npm:@angular/language-server@17   # una major qualsiasi, mai @latest
 mise use -g npm:typescript-language-server@latest
 mise use -g npm:typescript@5                  # tsserver per i file fuori progetto
 mise use -g npm:prettier@latest
 ```
 
+I due posti non sono in alternativa, e non sono ridondanza. `ngserver` è un guscio che
+carica `@angular/language-service` **dal progetto** (`capabilities.md` §4), quindi la
+major giusta cambia da checkout a checkout: solo il `mise.toml` del progetto può
+essere giusto per tutti insieme, perché lo shim risolve in base alla directory
+corrente e Neovim avvia `ngserver` proprio attraverso lo shim. Quello globale è giusto
+solo per la major con cui è stato installato, ma senza di lui un progetto che non
+fissa niente non ha nessun server: è la differenza fra sbagliato e assente, e il primo
+almeno lo si vede.
+
 `@latest` è la scelta sbagliata di default, ed è costato un giro: con il server 22.1.5
 su un progetto Angular 17 il client si attacca, `:checkhealth vim.lsp` lo dà sano, e
 **nessuna diagnostica arriva mai**; in `:LspLog` ogni `didOpen` fallisce con
-`languageService.ensureProjectAnalyzed is not a function`. Il perché è generale ed è
-in `capabilities.md` §4: `ngserver` è un guscio che carica
-`@angular/language-service` dal progetto. Per progetti di major diverse la sede è il
-`mise.toml` **del progetto**: lo shim risolve in base alla directory corrente, e
-Neovim avvia `ngserver` proprio attraverso lo shim.
+`languageService.ensureProjectAnalyzed is not a function`. La compatibilità va nella
+direzione opposta a quella che ci si aspetta da un client LSP: non è il server a dover
+reggere i progetti vecchi, è il server a non dover essere più nuovo dell'API che
+troverà. Il caso contrario - un server più vecchio del progetto - qui non è stato
+misurato, e non va dato per buono senza provarlo.
 
 `typescript@5` e non `@7`: la 7 è la riscrittura nativa e non espone più
 `typescript/lib/tsserverlibrary`, che è quello che `ngserver` cerca.

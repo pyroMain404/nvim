@@ -251,6 +251,7 @@ Da tenere presenti sia quando scrivi il comando sia quando ne leggi l'output.
 | Un `:terminal` dentro un Neovim headless non produce nessuna cella: il buffer resta vuoto e l'output del figlio finisce sullo stdout del padre | non passare dal `:terminal` per vedere uno schermo; la via che funziona è la UI attaccata via RPC, con `ext_linegrid` **disattivo** (su v0.12.5 Windows fa uscire il figlio con exit 1) e `--listen` su TCP, non su named pipe |
 | `buffer_state` legge `vars` **dal buffer corrente alla fine** dello snippet: uno snippet che passa da un buffer all'altro lascia le sue `vim.b.<nome>` sparse, e la sonda le riporta come non impostate | accumula in una tabella locale e scrivi **una** `vim.b.<nome>` alla fine, oppure usa `vim.g` |
 | L'evidenza di `option_origin` stampa `Last set from` con i separatori di Windows, quindi un `expect` scritto con la barra normale non combacia mai e il `FAIL` sembra della config | scrivi il pattern sul solo nome del file (`ftplugin.lua%.lua`), che è l'unica parte stabile |
+| La sonda `health` esce 1 da una fixture di progetto finta pur avendo passato tutti i suoi controlli: un server abilitato per quel filetype (`ts_ls`) fallisce `initialize` su un 'node_modules' vuoto, e il suo traceback arriva su stderr | leggi la riga `--- N lines, M failed` prima di credere all'exit code. Una fixture serve a far scattare un ramo del check, non a far partire i server: se anche quelli devono girare, il progetto deve essere vero |
 
 ## Antipattern
 
