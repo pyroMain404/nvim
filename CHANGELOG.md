@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-06
 
+- Advise pinning `ngserver` in the project it belongs to. The server loads the
+  Angular language service from the project's 'node_modules', so its major is a
+  property of the checkout and not of the machine: `:checkhealth config` now
+  gives the `mise use` line to run in the project root, and treats the global
+  install as the fallback for a project that pins nothing.
+
 - Load `purplehue`, this config's own color scheme, instead of `catppuccin`. The
   scheme is generated into 'colors/purplehue.lua' and documented as the one this
   fork ships, but 'plugin/40_plugins.lua' asked for `catppuccin` by name while

@@ -192,6 +192,9 @@ local function check_angular()
   if vim.fn.executable('ngserver') ~= 1 then
     health.warn('`ngserver` is not available', {
       'Install it with `mise use -g npm:@angular/language-server@<major>`',
+      'That global one is only the fallback: the major has to be the one of '
+        .. 'the project, and a project on another major pins it in its own '
+        .. 'mise.toml',
       'Templates lose completion, diagnostics and go to definition',
     })
   else
@@ -230,6 +233,11 @@ local function check_angular()
     -- taken from this project: a server newer than the project calls into an
     -- API that is not there yet. The failure is loud in ':LspLog' and silent
     -- everywhere else — the client attaches, and no diagnostic ever arrives.
+    -- NOTE: the fix belongs to the project and not to the global `mise` config.
+    -- Neovim starts `ngserver` through a `mise` shim, and a shim resolves the
+    -- version from the current directory: a pin in the project's own mise.toml
+    -- follows the checkout and is right for every project at once, while the
+    -- global one can only ever be right for the major it was installed for.
     local manifest = vim.fs.joinpath(root, 'package.json')
     local ok, blob = pcall(vim.fn.readblob, manifest)
     local deps = ok and (vim.json.decode(blob) or {}).dependencies or {}
@@ -237,10 +245,11 @@ local function check_angular()
     if version == nil then
       health.info('no `@angular/core` in ' .. manifest)
     else
-      local fix = 'mise use -g npm:@angular/language-server@' .. version
+      local fix = ('mise use npm:@angular/language-server@%s'):format(version)
       health.info(
-        ('project is on Angular %s, so `ngserver` has to be that '):format(version)
-          .. ('major: `%s`'):format(fix)
+        ('project is on Angular %s, so `ngserver` has to be that major. '):format(
+          version
+        ) .. ('Pin it there: `%s`, run in %s'):format(fix, root)
       )
     end
   end
