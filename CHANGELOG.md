@@ -105,6 +105,15 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-08
 
+- Turn 'list' off where its indicators mark nothing worth marking: the quickfix
+  and location list windows, which share the `qf` filetype and are what
+  `<Leader>eq` and `<Leader>eQ` open, and the plain text buffers of a '*.txt'
+  file. A quickfix entry is a line rendered from a position and a message, so
+  'listchars' describes that rendering rather than the code it points at; prose
+  has no tab-among-spaces to give away. Everywhere else 'list' stays on, as
+  'plugin/10_options.lua' sets it. A '*.txt' file inside a 'doc/' directory is
+  `help` and is not affected.
+
 - Reference the commit `<Leader>rh` reviews, so that the files it opens are read
   against it. The revision picked from the Git log becomes the 'mini.diff'
   reference text as the review is opened, which is what pressing `<Leader>gr`

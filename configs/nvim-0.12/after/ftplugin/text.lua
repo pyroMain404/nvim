@@ -1,0 +1,25 @@
+-- ┌────────────────┐
+-- │ Text behaviour │
+-- └────────────────┘
+--
+-- On top of '$VIMRUNTIME/ftplugin/text.vim', which sets the `comments` that
+-- keep `-`, `*` and `>` lists going and empties `commentstring`. Nothing of
+-- that is repeated here; `:verbose setlocal comments?` says who set what.
+--
+-- This is the filetype of a '*.txt' file that is plain text. A '*.txt' file
+-- inside a 'doc/' directory is detected as `help` instead and reads under its
+-- own rules, so it is not touched by this file.
+--
+-- 'list' is on for every window in 'plugin/10_options.lua', which is right for
+-- code: there a tab among spaces or a non breaking space changes what the text
+-- means, and stays invisible without it. Prose has no such distinction to make
+-- - the whitespace is what it looks like - and the indicators only add
+-- characters to lines meant to be read.
+--
+-- NOTE: 'list' belongs to the window, not to the buffer, so the second index is
+-- what keeps the setting from outliving this file. `vim.wo.list` writes like
+-- `:set`, which also moves the global value every window opened afterwards
+-- inherits; `vim.wo[0][0]` writes like `:setlocal` and ties the value to this
+-- buffer inside this window, so opening a source file in the same window gets
+-- the indicators back and coming back here loses them again (`:h vim.wo`).
+vim.wo[0][0].list = false
