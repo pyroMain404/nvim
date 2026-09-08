@@ -36,7 +36,7 @@
 -- - `Config.review.staged(pathspec)` - files changed and already staged.
 --
 -- Mappings carry no logic of their own: 'plugin/20_keymaps.lua' binds
--- `<Leader>rc`, `<Leader>rg`, `<Leader>rd` and `<Leader>ra` to the last four,
+-- `<Leader>rc`, `<Leader>rh`, `<Leader>rd` and `<Leader>ra` to the last four,
 -- under the `<Leader>r` group. Read that file for what a review looks like from
 -- the keyboard; read this one for how it is implemented.
 --
@@ -176,7 +176,8 @@ end
 -- be committed (`Config.review.staged()`). They are the same command with
 -- different arguments - `git diff --name-only`, the revision or `--cached` or
 -- neither - and the same three sets `<Leader>gh`, `<Leader>gd` and `<Leader>ga`
--- show as a patch: the group answers "what changed", this file opens it.
+-- show as a patch: the group answers "what changed", this file opens it, and
+-- the mapping of each keeps the second key of the patch it answers.
 --
 -- NOTE: a file Git does not track yet is in none of them, `git diff` being
 -- about what Git already knows. It is the same blind spot the patches have, so
@@ -186,7 +187,7 @@ end
 -- `git diff --name-only <rev>`, and `rev` is handed over as it is. That is
 -- enough for every shape a review takes, because the range syntax of Git is
 -- itself the expressive part. Example usage:
--- - `:lua Config.review.git()` - what `<Leader>rg` does: pick a commit from the
+-- - `:lua Config.review.git()` - what `<Leader>rh` does: pick a commit from the
 --   Git log and review everything changed since it
 -- - `:lua Config.review.git('HEAD')` - the working tree, staged or not
 -- - `:lua Config.review.git('main')` - every file this branch differs in
@@ -262,7 +263,7 @@ end
 -- log when it is not given - the same way `Config.git.diff_commit()` picks the
 -- commit to diff against. `pathspec` narrows the review to a part of the tree,
 -- and holds whether the revision is given or picked. Example usage:
--- - `:lua Config.review.git()` - what `<Leader>rg` does
+-- - `:lua Config.review.git()` - what `<Leader>rh` does
 -- - `:lua Config.review.git('HEAD~3')` - skip the picker
 -- - `:lua Config.review.git(nil, 'configs/')` - pick, then keep that directory
 -- NOTE: the root is resolved before the picker starts, so that a call from

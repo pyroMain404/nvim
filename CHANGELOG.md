@@ -108,11 +108,20 @@ a merge from 'minimax' conflict-free.
 - Add `<Leader>rd` and `<Leader>ra` to the review group, the two sets Git names
   without a revision: the files changed and not staged yet, and the ones already
   staged. They are the counterparts of `<Leader>gd` and `<Leader>ga`, which show
-  the same two sets as a patch - the second key is the one they have there, so
-  reading a change as a patch and reading it in its files are pressed alike.
-  Neither picks anything: both are read while the change is being written, and
-  open right away. `<Leader>rg` stays what it was, the review of everything
-  changed since a commit picked from the Git log.
+  the same two sets as a patch. Neither picks anything: both are read while the
+  change is being written, and open right away.
+
+- Rename `<Leader>rg` to `<Leader>rh`, so that the second key of a review is
+  always the one its patch has in `<Leader>g`: `<Leader>rd` reads what
+  `<Leader>gd` shows, `<Leader>ra` what `<Leader>ga` shows, and `<Leader>rh`
+  what `<Leader>gh` shows - the files changed since a commit picked from the Git
+  log. Reading a change as a patch and reading it in its files are then the same
+  two keys with the first one changed. The rule the group was added with - the
+  second key names the source - held only while Git was the single source of
+  one review, and would have made three Git reviews share the key `g`; a source
+  which is not Git still gets a key named after itself. `<Leader>rg` is gone
+  rather than kept as an alias, an alias being the second thing to remember that
+  the rename exists to remove.
 
 - Add `Config.review.unstaged(pathspec)` and `Config.review.staged(pathspec)`
   next to `Config.review.git(rev, pathspec)`, which is what the two mappings
