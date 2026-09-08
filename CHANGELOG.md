@@ -105,6 +105,14 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-09
 
+- Fold a file opened with `<CR>` from a hunk the way the same file folds when
+  opened by hand. The fold options inherited from the patch were dropped after
+  the file was loaded, and `<` reads the global value back, so the drop also
+  undid what the ftplugin of that file had just set: a Lua buffer reached this
+  way folded by indentation, while opening it normally folds it by tree-sitter.
+  They are dropped before the file is loaded now, which leaves its own ftplugin
+  the last word.
+
 - Keep the fold settings of a Git patch, and the alignment of `<Leader>gb`,
   inside the windows they were meant for. Written with `vim.wo`, they moved the
   global value too, so one `:Git diff` left every window opened afterwards

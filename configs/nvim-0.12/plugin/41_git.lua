@@ -391,10 +391,14 @@ local show_at_cursor = function()
   end
   local lnum = vim.api.nvim_win_get_cursor(0)[1]
 
-  -- Keep the patch as alternate file and drop the fold options which the new
-  -- window inherited from it, as they only make sense inside a patch
-  vim.cmd('keepalt edit ' .. path)
+  -- Drop the fold options which the new window inherited from the patch, as
+  -- they only make sense inside one, and drop them before the file is loaded:
+  -- `<` reads the global value back, so run afterwards it would also undo what
+  -- the ftplugin of the file has just set, and a Lua file opened this way
+  -- folded by indentation while the same file opened by hand folds by
+  -- tree-sitter. Then keep the patch as alternate file.
   vim.cmd('setlocal foldmethod< foldexpr< foldlevel<')
+  vim.cmd('keepalt edit ' .. path)
   vim.api.nvim_win_set_cursor(0, { lnum, 0 })
   vim.cmd('normal! zv')
 end
