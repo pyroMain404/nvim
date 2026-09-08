@@ -19,6 +19,8 @@
 -- integration apart from the rest of the config, both while reading it here and
 -- while typing `:lua Config.git.` in the command line:
 --
+-- - `Config.git.root()` - root of the repository the current directory belongs
+--   to, `nil` outside one.
 -- - `Config.git.diff_ref` - revision used as 'mini.diff' reference text in every
 --   buffer, `nil` for the Git index. Per buffer it is `vim.b.diff_ref`.
 -- - `Config.git.set_diff_ref(buf_id, rev)` - reference `rev` in every buffer, or
@@ -48,6 +50,11 @@
 -- `<Leader>ou`. Read that file for what the workflow looks like from the
 -- keyboard; read this one for how it is implemented.
 --
+-- What is not here is the reading of the files a change touched, which is
+-- 'plugin/43_review.lua': opening files to read them is the same work whatever
+-- named them, so it takes Git as one source among others and asks this file
+-- only for `Config.git.root()`.
+--
 -- The functions are defined as this file is sourced, and only the autocommands
 -- of the last section wait for `later()`: an API that appears once a deferred
 -- callback has run would answer differently depending on when it is called.
@@ -63,7 +70,11 @@ Config.git = {}
 -- Every part of this file needs it, as every path Git reports - in the output of
 -- a command and in the name of the buffers holding a file state at some commit
 -- - is relative to it, while Neovim runs below it (`:h vim.fs.root()`).
+-- It is part of the API because 'plugin/43_review.lua' resolves the paths of
+-- a review against it: where a repository begins is a fact about Git, and
+-- answering it in two places is how the two answers start to differ.
 local repo_root = function() return vim.fs.root(vim.fn.getcwd(), '.git') end
+Config.git.root = repo_root
 
 -- Path on disk of the file `buf_id` holds, `nil` when it holds none - the case
 -- for a scratch buffer and for the copy of a file at some commit which

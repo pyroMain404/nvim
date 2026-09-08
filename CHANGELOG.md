@@ -105,6 +105,31 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-08
 
+- Add `<Leader>r`, a review group of its own, and `<Leader>rg` as the Git way
+  into it: the files changed since a commit picked from the Git log are loaded
+  into the argument list of a new tabpage and opened as buffers, so a change is
+  read next to the code that stayed and not only as a patch. `:next` /
+  `:previous` walk it, `:argdo` runs over all of it, and the global argument
+  list is left alone. It is a group rather than one more `<Leader>g` mapping
+  because what its entries share is how the files are opened, not what named
+  them: the second key names the source, and Git is only the first one.
+  `<Leader>rc` ends the review, closing the tabpage and dropping the buffers it
+  opened while leaving alone the ones that were already there - `:tabclose` does
+  only the first half, and 'mini.tabline' shows every buffer left listed.
+
+- Add `Config.review` in the new 'plugin/43_review.lua', which is what that
+  group calls. `Config.review.open(paths, label)` takes any list of paths - the
+  whole contract a source has to meet - and `Config.review.close()` undoes it,
+  dropping the buffers the review opened and no others. `Config.review.git(rev,
+  pathspec)` is the Git source: it skips the picker and takes any revision
+  expression Git understands, so a branch against its merge base is
+  `:lua Config.review.git('main...')` and a single commit is
+  `:lua Config.review.git('abc1234~..abc1234')`. The second argument narrows the
+  review to a Git pathspec - a directory, a glob, or a list of them, read from
+  the root of the repository - which no mapping passes and the command line
+  reaches: `:lua Config.review.git('main', 'configs/')`. `Config.git.root()`
+  joins the Git API so that the two files agree on where a repository begins.
+
 - Take the buffer to act on as a `buf_id` in `Config.git.log()`,
   `Config.git.diff_commit()` and `Config.git.toggle_diff_ref()`, in place of the
   `'buf'` scope string, and put it first as `:h nvim_buf_get_name()` and every

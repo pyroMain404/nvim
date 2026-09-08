@@ -62,6 +62,7 @@ Config.leader_group_clues = {
   { mode = 'n', keys = '<Leader>l', desc = '+Language' },
   { mode = 'n', keys = '<Leader>m', desc = '+Map' },
   { mode = 'n', keys = '<Leader>o', desc = '+Other' },
+  { mode = 'n', keys = '<Leader>r', desc = '+Review' },
   { mode = 'n', keys = '<Leader>s', desc = '+Session' },
   { mode = 'n', keys = '<Leader>t', desc = '+Terminal' },
   { mode = 'n', keys = '<Leader>v', desc = '+Visits' },
@@ -221,6 +222,10 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 --   commit (all/buffer), in a separate tabpage. The list of `<Leader>gH` holds
 --   only the commits which touched the current file.
 --
+-- Reading only the patch is not always enough: a change is also judged next to
+-- the code that stayed, which means opening the files it touched. That is the
+-- `<Leader>r` group below, and `<Leader>rg` is the Git way into it.
+--
 -- Reading the code as it was at some revision is done by referencing it: the
 -- revision becomes the 'mini.diff' reference text, which makes every commit
 -- made after it look exactly like it is not committed yet. Hunk navigation
@@ -326,6 +331,43 @@ nmap_leader('or', '<Cmd>lua MiniMisc.resize_window()<CR>', 'Resize to default wi
 nmap_leader('ot', '<Cmd>lua MiniTrailspace.trim()<CR>',    'Trim trailspace')
 nmap_leader('ou', git_update_config,                       'Update from upstream')
 nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
+
+-- r is for 'Review'. Common usage:
+-- - `<Leader>rg` - open the files changed since a commit picked from the Git log
+-- - `<Leader>rc` - close the review and drop the buffers it opened
+--
+-- This group opens files in order to read them, and its unit is the set of
+-- them: the argument list (`:h argument-list`) of a new tabpage, with every one
+-- loaded. `:next` / `:previous` walk the review, `:args` shows where it stands,
+-- `:argdo` runs something over all of it, `:first` starts it over. That list is
+-- local to the tabpage (`:h :arglocal`), so the files Neovim was started with
+-- are left as they are.
+--
+-- What the group has in common is that, not where the files came from - which
+-- is why it is not part of `<Leader>g` although Git is its only source today.
+-- The second key names the source, so a list produced by something else gets
+-- a key here rather than a home in the group of whatever produced it.
+--
+-- `<Leader>rg` picks the commit from the Git log and reviews everything changed
+-- since it. Another Git command defines another review, from the command line:
+-- `:lua Config.review.git('main...')` is the branch being written against the
+-- point it left the one it will be merged into, and a second argument narrows
+-- the review to a part of the tree (`:lua Config.review.git('main', 'configs/')`).
+--
+-- It pairs with `<Leader>gr`: referencing the same revision turns every buffer
+-- of the review into the change it received, hunk by hunk.
+--
+-- `<Leader>rc` ends the review: the tabpage closes and the buffers it opened go
+-- with it, while the ones that were already open stay. `:tabclose` does half of
+-- that - the files remain listed, and 'mini.tabline' shows every listed buffer.
+-- Which only matters once there are many: for a review of five files, deleting
+-- them one by one with `<Leader>bd` is the same thing.
+--
+-- Everything these mappings call lives in 'plugin/43_review.lua', under
+-- `Config.review`.
+
+nmap_leader('rc', '<Cmd>lua Config.review.close()<CR>', 'Close review')
+nmap_leader('rg', '<Cmd>lua Config.review.git()<CR>',   'Git changes')
 
 -- s is for 'Session'. Common usage:
 -- - `<Leader>sn` - start new session
