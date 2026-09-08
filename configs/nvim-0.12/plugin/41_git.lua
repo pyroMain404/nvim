@@ -422,8 +422,16 @@ local setup_patch_buf = function()
   -- Fold by file entry (level 1), hunk (2), and hunk body (3). Start at the
   -- deepest level, as with the global 'foldlevel' of 10 the first several
   -- `zm` would do nothing at all (see 'plugin/10_options.lua').
-  vim.wo.foldmethod, vim.wo.foldexpr = 'expr', 'v:lua.MiniGit.diff_foldexpr()'
-  vim.wo.foldlevel = 3
+  --
+  -- The three are written with the second index because they belong to the
+  -- window and mean nothing outside a patch. Plain `vim.wo` writes like
+  -- `:set`, which moves the global value as well, so one `:Git diff` would
+  -- leave every window opened afterwards folding by `diff_foldexpr()` at level
+  -- 3 - and it would take with it the restore below, which reads the global
+  -- back (`:h vim.wo`).
+  vim.wo[0][0].foldmethod = 'expr'
+  vim.wo[0][0].foldexpr = 'v:lua.MiniGit.diff_foldexpr()'
+  vim.wo[0][0].foldlevel = 3
 
   -- Navigation is mapped only in scratch buffers of 'mini.nvim' itself (both
   -- "minigit://" of `:Git` and "miniextra://" of `:Pick git_commits`), as it
@@ -647,10 +655,16 @@ end
 local align_blame = function(au_data)
   if au_data.data.git_subcommand ~= 'blame' then return end
   local win_src = au_data.data.win_source
-  vim.wo.wrap = false
+  vim.wo[0][0].wrap = false
   vim.fn.winrestview({ topline = vim.fn.line('w0', win_src) })
   vim.api.nvim_win_set_cursor(0, { vim.fn.line('.', win_src), 0 })
-  vim.wo[win_src].scrollbind, vim.wo.scrollbind = true, true
+  -- Both windows scroll together, each written so that nothing outside them
+  -- changes: with the second index for this one, because plain `vim.wo` writes
+  -- like `:set` and would bind every window opened afterwards, and by window id
+  -- for the source, which addressed that way stays local on its own
+  -- (`:h vim.wo`).
+  vim.wo[win_src].scrollbind = true
+  vim.wo[0][0].scrollbind = true
 end
 
 -- Client =====================================================================

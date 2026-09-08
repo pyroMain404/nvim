@@ -103,6 +103,17 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-09
+
+- Keep the fold settings of a Git patch, and the alignment of `<Leader>gb`,
+  inside the windows they were meant for. Written with `vim.wo`, they moved the
+  global value too, so one `:Git diff` left every window opened afterwards
+  folding by `MiniGit.diff_foldexpr()` at 'foldlevel' 3, and one blame bound
+  every later window to scroll with the others. It also took with it the
+  restore in `show_at_cursor()`, which reads the global back: the file opened
+  with `<CR>` from a hunk kept the fold settings of the patch instead of
+  dropping them.
+
 ## 2026-09-08
 
 - Keep the fold settings of a Java buffer and of an Angular template inside the
