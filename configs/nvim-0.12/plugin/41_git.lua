@@ -21,17 +21,27 @@
 --
 -- - `Config.git.diff_ref` - revision used as 'mini.diff' reference text in every
 --   buffer, `nil` for the Git index. Per buffer it is `vim.b.diff_ref`.
--- - `Config.git.set_diff_ref(rev, buf_id)` - reference `rev` in every buffer, or
+-- - `Config.git.set_diff_ref(buf_id, rev)` - reference `rev` in every buffer, or
 --   in a single one.
--- - `Config.git.toggle_diff_ref(scope, rev)` - reference a revision, or restore
+-- - `Config.git.toggle_diff_ref(buf_id, rev)` - reference a revision, or restore
 --   the Git index when one is already referenced.
 -- - `Config.git.blame` - whether the line under the cursor is blamed.
 -- - `Config.git.toggle_blame()` - turn that annotation on and off.
--- - `Config.git.log(scope)` - Git log of the repository or of the buffer.
--- - `Config.git.diff_commit(scope, rev)` - patch of everything changed since
+-- - `Config.git.log(buf_id)` - Git log of the repository or of one file.
+-- - `Config.git.diff_commit(buf_id, rev)` - patch of everything changed since
 --   a commit.
 -- - `Config.git.lazygit()` - Git client in a floating window.
 -- - `Config.git.update_config()` - merge upstream changes into this config.
+--
+-- Two arguments recur, and mean the same thing wherever they appear:
+-- - `buf_id` - which file the answer is about, written the way Neovim writes
+--   a buffer everywhere else (`:h nvim_buf_get_name()`): `nil` for the whole
+--   repository, `0` for the current buffer, a number for that buffer. It comes
+--   first, as it does in every `nvim_buf_*()` function, and it is what lets
+--   a function be asked about a file which is not the one being edited.
+-- - `rev` - the revision to read against, `nil` to pick one from the Git log.
+--   It is handed to Git as it is, so any revision expression Git understands
+--   is one this config understands.
 --
 -- Mappings carry no logic of their own: 'plugin/20_keymaps.lua' only binds keys
 -- to these functions, under the `<Leader>g` group plus `<Leader>tl` and
@@ -54,6 +64,17 @@ Config.git = {}
 -- a command and in the name of the buffers holding a file state at some commit
 -- - is relative to it, while Neovim runs below it (`:h vim.fs.root()`).
 local repo_root = function() return vim.fs.root(vim.fn.getcwd(), '.git') end
+
+-- Path on disk of the file `buf_id` holds, `nil` when it holds none - the case
+-- for a scratch buffer and for the copy of a file at some commit which
+-- 'mini.git' opens. Every buffer scoped function starts here, because Git can
+-- only answer about a path it can find, and because the alternative is the same
+-- warning written three times.
+local buf_path = function(buf_id)
+  local path = vim.api.nvim_buf_get_name(buf_id)
+  if vim.fn.filereadable(path) == 1 then return path end
+  vim.notify('Buffer is not a file on disk', vim.log.levels.WARN)
+end
 
 -- HACK: paths inside a patch are relative to the root of the repository, while
 -- 'mini.git' resolves them against the current directory, as the notes of
@@ -142,10 +163,10 @@ end
 -- Revision used as 'mini.diff' reference text, `nil` for the Git index: in
 -- `Config.git.diff_ref` for every buffer, in `vim.b.diff_ref` for a single one.
 -- Change it through `set_diff_ref()`, as the source has to be attached anew:
--- - `:lua Config.git.set_diff_ref('v0.15.0')` - reference a tag everywhere
--- - `:lua Config.git.set_diff_ref(nil, 0)` - restore the index in current buffer
+-- - `:lua Config.git.set_diff_ref(nil, 'v0.15.0')` - reference a tag everywhere
+-- - `:lua Config.git.set_diff_ref(0)` - restore the index in the current buffer
 Config.git.diff_ref = nil
-Config.git.set_diff_ref = function(rev, buf_id)
+Config.git.set_diff_ref = function(buf_id, rev)
   local source = rev ~= nil and diff_sources_at(rev) or nil
   local bufs = vim.api.nvim_list_bufs()
   if buf_id == nil then
@@ -178,35 +199,34 @@ Config.git.set_diff_ref = function(rev, buf_id)
     end
   end
 
-  local scope = buf_id ~= nil and ' (buffer)' or ''
-  vim.notify('Diff reference' .. scope .. ': ' .. (rev or 'Git index'))
+  local suffix = buf_id ~= nil and ' (buffer)' or ''
+  vim.notify('Diff reference' .. suffix .. ': ' .. (rev or 'Git index'))
 end
 
 -- Reference the revision `rev`, or one picked from the Git log when it is not
 -- given. Restore the Git index instead when a revision is already referenced,
--- which is what makes this a toggle. `scope` is "buf" for the current buffer
--- alone, anything else for every buffer. Example usage:
+-- which is what makes this a toggle. Example usage:
 -- - `:lua Config.git.toggle_diff_ref()` - what `<Leader>gr` does
--- - `:lua Config.git.toggle_diff_ref('buf')` - what `<Leader>gR` does
+-- - `:lua Config.git.toggle_diff_ref(0)` - what `<Leader>gR` does
 -- - `:lua Config.git.toggle_diff_ref(nil, 'HEAD~3')` - skip the picker
--- NOTE: `choose` runs while the picker is still the current buffer, hence the
--- buffer identifier resolved before starting it.
-Config.git.toggle_diff_ref = function(scope, rev)
-  local buf_id, cur_ref = nil, Config.git.diff_ref
-  if scope == 'buf' then
-    buf_id, cur_ref = vim.api.nvim_get_current_buf(), vim.b.diff_ref
+-- NOTE: `choose` runs while the picker is still the current buffer, which is
+-- why `0` is resolved to a real identifier before starting it: by the time the
+-- commit is chosen, the current buffer is the picker.
+Config.git.toggle_diff_ref = function(buf_id, rev)
+  local cur_ref = Config.git.diff_ref
+  if buf_id ~= nil then
+    buf_id = buf_id == 0 and vim.api.nvim_get_current_buf() or buf_id
+    cur_ref = vim.b[buf_id].diff_ref
   end
-  if cur_ref ~= nil then return Config.git.set_diff_ref(nil, buf_id) end
-  if rev ~= nil then return Config.git.set_diff_ref(rev, buf_id) end
+  if cur_ref ~= nil then return Config.git.set_diff_ref(buf_id, nil) end
+  if rev ~= nil then return Config.git.set_diff_ref(buf_id, rev) end
 
   local path = nil
-  if scope == 'buf' then
-    path = vim.api.nvim_buf_get_name(0)
-    if vim.fn.filereadable(path) ~= 1 then
-      return vim.notify('Buffer is not a file on disk', vim.log.levels.WARN)
-    end
+  if buf_id ~= nil then
+    path = buf_path(buf_id)
+    if path == nil then return end
   end
-  local choose = function(item) Config.git.set_diff_ref(item:match('^%S+'), buf_id) end
+  local choose = function(item) Config.git.set_diff_ref(buf_id, item:match('^%S+')) end
   MiniExtra.pickers.git_commits({ path = path }, { source = { choose = choose } })
 end
 
@@ -282,7 +302,7 @@ local diff_ref_at_parent = function(buf_id)
   local name = vim.api.nvim_buf_get_name(buf_id)
   local commit = name:match('^minigit://%d+/.*show (%x+~*):')
   if commit == nil then return end
-  Config.git.set_diff_ref(commit .. '~', buf_id)
+  Config.git.set_diff_ref(buf_id, commit .. '~')
 end
 
 -- Only the first file opened from a patch takes a full height column of its
@@ -405,36 +425,41 @@ end
 
 -- History ====================================================================
 
--- Git log, of the repository or of the file in the current buffer, in the
--- layout the blame annotation uses. Example usage:
+-- Git log, of the repository or of one file, in the layout the blame annotation
+-- uses. Example usage:
 -- - `:lua Config.git.log()` - what `<Leader>gl` does
--- - `:lua Config.git.log('buf')` - what `<Leader>gL` does
+-- - `:lua Config.git.log(0)` - what `<Leader>gL` does
 -- NOTE: the backslashes keep 'mini.git' from expanding `%h`, `%as` and `%s` as
 -- the name of the current file with a modifier (`:h cmdline-special`).
+-- NOTE: the path is written out rather than left as `%:p`, which would name the
+-- current buffer and not the one asked for.
 local git_log_cmd = [[Git log --pretty=format:\%h\ \%as\ │\ \%s --topo-order]]
-Config.git.log = function(scope)
-  local postfix = scope == 'buf' and ' --follow -- %:p' or ''
+Config.git.log = function(buf_id)
+  local postfix = ''
+  if buf_id ~= nil then
+    local path = buf_path(buf_id)
+    if path == nil then return end
+    postfix = ' --follow -- ' .. vim.fn.fnameescape(path)
+  end
   vim.cmd(git_log_cmd .. postfix)
 end
 
--- Patch of everything changed since a commit, of the repository or of the file
--- in the current buffer. The commit is picked from the Git log - of the current
--- file when the scope is the buffer, so that the list holds only commits which
--- have something to show - or passed as `rev` to skip the picker. Example usage:
+-- Patch of everything changed since a commit, of the repository or of one file.
+-- The commit is picked from the Git log - of that file when one is given, so
+-- that the list holds only commits which have something to show - or passed as
+-- `rev` to skip the picker. Example usage:
 -- - `:lua Config.git.diff_commit()` - what `<Leader>gh` does
--- - `:lua Config.git.diff_commit('buf', 'HEAD~3')` - the buffer since `HEAD~3`
+-- - `:lua Config.git.diff_commit(0, 'HEAD~3')` - the buffer since `HEAD~3`
 -- NOTE: the path is resolved before the picker starts and passed to Git as it
 -- is: `%:p` would expand against the picker buffer by the time `choose` runs.
 -- NOTE: `choose` opens a window, so it is deferred past the closing of the
 -- picker (`:h MiniPick-source.choose` - it runs while the picker is current,
 -- and `:Git` would take that window as the one to split).
-Config.git.diff_commit = function(scope, rev)
+Config.git.diff_commit = function(buf_id, rev)
   local path, postfix = nil, ''
-  if scope == 'buf' then
-    path = vim.api.nvim_buf_get_name(0)
-    if vim.fn.filereadable(path) ~= 1 then
-      return vim.notify('Buffer is not a file on disk', vim.log.levels.WARN)
-    end
+  if buf_id ~= nil then
+    path = buf_path(buf_id)
+    if path == nil then return end
     postfix = ' -- ' .. vim.fn.fnameescape(path)
   end
   local diff = function(commit) vim.cmd('Git diff ' .. commit .. postfix) end

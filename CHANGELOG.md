@@ -105,6 +105,15 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-08
 
+- Take the buffer to act on as a `buf_id` in `Config.git.log()`,
+  `Config.git.diff_commit()` and `Config.git.toggle_diff_ref()`, in place of the
+  `'buf'` scope string, and put it first as `:h nvim_buf_get_name()` and every
+  other buffer function of Neovim does. `nil` is the whole repository, `0` the
+  current buffer, and a number any other buffer - which the scope string could
+  not name at all. `Config.git.set_diff_ref()` swaps its two arguments to match,
+  and the buffer scoped log no longer passes `-- %:p`: it writes out the path of
+  the buffer it was given.
+
 - Pick the commit to review from the Git log in `<Leader>gh` / `<Leader>gH`,
   instead of counting commits back from `HEAD`. The patch now covers everything
   changed since the picked commit, and the list of `<Leader>gH` holds only the
