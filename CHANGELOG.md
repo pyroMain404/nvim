@@ -116,6 +116,12 @@ a merge from 'minimax' conflict-free.
 - Rename `Config.git.diff_head()` to `Config.git.diff_commit()`, which is what
   it does now that the commit is picked rather than reached by distance.
 
+- Name the enclosing function in the hunk headers of a Lua diff, through the
+  built-in driver asked for in '.gitattributes'. Without it Git walks back to
+  the first line starting in column 0 - the mapping which happens to sit above
+  the change, truncated at 80 characters - and every patch of this config,
+  `<Leader>gd` included, was headed by something unrelated to what it shows.
+
 ## 2026-09-06
 
 - Advise pinning `ngserver` in the project it belongs to. The server loads the
