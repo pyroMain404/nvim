@@ -14,6 +14,9 @@ vim.cmd('compiler ngc')
 -- Fold by structure. The `angular` parser is in `languages` in
 -- 'plugin/40_plugins.lua', so the tree exists; without a `foldexpr` a template
 -- folds by indentation, which in nested markup groups by depth of nesting
--- rather than by element (`:h vim.treesitter.foldexpr()`).
-vim.wo.foldmethod = 'expr'
-vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+-- rather than by element (`:h vim.treesitter.foldexpr()`). The second index is
+-- what keeps the two inside this buffer: plain `vim.wo` writes like `:set` and
+-- moves the global value as well, so every window opened after the first
+-- template would fold by this expression (`:h vim.wo`).
+vim.wo[0][0].foldmethod = 'expr'
+vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'

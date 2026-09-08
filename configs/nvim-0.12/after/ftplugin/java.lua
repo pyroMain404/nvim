@@ -24,9 +24,12 @@ vim.bo.softtabstop = 4
 
 -- Fold on classes and methods instead of on indentation, now that the parser
 -- is installed (`:h vim.treesitter.foldexpr()`). Nothing is folded on opening,
--- because 'foldlevel' is 10 in 'plugin/10_options.lua'.
-vim.wo.foldmethod = 'expr'
-vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+-- because 'foldlevel' is 10 in 'plugin/10_options.lua'. The second index is
+-- what keeps the two inside this buffer: plain `vim.wo` writes like `:set` and
+-- moves the global value as well, so every window opened after the first Java
+-- file would fold by this expression (`:h vim.wo`).
+vim.wo[0][0].foldmethod = 'expr'
+vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 
 -- Build and test through `:h :make`, so that errors and failing tests land in
 -- the quickfix list and `]q` / `[q` of 'mini.bracketed' walk them. Which of

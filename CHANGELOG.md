@@ -105,6 +105,14 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-08
 
+- Keep the fold settings of a Java buffer and of an Angular template inside the
+  buffer they were meant for. They were written with `vim.wo`, which for an
+  option of sole window scope writes like `:set` and moves the global value
+  too, so after the first Java file every window opened afterwards started with
+  `foldmethod=expr` and the tree-sitter 'foldexpr' - on a buffer whose parser
+  may not even be installed. `after/ftplugin/markdown.lua` was already right,
+  going through `:setlocal`.
+
 - Turn 'list' off where its indicators mark nothing worth marking: the quickfix
   and location list windows, which share the `qf` filetype and are what
   `<Leader>eq` and `<Leader>eQ` open, and the plain text buffers of a '*.txt'
