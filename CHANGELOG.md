@@ -103,6 +103,19 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-08
+
+- Pick the commit to review from the Git log in `<Leader>gh` / `<Leader>gH`,
+  instead of counting commits back from `HEAD`. The patch now covers everything
+  changed since the picked commit, and the list of `<Leader>gH` holds only the
+  commits which touched the current file. `3<Leader>gh` is gone, as is the
+  `[count]` of `<Leader>gr` / `<Leader>gR`: a revision is chosen by subject
+  everywhere, and named by hash through the `rev` argument the two functions now
+  take (`:lua Config.git.toggle_diff_ref(nil, 'HEAD~3')`).
+
+- Rename `Config.git.diff_head()` to `Config.git.diff_commit()`, which is what
+  it does now that the commit is picked rather than reached by distance.
+
 ## 2026-09-06
 
 - Advise pinning `ngserver` in the project it belongs to. The server loads the

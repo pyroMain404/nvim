@@ -213,10 +213,11 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- The two differ as soon as Neovim is started below the root, and Git then gets
 -- a path which matches nothing and answers with an empty output.
 --
--- To review already committed changes there is a `[count]` (default 1) which
--- tells how many latest commits to look at:
--- - `<Leader>gh` / `<Leader>gH` - patch of latest `[count]` commits (all/buffer)
---   in a separate tabpage. Example: `3<Leader>gh` - patch of latest 3 commits.
+-- To review already committed changes the commit to start from is picked from
+-- the Git log, by subject rather than by distance from `HEAD`:
+-- - `<Leader>gh` / `<Leader>gH` - patch of everything changed since the picked
+--   commit (all/buffer), in a separate tabpage. The list of `<Leader>gH` holds
+--   only the commits which touched the current file.
 --
 -- Reading the code as it was at some revision is done by referencing it: the
 -- revision becomes the 'mini.diff' reference text, which makes every commit
@@ -224,9 +225,9 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- (`[h` / `]h`), hunk textobject (`gh`) and overlay then work on the history.
 -- - `<Leader>gr` / `<Leader>gR` - reference a revision in every buffer / in the
 --   current one. Pressing it again restores the reference to the Git index.
--- - `[count]` references `HEAD~[count]`. Example: `3<Leader>gr`. Without it the
---   revision is picked from the Git log (of the current file for `<Leader>gR`),
---   which is the way to reference a commit by hash.
+-- - The revision is picked from the Git log (of the current file for
+--   `<Leader>gR`), the same way `<Leader>gh` picks the commit to diff against.
+--   `:lua Config.git.toggle_diff_ref(nil, 'HEAD~3')` names one without picking.
 -- - What is referenced can be read in `Config.git.diff_ref` and `vim.b.diff_ref`,
 --   the source that actually attached in `vim.b.minidiff_summary.source_name`.
 -- - Hunks can not be applied (`gh`) while a revision is referenced: they would
@@ -240,21 +241,21 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 local git_ref = '<Cmd>lua Config.git.toggle_diff_ref()<CR>'
 local git_ref_buf = '<Cmd>lua Config.git.toggle_diff_ref("buf")<CR>'
 
-nmap_leader('ga', '<Cmd>Git diff --cached<CR>',               'Added diff')
-nmap_leader('gA', '<Cmd>Git diff --cached -- %:p<CR>',        'Added diff buffer')
-nmap_leader('gb', '<Cmd>lua Config.git.toggle_blame()<CR>',   'Blame line (toggle)')
-nmap_leader('gc', '<Cmd>Git commit<CR>',                      'Commit')
-nmap_leader('gC', '<Cmd>Git commit --amend<CR>',              'Commit amend')
-nmap_leader('gd', '<Cmd>Git diff<CR>',                        'Diff')
-nmap_leader('gD', '<Cmd>Git diff -- %:p<CR>',                 'Diff buffer')
-nmap_leader('gh', '<Cmd>lua Config.git.diff_head()<CR>',      'HEAD~N diff')
-nmap_leader('gH', '<Cmd>lua Config.git.diff_head("buf")<CR>', 'HEAD~N diff buffer')
-nmap_leader('gl', '<Cmd>lua Config.git.log()<CR>',            'Log')
-nmap_leader('gL', '<Cmd>lua Config.git.log("buf")<CR>',       'Log buffer')
-nmap_leader('go', '<Cmd>lua MiniDiff.toggle_overlay()<CR>',   'Toggle overlay')
-nmap_leader('gr', git_ref,                                    'Reference revision')
-nmap_leader('gR', git_ref_buf,                                'Reference revision buffer')
-nmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>',    'Show at cursor')
+nmap_leader('ga', '<Cmd>Git diff --cached<CR>',                 'Added diff')
+nmap_leader('gA', '<Cmd>Git diff --cached -- %:p<CR>',          'Added diff buffer')
+nmap_leader('gb', '<Cmd>lua Config.git.toggle_blame()<CR>',     'Blame line (toggle)')
+nmap_leader('gc', '<Cmd>Git commit<CR>',                        'Commit')
+nmap_leader('gC', '<Cmd>Git commit --amend<CR>',                'Commit amend')
+nmap_leader('gd', '<Cmd>Git diff<CR>',                          'Diff')
+nmap_leader('gD', '<Cmd>Git diff -- %:p<CR>',                   'Diff buffer')
+nmap_leader('gh', '<Cmd>lua Config.git.diff_commit()<CR>',      'Commit diff')
+nmap_leader('gH', '<Cmd>lua Config.git.diff_commit("buf")<CR>', 'Commit diff buffer')
+nmap_leader('gl', '<Cmd>lua Config.git.log()<CR>',              'Log')
+nmap_leader('gL', '<Cmd>lua Config.git.log("buf")<CR>',         'Log buffer')
+nmap_leader('go', '<Cmd>lua MiniDiff.toggle_overlay()<CR>',     'Toggle overlay')
+nmap_leader('gr', git_ref,                                      'Reference revision')
+nmap_leader('gR', git_ref_buf,                                  'Reference revision buffer')
+nmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>',      'Show at cursor')
 
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 
