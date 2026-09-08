@@ -30,6 +30,9 @@
 -- - `Config.git.blame` - whether the line under the cursor is blamed.
 -- - `Config.git.toggle_blame()` - turn that annotation on and off.
 -- - `Config.git.log(buf_id)` - Git log of the repository or of one file.
+-- - `Config.git.diff_unstaged(buf_id)` - patch of what is changed and not
+--   staged yet, of the repository or of one file.
+-- - `Config.git.diff_staged(buf_id)` - patch of what is already staged.
 -- - `Config.git.diff_commit(buf_id, rev)` - patch of everything changed since
 --   a commit.
 -- - `Config.git.lazygit()` - Git client in a floating window.
@@ -455,31 +458,93 @@ Config.git.log = function(buf_id)
   vim.cmd(git_log_cmd .. postfix)
 end
 
+-- Patches ====================================================================
+
+-- The three patches of this group all end in `:Git diff`, which 'mini.git' runs
+-- and presents - exactly what is wanted when there is output. What it does when
+-- there is none is the reason this function exists: on a working tree with
+-- nothing changed it opens no window and says nothing, which is what a mapping
+-- that does not work looks like; outside a repository it hands over the whole
+-- usage message of `git diff --no-index` as a warning, over two hundred lines
+-- of it, for a key pressed in the wrong directory. Both are answered here
+-- before the command runs, in the one line the `<Leader>r` group answers them
+-- with: which of the two happened, and about which selection.
+--
+-- Whether there would be anything to show is asked with `git diff --quiet`,
+-- which is the same command minus the output: it exits 1 when the patch holds
+-- something, 0 when it is empty, and above that when Git itself failed. That
+-- last exit is reported as it is, naming the command as it was run - a Git
+-- which refuses is not the same thing as a Git with nothing to say.
+--
+-- `label` names the selection so that it reads after "No change to show", and
+-- the buffer scoped ones add the file the way Git names a pathspec.
+-- NOTE: asking costs a second run of Git, which is what buys the difference
+-- between "nothing changed" and "nothing happened". It is `--quiet`, so Git
+-- stops at the first difference it finds instead of formatting a patch.
+local show_patch = function(buf_id, diff_args, label)
+  local root = repo_root()
+  if root == nil then
+    return vim.notify('Not inside a Git repository', vim.log.levels.WARN)
+  end
+
+  local cmd, postfix = { 'git', 'diff', '--quiet' }, ''
+  vim.list_extend(cmd, diff_args)
+  if buf_id ~= nil then
+    local path = buf_path(buf_id)
+    if path == nil then return end
+    vim.list_extend(cmd, { '--', path })
+    postfix = ' -- ' .. vim.fn.fnameescape(path)
+    label = label .. ' -- ' .. vim.fn.fnamemodify(path, ':t')
+  end
+
+  local args = table.concat(diff_args, ' ')
+  local on_done = function(out)
+    if out.code == 0 then
+      return vim.notify('No change to show ' .. label, vim.log.levels.WARN)
+    end
+    if out.code ~= 1 then
+      local msg = vim.trim(out.stderr)
+      if msg == '' then msg = 'exited with code ' .. out.code end
+      local run = vim.trim('git diff ' .. args)
+      return vim.notify(run .. ': ' .. msg, vim.log.levels.ERROR)
+    end
+    vim.cmd(vim.trim('Git diff ' .. args) .. postfix)
+  end
+  vim.system(cmd, { cwd = root, text = true }, vim.schedule_wrap(on_done))
+end
+
+-- The changes not staged yet, and the ones already staged: the working tree
+-- read as the two halves Git keeps it in. Example usage:
+-- - `:lua Config.git.diff_unstaged()` - what `<Leader>gd` does
+-- - `:lua Config.git.diff_staged(0)` - what `<Leader>gA` does
+Config.git.diff_unstaged = function(buf_id) show_patch(buf_id, {}, 'not staged') end
+Config.git.diff_staged = function(buf_id)
+  show_patch(buf_id, { '--cached' }, 'staged')
+end
+
 -- Patch of everything changed since a commit, of the repository or of one file.
 -- The commit is picked from the Git log - of that file when one is given, so
 -- that the list holds only commits which have something to show - or passed as
 -- `rev` to skip the picker. Example usage:
 -- - `:lua Config.git.diff_commit()` - what `<Leader>gh` does
 -- - `:lua Config.git.diff_commit(0, 'HEAD~3')` - the buffer since `HEAD~3`
--- NOTE: the path is resolved before the picker starts and passed to Git as it
--- is: `%:p` would expand against the picker buffer by the time `choose` runs.
--- NOTE: `choose` opens a window, so it is deferred past the closing of the
--- picker (`:h MiniPick-source.choose` - it runs while the picker is current,
--- and `:Git` would take that window as the one to split).
+-- NOTE: the path is resolved before the picker starts, and `0` is turned into
+-- the buffer it means there and then: by the time `choose` runs the current
+-- buffer is the one of the picker, and both would name it instead.
+-- NOTE: `choose` opens a window, and would open it inside the picker
+-- (`:h MiniPick-source.choose` - it runs while the picker is current). Nothing
+-- defers it here because `show_patch()` asks Git first: its callback lands
+-- after the picker has closed, which is what makes the window openable.
 Config.git.diff_commit = function(buf_id, rev)
-  local path, postfix = nil, ''
   if buf_id ~= nil then
-    path = buf_path(buf_id)
-    if path == nil then return end
-    postfix = ' -- ' .. vim.fn.fnameescape(path)
+    if buf_path(buf_id) == nil then return end
+    buf_id = buf_id == 0 and vim.api.nvim_get_current_buf() or buf_id
   end
-  local diff = function(commit) vim.cmd('Git diff ' .. commit .. postfix) end
-  if rev ~= nil then return diff(rev) end
+  local show = function(commit) show_patch(buf_id, { commit }, 'since ' .. commit) end
+  if rev ~= nil then return show(rev) end
 
-  local choose = function(item)
-    local commit = item:match('^%S+')
-    vim.schedule(function() diff(commit) end)
-  end
+  local choose = function(item) show(item:match('^%S+')) end
+  local path = buf_id ~= nil and vim.api.nvim_buf_get_name(buf_id) or nil
   MiniExtra.pickers.git_commits({ path = path }, { source = { choose = choose } })
 end
 

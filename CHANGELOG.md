@@ -105,6 +105,21 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-08
 
+- Say why a patch is not shown in `<Leader>gd`, `<Leader>ga`, `<Leader>gh` and
+  their buffer scoped counterparts, which now go through
+  `Config.git.diff_unstaged(buf_id)`, `Config.git.diff_staged(buf_id)` and
+  `Config.git.diff_commit(buf_id, rev)` instead of running `:Git diff`
+  themselves. Two cases had no answer: on a working tree with nothing changed
+  'mini.git' opens no window and says nothing, which reads as a mapping that
+  does not work, and outside a repository it answers with the whole usage
+  message of `git diff --no-index`, over two hundred lines of it. Both are now
+  the single line the `<Leader>r` group already gave - `No change to show not
+  staged`, `No change to show since abc1234 -- 41_git.lua`, `Not inside a Git
+  repository` - and a Git which fails for any other reason is reported as it is,
+  naming the command as it was run. What it costs is a second run of Git, with
+  `--quiet` so that it stops at the first difference instead of formatting
+  a patch nobody asked for yet.
+
 - Add `<Leader>rd` and `<Leader>ra` to the review group, the two sets Git names
   without a revision: the files changed and not staged yet, and the ones already
   staged. They are the counterparts of `<Leader>gd` and `<Leader>ga`, which show
