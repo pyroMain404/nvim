@@ -224,7 +224,9 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 --
 -- Reading only the patch is not always enough: a change is also judged next to
 -- the code that stayed, which means opening the files it touched. That is the
--- `<Leader>r` group below, and `<Leader>rg` is the Git way into it.
+-- `<Leader>r` group below, and every diff above has its counterpart there:
+-- `<Leader>rd` opens the files `<Leader>gd` shows as a patch, `<Leader>ra` the
+-- ones `<Leader>ga` shows, `<Leader>rg` those changed since a picked commit.
 --
 -- Reading the code as it was at some revision is done by referencing it: the
 -- revision becomes the 'mini.diff' reference text, which makes every commit
@@ -333,6 +335,8 @@ nmap_leader('ou', git_update_config,                       'Update from upstream
 nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
 
 -- r is for 'Review'. Common usage:
+-- - `<Leader>rd` - open the files changed and not staged yet
+-- - `<Leader>ra` - open the files already staged
 -- - `<Leader>rg` - open the files changed since a commit picked from the Git log
 -- - `<Leader>rc` - close the review and drop the buffers it opened
 --
@@ -345,14 +349,24 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
 --
 -- What the group has in common is that, not where the files came from - which
 -- is why it is not part of `<Leader>g` although Git is its only source today.
--- The second key names the source, so a list produced by something else gets
--- a key here rather than a home in the group of whatever produced it.
+-- The second key names the set being read, and where `<Leader>g` already shows
+-- that same set as a patch it is the key it has there: `<Leader>rd` reads what
+-- `<Leader>gd` shows and `<Leader>ra` what `<Leader>ga` shows, so the two ways
+-- of looking at one change are pressed alike. `<Leader>rg` names its source
+-- instead, being everything else Git can select; a set produced by something
+-- which is not Git gets a key here too, rather than a home in the group of
+-- whatever produced it. There is no uppercase counterpart to any of them: the
+-- review of a single file is that file, and opening it needs no group.
+--
+-- NOTE: a file Git does not track yet is in none of these, `git diff` being
+-- about what Git already knows - the same blind spot the patches have.
 --
 -- `<Leader>rg` picks the commit from the Git log and reviews everything changed
 -- since it. Another Git command defines another review, from the command line:
 -- `:lua Config.review.git('main...')` is the branch being written against the
 -- point it left the one it will be merged into, and a second argument narrows
 -- the review to a part of the tree (`:lua Config.review.git('main', 'configs/')`).
+-- The same argument narrows the other two (`:lua Config.review.staged('*.md')`).
 --
 -- It pairs with `<Leader>gr`: referencing the same revision turns every buffer
 -- of the review into the change it received, hunk by hunk.
@@ -366,8 +380,10 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
 -- Everything these mappings call lives in 'plugin/43_review.lua', under
 -- `Config.review`.
 
-nmap_leader('rc', '<Cmd>lua Config.review.close()<CR>', 'Close review')
-nmap_leader('rg', '<Cmd>lua Config.review.git()<CR>',   'Git changes')
+nmap_leader('ra', '<Cmd>lua Config.review.staged()<CR>',   'Added files')
+nmap_leader('rc', '<Cmd>lua Config.review.close()<CR>',    'Close review')
+nmap_leader('rd', '<Cmd>lua Config.review.unstaged()<CR>', 'Diff files')
+nmap_leader('rg', '<Cmd>lua Config.review.git()<CR>',      'Git changes')
 
 -- s is for 'Session'. Common usage:
 -- - `<Leader>sn` - start new session

@@ -105,6 +105,24 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-08
 
+- Add `<Leader>rd` and `<Leader>ra` to the review group, the two sets Git names
+  without a revision: the files changed and not staged yet, and the ones already
+  staged. They are the counterparts of `<Leader>gd` and `<Leader>ga`, which show
+  the same two sets as a patch - the second key is the one they have there, so
+  reading a change as a patch and reading it in its files are pressed alike.
+  Neither picks anything: both are read while the change is being written, and
+  open right away. `<Leader>rg` stays what it was, the review of everything
+  changed since a commit picked from the Git log.
+
+- Add `Config.review.unstaged(pathspec)` and `Config.review.staged(pathspec)`
+  next to `Config.review.git(rev, pathspec)`, which is what the two mappings
+  call. They take the same pathspec argument, so a review can be narrowed to
+  a part of the tree from the command line: `:lua Config.review.staged('*.md')`.
+  What asks Git now takes the arguments which select the files rather than
+  a revision, and the label the review is named by rather than deriving it: the
+  three sources say `since abc1234`, `not staged` and `staged` in every message
+  they print, and the error still names the command as Git was given it.
+
 - Add `<Leader>r`, a review group of its own, and `<Leader>rg` as the Git way
   into it: the files changed since a commit picked from the Git log are loaded
   into the argument list of a new tabpage and opened as buffers, so a change is

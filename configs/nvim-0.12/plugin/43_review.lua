@@ -18,8 +18,8 @@
 -- Where the set comes from is deliberately not part of it. Opening files in
 -- order to read them is the same work whether Git named them, a grep did, or
 -- they were typed by hand, so `Config.review.open()` asks nothing about their
--- origin: a source is anything that produces paths and hands them over.
--- `Config.review.git()` is the first one, and the reason this file exists.
+-- origin: a source is anything that produces paths and hands them over. Git is
+-- the first one, and the reason this file exists.
 --
 -- Everything this file offers is reachable through `Config.review`, and nothing
 -- else of it is global:
@@ -32,11 +32,13 @@
 --   the buffers it opened.
 -- - `Config.review.git(rev, pathspec)` - files changed since a revision, opened
 --   as a review.
+-- - `Config.review.unstaged(pathspec)` - files changed and not staged yet.
+-- - `Config.review.staged(pathspec)` - files changed and already staged.
 --
 -- Mappings carry no logic of their own: 'plugin/20_keymaps.lua' binds
--- `<Leader>rg` and `<Leader>rc` to the last two, under the `<Leader>r` group.
--- Read that file for what a review looks like from the keyboard; read this one
--- for how it is implemented.
+-- `<Leader>rc`, `<Leader>rg`, `<Leader>rd` and `<Leader>ra` to the last four,
+-- under the `<Leader>r` group. Read that file for what a review looks like from
+-- the keyboard; read this one for how it is implemented.
 --
 -- It pairs with `<Leader>gr`: referencing the same revision turns every buffer
 -- of the review into the change it received, hunk by hunk.
@@ -168,6 +170,18 @@ end
 
 -- Git ========================================================================
 
+-- Git names three sets of files worth reading as a whole, and each is a review:
+-- what changed since some revision (`Config.review.git()`), what is changed and
+-- not staged yet (`Config.review.unstaged()`), and what is staged and about to
+-- be committed (`Config.review.staged()`). They are the same command with
+-- different arguments - `git diff --name-only`, the revision or `--cached` or
+-- neither - and the same three sets `<Leader>gh`, `<Leader>gd` and `<Leader>ga`
+-- show as a patch: the group answers "what changed", this file opens it.
+--
+-- NOTE: a file Git does not track yet is in none of them, `git diff` being
+-- about what Git already knows. It is the same blind spot the patches have, so
+-- a review holds exactly what the patch of the same name holds.
+
 -- Which files the review holds is decided by `rev`: the command is always
 -- `git diff --name-only <rev>`, and `rev` is handed over as it is. That is
 -- enough for every shape a review takes, because the range syntax of Git is
@@ -192,41 +206,56 @@ end
 -- and the root every path it reports is relative to: it says the same thing no
 -- matter which directory Neovim was started in.
 
--- Ask Git which files changed and hand them over. It runs asynchronously
--- (`:h vim.system()`) both because a diff over a long range takes its time and
--- because the callback then runs once the picker has closed, which is what
--- makes a window openable from it.
+-- Ask Git which files changed and hand them over. `diff_args` is what selects
+-- them - a revision, `--cached`, or nothing at all - and `label` says the same
+-- thing in words, for the messages. It runs asynchronously (`:h vim.system()`)
+-- both because a diff over a long range takes its time and because the callback
+-- then runs once the picker has closed, which is what makes a window openable
+-- from it.
 -- NOTE: with the default `core.quotePath`, Git writes a path holding anything
 -- outside ASCII quoted and escaped ("caff\303\250.lua"), which matches no file
 -- on disk and would drop it from the review without a word. Turning the setting
 -- off for this one call is what keeps such a file in.
 -- NOTE: a single pathspec is taken as a string, as that is how one is written
--- in the command line, and every message names the arguments Git was given
--- rather than the revision alone: a review limited to a directory which finds
--- nothing has to say which directory it looked in.
-local git_changed = function(rev, root, pathspec)
-  local cmd = { 'git', '-c', 'core.quotePath=false', 'diff', '--name-only', rev }
-  local args = rev
+-- in the command line, and both messages name it: a review limited to a
+-- directory which finds nothing has to say which directory it looked in. The
+-- error names the command as it was run, the review names itself as it reads.
+local git_changed = function(diff_args, root, pathspec, label)
+  local cmd = { 'git', '-c', 'core.quotePath=false', 'diff', '--name-only' }
+  vim.list_extend(cmd, diff_args)
+  local args = table.concat(diff_args, ' ')
   if pathspec ~= nil then
     local specs = type(pathspec) == 'string' and { pathspec } or pathspec
     vim.list_extend(cmd, { '--' })
     vim.list_extend(cmd, specs)
-    args = rev .. ' -- ' .. table.concat(specs, ' ')
+    local shown = '-- ' .. table.concat(specs, ' ')
+    args, label = vim.trim(args .. ' ' .. shown), label .. ' ' .. shown
   end
 
   local on_done = function(out)
     if out.code ~= 0 then
       local msg = vim.trim(out.stderr)
       if msg == '' then msg = 'exited with code ' .. out.code end
-      return vim.notify('git diff ' .. args .. ': ' .. msg, vim.log.levels.ERROR)
+      local run = vim.trim('git diff ' .. args)
+      return vim.notify(run .. ': ' .. msg, vim.log.levels.ERROR)
     end
     local dir, paths = vim.fs.normalize(root), {}
     for _, line in ipairs(vim.split(out.stdout, '\n')) do
       table.insert(paths, dir .. '/' .. vim.trim(line))
     end
-    Config.review.open(paths, 'since ' .. args)
+    Config.review.open(paths, label)
   end
   vim.system(cmd, { cwd = root, text = true }, vim.schedule_wrap(on_done))
+end
+
+-- Root of the repository to review, `nil` outside one - which is answered once
+-- here rather than in each source, all three of them starting with the question.
+local review_root = function()
+  local root = Config.git.root()
+  if root == nil then
+    vim.notify('Not inside a Git repository', vim.log.levels.WARN)
+  end
+  return root
 end
 
 -- Review the files changed since `rev`, or since a commit picked from the Git
@@ -240,12 +269,33 @@ end
 -- outside a repository is refused right away instead of after a picker with
 -- nothing to pick from.
 Config.review.git = function(rev, pathspec)
-  local root = Config.git.root()
-  if root == nil then
-    return vim.notify('Not inside a Git repository', vim.log.levels.WARN)
+  local root = review_root()
+  if root == nil then return end
+  local since = function(commit)
+    git_changed({ commit }, root, pathspec, 'since ' .. commit)
   end
-  if rev ~= nil then return git_changed(rev, root, pathspec) end
+  if rev ~= nil then return since(rev) end
 
-  local choose = function(item) git_changed(item:match('^%S+'), root, pathspec) end
+  local choose = function(item) since(item:match('^%S+')) end
   MiniExtra.pickers.git_commits({}, { source = { choose = choose } })
+end
+
+-- The two sets which need no revision to name them, and the ones read most
+-- often: what is changed and not staged yet, and what is staged and about to be
+-- committed. They are read while the change is being written rather than after
+-- it, so neither has anything to pick and both open right away. `pathspec`
+-- narrows them the same way it narrows `Config.review.git()`. Example usage:
+-- - `:lua Config.review.unstaged()` - what `<Leader>rd` does
+-- - `:lua Config.review.staged()` - what `<Leader>ra` does
+-- - `:lua Config.review.unstaged('configs/')` - only that directory
+Config.review.unstaged = function(pathspec)
+  local root = review_root()
+  if root == nil then return end
+  git_changed({}, root, pathspec, 'not staged')
+end
+
+Config.review.staged = function(pathspec)
+  local root = review_root()
+  if root == nil then return end
+  git_changed({ '--cached' }, root, pathspec, 'staged')
 end
