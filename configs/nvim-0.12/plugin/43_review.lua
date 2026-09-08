@@ -25,11 +25,12 @@
 -- else of it is global:
 --
 -- - `Config.review.max_files` - how many files are opened without asking first.
--- - `Config.review.open(paths, label)` - open these files as the argument list
---   of a new tabpage. `label` names the review in every message it prints, and
---   is written so that it reads after the word "Review".
--- - `Config.review.close()` - close the review of the current tabpage and drop
---   the buffers it opened.
+-- - `Config.review.open(paths, label, on_open)` - open these files as the
+--   argument list of a new tabpage. `label` names the review in every message
+--   it prints, and is written so that it reads after the word "Review".
+--   `on_open` is optional, and is what the source does once it is there.
+-- - `Config.review.close()` - close the review of the current tabpage, drop the
+--   buffers it opened and restore the diff reference it found.
 -- - `Config.review.git(rev, pathspec)` - files changed since a revision, opened
 --   as a review.
 -- - `Config.review.unstaged(pathspec)` - files changed and not staged yet.
@@ -40,8 +41,9 @@
 -- under the `<Leader>r` group. Read that file for what a review looks like from
 -- the keyboard; read this one for how it is implemented.
 --
--- It pairs with `<Leader>gr`: referencing the same revision turns every buffer
--- of the review into the change it received, hunk by hunk.
+-- A review since a revision references it on its own - what `<Leader>gr` does
+-- by hand - so every buffer holds the change it received since then, hunk by
+-- hunk. Closing the review puts back whatever was referenced before it.
 
 Config.review = {}
 
@@ -86,7 +88,10 @@ end
 -- variable that lives exactly as long as the review does, because afterwards it
 -- cannot be worked out: a file already open before the review is indis-
 -- tinguishable from one it opened, and closing the review must not close it.
-local open_arglist = function(paths, label)
+-- NOTE: `on_open` runs after the tabpage is there and before the files are
+-- loaded, so that whatever it sets - a diff reference, an option - is what they
+-- are loaded against, and is written down in the tabpage the review lives in.
+local open_arglist = function(paths, label, on_open)
   local existing = {}
   for _, buf_id in ipairs(vim.api.nvim_list_bufs()) do
     existing[buf_id] = true
@@ -95,6 +100,7 @@ local open_arglist = function(paths, label)
   vim.cmd('tabnew')
   local escaped = vim.tbl_map(vim.fn.fnameescape, paths)
   vim.cmd('arglocal! ' .. table.concat(escaped, ' '))
+  if on_open ~= nil then on_open() end
 
   local opened, unloaded = {}, 0
   for _, path in ipairs(paths) do
@@ -113,20 +119,24 @@ end
 
 -- Open `paths` as the review, asking first when it is a big one. The question
 -- is asked with `:h vim.ui.input()`, as in `Config.git.update_config()`. This
--- is the whole contract a source has to meet: a list of paths and a label.
--- Example usage:
+-- is the whole contract a source has to meet: a list of paths and a label, plus
+-- an `on_open` when producing them is not all it does - the Git source
+-- references the revision there, and a source with nothing to add passes
+-- nothing. Example usage:
 -- - `:lua Config.review.open({ 'init.lua', 'plugin/10_options.lua' }, 'by hand')`
-Config.review.open = function(paths, label)
+Config.review.open = function(paths, label, on_open)
   paths = readable_paths(paths)
   if #paths == 0 then
     return vim.notify('No file to review ' .. label, vim.log.levels.WARN)
   end
-  if #paths <= Config.review.max_files then return open_arglist(paths, label) end
+  if #paths <= Config.review.max_files then
+    return open_arglist(paths, label, on_open)
+  end
 
   local prompt = #paths .. ' files to review. Open them all? (y/n) '
   vim.ui.input({ prompt = prompt }, function(answer)
     if (answer or ''):lower() ~= 'y' then return end
-    open_arglist(paths, label)
+    open_arglist(paths, label, on_open)
   end)
 end
 
@@ -140,12 +150,20 @@ end
 -- Under a handful of files this is `<Leader>bd` pressed a few times, which is
 -- what 'plugin/30_mini.lua' says about buffers taking up space. It is worth
 -- a key of its own at the size `Config.review.max_files` allows, where what is
--- left behind is a tabline nobody can read. Example usage:
+-- left behind is a tabline nobody can read.
+--
+-- The diff reference goes with them, back to what it was before the review:
+-- a review since a revision references it (`Config.review.git()`), and what is
+-- read against what ends with the tabpage that held it. A reference changed by
+-- hand while the review was open is left alone - that is a decision about what
+-- to read against, and closing a tabpage does not undo it. Example usage:
 -- - `:lua Config.review.close()` - what `<Leader>rc` does
 -- NOTE: a buffer with unsaved changes refuses to be deleted (`:h E89`), and is
 -- reported rather than forced: the review is over, that edit is not.
+-- NOTE: both tabpage variables are read before `:h :tabclose`, after which they
+-- are those of whatever tabpage the closing lands in.
 Config.review.close = function()
-  local bufs = vim.t.review_bufs
+  local bufs, diff_ref = vim.t.review_bufs, vim.t.review_diff_ref
   if bufs == nil then
     return vim.notify('Not in a review tabpage', vim.log.levels.WARN)
   end
@@ -160,6 +178,9 @@ Config.review.close = function()
     if vim.api.nvim_buf_is_valid(buf_id) then
       if not pcall(vim.api.nvim_buf_delete, buf_id, {}) then kept = kept + 1 end
     end
+  end
+  if diff_ref ~= nil and Config.git.diff_ref == diff_ref.set then
+    Config.git.set_diff_ref(nil, diff_ref.prev)
   end
 
   local msg = 'Review closed: ' .. (#bufs - kept) .. ' buffer(s) dropped'
@@ -209,10 +230,12 @@ end
 
 -- Ask Git which files changed and hand them over. `diff_args` is what selects
 -- them - a revision, `--cached`, or nothing at all - and `label` says the same
--- thing in words, for the messages. It runs asynchronously (`:h vim.system()`)
--- both because a diff over a long range takes its time and because the callback
--- then runs once the picker has closed, which is what makes a window openable
--- from it.
+-- thing in words, for the messages. `on_open` reaches `Config.review.open()`
+-- untouched, and is where a revision gets referenced when there is one.
+--
+-- It runs asynchronously (`:h vim.system()`) both because a diff over a long
+-- range takes its time and because the callback then runs once the picker has
+-- closed, which is what makes a window openable from it.
 -- NOTE: with the default `core.quotePath`, Git writes a path holding anything
 -- outside ASCII quoted and escaped ("caff\303\250.lua"), which matches no file
 -- on disk and would drop it from the review without a word. Turning the setting
@@ -221,7 +244,7 @@ end
 -- in the command line, and both messages name it: a review limited to a
 -- directory which finds nothing has to say which directory it looked in. The
 -- error names the command as it was run, the review names itself as it reads.
-local git_changed = function(diff_args, root, pathspec, label)
+local git_changed = function(diff_args, root, pathspec, label, on_open)
   local cmd = { 'git', '-c', 'core.quotePath=false', 'diff', '--name-only' }
   vim.list_extend(cmd, diff_args)
   local args = table.concat(diff_args, ' ')
@@ -244,7 +267,7 @@ local git_changed = function(diff_args, root, pathspec, label)
     for _, line in ipairs(vim.split(out.stdout, '\n')) do
       table.insert(paths, dir .. '/' .. vim.trim(line))
     end
-    Config.review.open(paths, label)
+    Config.review.open(paths, label, on_open)
   end
   vim.system(cmd, { cwd = root, text = true }, vim.schedule_wrap(on_done))
 end
@@ -259,10 +282,34 @@ local review_root = function()
   return root
 end
 
+-- Reference `rev` in every buffer, which is what `<Leader>gr` does by hand, and
+-- write down in the review tabpage both it and the reference it replaces.
+-- `Config.review.close()` reads the two: the revision to recognise a reference
+-- still standing from the review, the previous one to put back in its place.
+-- NOTE: the reference is global rather than a property of the tabpage, being
+-- the one 'mini.diff' has, so a second review opened over the first takes it
+-- over. Closing that one restores the revision of the first; closing the first
+-- afterwards finds a reference it did not set, and leaves it alone.
+-- NOTE: a revision `git show <rev>:<path>` cannot resolve - a range such as
+-- `main...`, which names a set of commits and not a state - leaves every file
+-- on the Git index fallback of the source. The review then holds the right
+-- files and the reference shows what is not staged, neither of them saying
+-- anything is off: a range is reviewed with the reference set on its merge base
+-- (`<Leader>gr`, or `:lua Config.git.set_diff_ref(nil, 'main')`).
+local reference_rev = function(rev)
+  vim.t.review_diff_ref = { set = rev, prev = Config.git.diff_ref }
+  Config.git.set_diff_ref(nil, rev)
+end
+
 -- Review the files changed since `rev`, or since a commit picked from the Git
 -- log when it is not given - the same way `Config.git.diff_commit()` picks the
 -- commit to diff against. `pathspec` narrows the review to a part of the tree,
--- and holds whether the revision is given or picked. Example usage:
+-- and holds whether the revision is given or picked.
+--
+-- That revision is also what the review is read against: it becomes the
+-- 'mini.diff' reference text, so every file opened shows the change it received
+-- since then - hunk navigation, hunk textobject and overlay included - without
+-- picking the same commit a second time under `<Leader>gr`. Example usage:
 -- - `:lua Config.review.git()` - what `<Leader>rh` does
 -- - `:lua Config.review.git('HEAD~3')` - skip the picker
 -- - `:lua Config.review.git(nil, 'configs/')` - pick, then keep that directory
@@ -273,7 +320,8 @@ Config.review.git = function(rev, pathspec)
   local root = review_root()
   if root == nil then return end
   local since = function(commit)
-    git_changed({ commit }, root, pathspec, 'since ' .. commit)
+    local reference = function() reference_rev(commit) end
+    git_changed({ commit }, root, pathspec, 'since ' .. commit, reference)
   end
   if rev ~= nil then return since(rev) end
 
@@ -289,6 +337,9 @@ end
 -- - `:lua Config.review.unstaged()` - what `<Leader>rd` does
 -- - `:lua Config.review.staged()` - what `<Leader>ra` does
 -- - `:lua Config.review.unstaged('configs/')` - only that directory
+-- NOTE: neither touches the diff reference, which stays the Git index and so
+-- shows what is not staged yet. Naming the state before a staged change is
+-- `HEAD`, and referencing it is `<Leader>gr` away.
 Config.review.unstaged = function(pathspec)
   local root = review_root()
   if root == nil then return end

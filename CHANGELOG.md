@@ -105,6 +105,20 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-08
 
+- Reference the commit `<Leader>rh` reviews, so that the files it opens are read
+  against it. The revision picked from the Git log becomes the 'mini.diff'
+  reference text as the review is opened, which is what pressing `<Leader>gr`
+  and finding the same commit a second time did by hand: hunk navigation, the
+  hunk textobject and the overlay then work on the change every file of the
+  review received since then. `<Leader>rc` puts back the reference that was
+  there before, unless it was changed by hand while the review was open - that
+  is a decision about what to read against, and closing a tabpage does not undo
+  it. A review named from the command line references its revision too, ranges
+  such as `main...` excepted: they name a set of commits and not a state, so
+  every file falls back to the Git index. `Config.review.unstaged()` and
+  `Config.review.staged()` set no reference, the index being what they are read
+  against already.
+
 - Say why a patch is not shown in `<Leader>gd`, `<Leader>ga`, `<Leader>gh` and
   their buffer scoped counterparts, which now go through
   `Config.git.diff_unstaged(buf_id)`, `Config.git.diff_staged(buf_id)` and

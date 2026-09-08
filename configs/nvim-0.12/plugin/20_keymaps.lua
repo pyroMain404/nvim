@@ -251,6 +251,9 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 --   be staged against the index, which is not what is shown.
 -- - A file opened at some commit from a patch (`<CR>` / `gF`) references the
 --   commit before it on its own, so it is read as the change it received there.
+-- - `<Leader>rh` references the commit it reviews, so the files it opens are
+--   read the same way without picking that commit twice. `<Leader>rc` puts back
+--   what was referenced before the review.
 --
 -- Everything these mappings call lives in 'plugin/41_git.lua', under
 -- `Config.git`, next to the 'mini.diff' and 'mini.git' setup it configures.
@@ -345,7 +348,8 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
 -- r is for 'Review'. Common usage:
 -- - `<Leader>rd` - open the files changed and not staged yet
 -- - `<Leader>ra` - open the files already staged
--- - `<Leader>rh` - open the files changed since a commit picked from the Git log
+-- - `<Leader>rh` - open the files changed since a commit picked from the Git
+--   log, read against it
 -- - `<Leader>rc` - close the review and drop the buffers it opened
 --
 -- This group opens files in order to read them, and its unit is the set of
@@ -377,8 +381,17 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
 -- the review to a part of the tree (`:lua Config.review.git('main', 'configs/')`).
 -- The same argument narrows the other two (`:lua Config.review.staged('*.md')`).
 --
--- It pairs with `<Leader>gr`: referencing the same revision turns every buffer
--- of the review into the change it received, hunk by hunk.
+-- That commit is also referenced, which is `<Leader>gr` pressed on the same
+-- one: every buffer - of the review and not - then holds the change it received
+-- since then, walked with `[h` / `]h` and read in place with the overlay, and
+-- nothing is picked twice. `<Leader>rc` puts the previous reference back,
+-- unless it was changed by hand in the meantime: what a review is read against
+-- ends with it.
+--
+-- The other two set no reference - the Git index is what they are read against
+-- already - and a review named from the command line references its revision
+-- like `<Leader>rh` does, `main...` and the other ranges excepted: there is no
+-- single state to show a file at, and they fall back to the index.
 --
 -- `<Leader>rc` ends the review: the tabpage closes and the buffers it opened go
 -- with it, while the ones that were already open stay. `:tabclose` does half of
