@@ -75,7 +75,7 @@ local resolvers = {
   ['textDocument/documentLink'] = 'documentLink/resolve',
 }
 
---- Parameters each method wants. Only these three shapes exist in practice.
+--- Parameters each method wants. Only these four shapes exist in practice.
 local function params_for(method, client)
   if method:find('codeLens') then
     return { textDocument = vim.lsp.util.make_text_document_params(0) }
@@ -89,6 +89,17 @@ local function params_for(method, client)
       textDocument = position.textDocument,
       range = { start = position.position, ['end'] = position.position },
       context = { diagnostics = diagnostics, triggerKind = 1 },
+    }
+  end
+  -- `references` is a position plus a context, and the context is not
+  -- optional: without it `lua_ls` answers with an internal error whose
+  -- traceback names its own 'provider.lua', which reads like a broken server.
+  if method:find('references') then
+    local position = vim.lsp.util.make_position_params(0, client.offset_encoding)
+    return {
+      textDocument = position.textDocument,
+      position = position.position,
+      context = { includeDeclaration = true },
     }
   end
   return vim.lsp.util.make_position_params(0, client.offset_encoding)
