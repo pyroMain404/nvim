@@ -105,6 +105,29 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-09
 
+- Check a Java project against the class library it is really compiled with, and
+  say so out loud when that is not possible. `jdtls` runs on the JDK that
+  started it - 21 at least, it refuses to start on less - and compiled every
+  project with that one too, so on a build targeting another release the
+  compliance level read from 'pom.xml' was right and the class library was not:
+  a method that release does not have was completed and accepted in the buffer,
+  then rejected by the real build.
+
+  Every JDK `mise` has installed is now declared to the server as an execution
+  environment, derived from `mise ls java --json` rather than listed by hand -
+  the list by hand had to be edited in two files at once, and forgetting it is
+  silent. The server itself starts on the newest installed release through
+  `MISE_JAVA_VERSION`, so the day it raises its minimum is an installation and
+  not an edit, and `:checkhealth config` reads that minimum out of the launcher
+  instead of restating it.
+
+  What no list can cover is the JDK that is not installed at all. For that the
+  config asks the server, once the project has been imported, which release it
+  compiles against, and warns when no declared runtime answers for it. It also
+  warns when nothing was imported: with a failed build import `jdtls` keeps
+  answering from a bare JDK at its own release, which made that case
+  indistinguishable from a healthy one.
+
 - Reach the config through its real path from the `'c` bookmark of the file
   explorer, as `<Leader>ei` and the other `<Leader>e` mappings already do. It
   pointed at the junction Neovim starts from, where no root marker is reachable,

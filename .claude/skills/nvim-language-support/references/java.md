@@ -187,11 +187,97 @@ se un giorno serve davvero, è un `errorformat` che riconosca la riga di riepilo
 
 ## 6. Ambiente di progetto
 
-Niente di obbligatorio. `JAVA_HOME` arriva al server dallo shim di `mise`, quindi
-un progetto che pinna il proprio JDK nel suo `mise.toml` è già a posto. Il
-`.nvim.lua` serve solo per ciò che nessuno dei due sa: `vim.env.JDTLS_JVM_ARGS`
-per agganciare Lombok (`-javaagent:.../lombok.jar`), che 'nvim-lspconfig' legge
-nel suo `cmd`.
+Il `.nvim.lua` serve per ciò che né la config né `mise.toml` sanno, e in Java è
+quasi sempre una cosa sola: **Lombok**. Dove va un file del genere e come si
+verifica che sia stato letto è nella skill `nvim-project-environment`; qui c'è
+solo il perché.
+
+Ciò che **non** è lavoro di progetto, per quanto lo sembri, sta subito qui sotto.
+
+### Due JDK, non uno
+
+Un progetto Java ne ha sempre due in gioco, e confonderli costa una diagnosi
+intera:
+
+| Quale | Chi lo sceglie | Cosa succede se è sbagliato |
+|---|---|---|
+| Il JDK **del progetto** — quello contro cui si compila | il `mise.toml` di quel checkout | il codice è validato contro una class library che non è la sua: un metodo aggiunto dopo viene completato e accettato nel buffer, e poi rifiutato dal build vero |
+| Il JDK **del server** — quello su cui gira `jdtls` | `after/lsp/jdtls.lua`, per tutti i progetti | `jdtls` 1.61 si rifiuta di partire sotto la **21**, e lo dice solo nel proprio log: `Exception: jdtls requires at least Java 21`. In Neovim non compare niente, nessun client si attacca, e il progetto è sano |
+
+Il secondo non è una versione di progetto e non va cercata lì: è un requisito del
+server, vero in ogni progetto Java. Un checkout su Java 8 o 11 — e sono la norma
+nei gestionali — lascerebbe il server senza JVM valida. Per questo
+`after/lsp/jdtls.lua` la impone da sé con `MISE_JAVA_VERSION` in `cmd_env` (§4).
+
+Nessuno dei numeri in gioco è scritto da qualche parte, ed è il punto: si
+chiedono tutti.
+
+| Cosa | A chi si chiede | Perché non si scrive |
+|---|---|---|
+| Quali JDK esistono | `mise ls java --json` | l'elenco `runtimes` cambia a ogni progetto su una release nuova, e a mano erano **due** copie (config e health check) da tenere uguali |
+| Su quale gira il server | la più recente fra quelle installate | il minimo di `jdtls` sta dentro `bin/jdtls.py`, non qui: quando sale si **installa** un JDK, non si modifica un file |
+| Contro quale va controllato il progetto | al server, con `java.project.getSettings` | l'ha già risolto lui dal build — Maven, Gradle, Ant o niente — e riparsare il `pom.xml` sarebbe una seconda risposta, peggiore |
+| Qual è il minimo di `jdtls` | `bin/jdtls.py`, che lo scrive nel messaggio d'errore (`mise which jdtls` per arrivarci) | un 21 copiato nell'health check resterebbe indietro proprio il giorno in cui serve |
+
+Il prezzo è l'elenco `runtimes`, che smette di essere facoltativo: il server non
+gira più per caso sulla stessa JDK del progetto, quindi **ogni** release diversa
+dalla sua va dichiarata — non solo quelle più vecchie. Resta un solo passo umano,
+e non è automatizzabile perché nessuno può indovinarlo: **installare** il JDK di
+quella release, `mise install java@temurin-<major>`.
+
+Un progetto su una release non installata non darebbe errore da solo: verrebbe
+controllato contro la JDK del server, cioè completa e accetta metodi che il build
+poi rifiuta — lo stesso sintomo di Lombok mancante, e la stessa difficoltà a
+riconoscerlo. Per questo `after/lsp/jdtls.lua` lo dice: a import finito
+(`language/status` con `type = 'ServiceReady'`) chiede al server contro cosa
+compila, e avvisa se nessun runtime dichiarato risponde per quella release.
+
+NOTE: **una risposta di `getSettings` vale solo se il build è stato importato.**
+Con un import fallito — un repository irraggiungibile, un parent POM che non
+risolve — `jdtls` non tace: ripiega su un progetto JDK nudo e risponde con la
+*propria* release, che un runtime ce l'ha sempre. Il controllo va quindi fatto in
+due tempi, `java.project.getAll` per primo: lista vuota vuol dire che niente di
+ciò che il server dice viene dal build, diagnostiche comprese. Misurato su
+'~/workspace/RGI/assimoco-pass-platform-batch' senza credenziali Maven: `getAll`
+vuoto, compliance risposta `21`, `pom.xml` che dice 11, e un errore sul `pom.xml`
+che nomina il parent non risolvibile.
+
+### Lombok
+
+`jdtls` compila con la propria copia di ECJ dentro la propria JVM, e Lombok
+genera i membri **mentre il compilatore gira**: senza il suo agent nessuno di
+quei membri esiste per il server. Il sintomo non assomiglia a una configurazione
+mancante, assomiglia a un progetto rotto — `The method getFoo() is undefined for
+the type Bar` su ogni getter, `log cannot be resolved` su ogni `@Slf4j` — e
+riguarda ogni file che tocchi un'entità o un DTO. Misurato su
+'riesame-privacy-be', file `AnswerService.java`: **87 errori senza agent, 0 con**.
+
+L'aggancio è una variabile d'ambiente, che 'nvim-lspconfig' legge nel `cmd` che
+costruisce per `jdtls`:
+
+```lua
+local lombok = vim.fs.normalize('~/.local/share/java/lombok-1.18.36.jar')
+vim.env.JDTLS_JVM_ARGS = '-javaagent:' .. lombok
+```
+
+Va nel `.nvim.lua` **del progetto che usa Lombok**, non in `after/lsp/jdtls.lua`:
+un agent caricato in ogni progetto Java è un presupposto che non si può dare.
+
+Tre cose che non sono ovvie, tutte verificate qui:
+
+- **la versione dell'agent non è quella del `pom.xml`, e spesso non può esserlo.**
+  L'agent gira dentro la JVM del server, cioè la JDK 21 che `jdtls` pretende,
+  mentre Lombok 1.18.12 — quella che Spring Boot 2.3.1 tira dentro — muore su
+  qualunque cosa più nuova della 15. Le annotazioni continuano ad arrivare dal jar
+  del build, quindi le due versioni sono indipendenti e solo questa deve stare in
+  piedi sulla JDK del server;
+- **il jar non si prende da `~/.m2`.** Se il progetto pinna una versione vecchia,
+  una più nuova è nel repository locale solo per caso: nessun `mvn` la
+  riscaricherà mai, e il giorno che sparisce il sintomo torna. Va copiato in un
+  posto stabile — `~/.local/share/java/`, che è la convenzione documentata da
+  'nvim-lspconfig';
+- **il percorso non può contenere spazi.** 'nvim-lspconfig' spezza la variabile
+  sugli spazi bianchi e ne fa un `--jvm-arg=` per pezzo.
 
 ## 7. Health check
 
@@ -227,4 +313,9 @@ solo qui:
   sono arrivate al server: il suo default è `false`;
 - go to definition da un file di test a uno di `src/main` deve funzionare: è ciò
   che distingue un `root_dir` giusto dalla modalità a file singolo, in cui
-  `jdtls` risponde comunque ma solo sul file aperto.
+  `jdtls` risponde comunque ma solo sul file aperto;
+- in un progetto Lombok, che l'agent sia davvero agganciato lo dice la sonda
+  `diagnostics` con `absent = 'undefined for the type'`. Da sola però non basta:
+  quel controllo passa identico in un progetto che Lombok non lo usa, quindi
+  accanto va letta anche la variabile, con
+  `before = "print(vim.env.JDTLS_JVM_ARGS)"`.

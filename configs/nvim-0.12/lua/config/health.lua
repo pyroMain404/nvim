@@ -268,39 +268,154 @@ local function check_angular()
   end
 end
 
+-- The oldest Java release jdtls agrees to start on, read from the launcher.
+--
+-- The number lives in one place and it is not this file: 'bin/jdtls.py' raises
+-- `Exception: jdtls requires at least Java 21` and that string is the only
+-- statement of the requirement anywhere. Writing 21 here instead would be a
+-- copy that stays behind on the day the server raises its minimum - which is
+-- exactly the day this check exists for, because the symptom then is a language
+-- server that quietly never attaches.
+--
+-- `mise which` resolves the shim to the real script, whose sibling is the
+-- Python it runs. Anything unexpected on the way - jdtls installed some other
+-- way, the message reworded upstream - returns `nil`, and the caller reports
+-- nothing rather than a number it invented.
+local function jdtls_minimum_java()
+  local launcher = first_line({ 'mise', 'which', 'jdtls' })
+  if launcher == nil then return nil end
+  local ok, lines =
+    pcall(vim.fn.readfile, vim.fs.joinpath(vim.fs.dirname(launcher), 'jdtls.py'))
+  if not ok then return nil end
+  for _, line in ipairs(lines) do
+    local minimum = line:match('requires at least Java (%d+)')
+    if minimum ~= nil then return tonumber(minimum) end
+  end
+  return nil
+end
+
 local function check_java()
   health.start('config: Java')
 
+  -- NOTE: the fallback is only reached when the launcher could not be read at
+  -- all, which in practice means jdtls is not installed - and the check that
+  -- says so is a few lines below. 21 is the minimum of jdtls 1.61, kept here
+  -- because advice with a placeholder in it is advice nobody can run.
+  local minimum = jdtls_minimum_java()
+  local install_jdk = ('Install one with `mise install java@temurin-%s`'):format(
+    minimum or 21
+  )
+
   -- Which JDK answers here. `mise` resolves it through its shims, so a project
   -- with its own 'mise.toml' can change the answer without changing anything
-  -- in this config
+  -- in this config. This is the JDK of the *project*: `:make`, `javac` and the
+  -- build use it, and it is expected to be whatever that project targets — 8 or
+  -- 11 are normal answers and not a problem
   local version = first_line({ 'java', '--version' })
   if version == nil then
     return health.warn('`java` is not available', {
-      'Install it with `mise use -g java@temurin-21`',
+      install_jdk .. " and pin the project one in its 'mise.toml'",
       "Nothing in 'after/lsp/jdtls.lua' can start without a JDK",
     })
   end
   health.ok('java: ' .. version .. ' (' .. vim.fn.exepath('java') .. ')')
-  -- jdtls 1.61 refuses to start on anything older, and says so only in a log
-  local major = tonumber(version:match('(%d+)'))
-  if major ~= nil and major < 21 then
-    health.warn('the JDK in this session is older than 21', {
-      'Install a newer one with `mise use -g java@temurin-21`',
-      'jdtls refuses to start on it, whatever the project targets',
+
+  -- The JDK jdtls runs on, which is *not* the one above: 'after/lsp/jdtls.lua'
+  -- hands the server the newest JDK `mise` has installed, through
+  -- `MISE_JAVA_VERSION`, so that it starts in a project pinned to an older
+  -- toolchain. What has to hold here is that such a JDK exists and is new
+  -- enough, not that it is the active one — checking the session JDK instead
+  -- would report a healthy Java 11 project as broken.
+  --
+  -- Read from the resolved config rather than named here. Which version the
+  -- server gets is a decision of that file, and a second copy of it in this one
+  -- would keep answering after the decision changed.
+  --
+  -- NOTE: below the minimum, jdtls says so only in its own log and nothing at
+  -- all in Neovim, so an unmet requirement looks like a language server that
+  -- simply does not attach. That is what makes it worth checking here.
+  local jdtls_config = vim.lsp.config['jdtls'] or {}
+  local server_jdk = vim.tbl_get(jdtls_config, 'cmd_env', 'MISE_JAVA_VERSION')
+  if server_jdk == nil then
+    health.warn('jdtls has no JDK of its own', {
+      install_jdk,
+      'It falls back to the JDK of the project, and a project on an older '
+        .. 'release then leaves no client attached',
     })
+  else
+    -- Always a `mise` version string ('temurin-21.0.12+101.0.LTS'), never the
+    -- legacy '1.8' spelling an Eclipse compliance level can carry, so the
+    -- release is the first number after the vendor name
+    local release = tonumber(server_jdk:gsub('^%D+', ''):match('^%d+'))
+    if minimum ~= nil and release ~= nil and release < minimum then
+      health.warn(
+        ('jdtls needs Java %d and the newest one installed is %d'):format(
+          minimum,
+          release
+        ),
+        {
+          ('Install it with `mise install java@temurin-%d`'):format(minimum),
+          'Until then the server refuses to start and no client attaches to a '
+            .. 'Java buffer',
+        }
+      )
+    else
+      health.ok(
+        ('jdtls JDK: %s%s'):format(
+          server_jdk,
+          minimum ~= nil and (', minimum required is %d'):format(minimum) or ''
+        )
+      )
+    end
   end
 
   report(
     'javac',
     "`:make` does nothing in a file that belongs to no build ('compiler/javac')",
-    'It comes with the JDK: `mise use -g java@temurin-21`'
+    'It comes with the JDK, whichever release the project targets'
   )
   report(
     'mvn',
     '`:make test` and `:make compile` do nothing in a Maven project',
     'Install it with `mise use -g maven@3.9`'
   )
+
+  -- Not programs this config runs, but directories it hands over: the execution
+  -- environments 'after/lsp/jdtls.lua' declares, so that a project targeting a
+  -- release other than the server's own is checked against the class library it
+  -- is really compiled with.
+  --
+  -- Read from the resolved config rather than from a list kept here. The two
+  -- lists used to be written twice and had to agree; asking the config is the
+  -- only version of this check that cannot drift away from what the server is
+  -- actually told.
+  local declared = vim.tbl_get(
+    jdtls_config,
+    'settings',
+    'java',
+    'configuration',
+    'runtimes'
+  ) or {}
+  if #declared == 0 then
+    health.warn('jdtls is told about no JDK at all', {
+      'Install one with `mise install java@temurin-<major>` — never `mise use -g`',
+      'Every project is then checked against the class library of the JDK the '
+        .. 'server runs on, which accepts calls that its build then rejects',
+    })
+  else
+    for _, runtime in ipairs(declared) do
+      health.ok(runtime.name .. ' runtime for jdtls: ' .. runtime.path)
+    end
+    -- Not a warning, because a release missing from this list is only a problem
+    -- for a project that targets it, and this list says nothing about which
+    -- projects exist. That case is caught where it can be: 'after/lsp/jdtls.lua'
+    -- asks the server what the project it just imported compiles against, and
+    -- warns when no runtime here answers for it.
+    health.info(
+      'A project on a release missing from this list is checked against the '
+        .. "server's own JDK, and says so when it is opened"
+    )
+  end
 
   -- Presence only, on purpose: 'jdtls' has no `--version`, and its Windows
   -- wrapper ends with a `pause` that would wait for a key nobody can press.
