@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-09
 
+- Format a file Git does not track yet with `<Leader>lf`, instead of answering
+  "No changed lines to format". 'mini.diff' attaches to such a file as well, so
+  the check for "no reference here" never fired: it looked at whether there was
+  any data, where the state that matters is having a reference text. Everything
+  in a file that new is changed, and the whole buffer is what gets formatted.
+
 - Stop `lua-language-server` from reading the three reference configs. They
   define the same `Config` helpers as the one in use, so `gd` on one of them
   offered a choice between 'configs/nvim-0.12/init.lua' and

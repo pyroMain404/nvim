@@ -62,11 +62,23 @@ Config.format.changed = function()
     return vim.notify(msg, vim.log.levels.WARN)
   end
 
-  -- No data means 'mini.diff' is not attached to this buffer - a file outside a
-  -- repository, or one Git does not track. Nothing there is "unchanged", so the
-  -- whole buffer is the honest answer, and the message says which one was taken.
+  -- Without a reference text nothing here is "unchanged", so the whole buffer
+  -- is the honest answer, and the message says which one was taken. Two
+  -- different states end up in it: outside a repository 'mini.diff' does not
+  -- attach at all, while inside one it attaches to a file Git does not track
+  -- too - and that buffer has a data table with no reference text and no hunk,
+  -- which reads as "nothing changed" for a file where everything is new.
+  -- NOTE: the reference text arrives asynchronously, around 130 ms after the
+  -- file is opened (measured). Until it does, a tracked file looks exactly like
+  -- an untracked one, and waiting for it is what keeps the first from being
+  -- reformatted whole.
   local data = MiniDiff.get_buf_data(0)
-  if data == nil then
+  if data ~= nil and data.ref_text == nil then
+    local has_ref = function() return (MiniDiff.get_buf_data(0) or {}).ref_text end
+    vim.wait(500, function() return has_ref() ~= nil end, 10)
+    data = MiniDiff.get_buf_data(0)
+  end
+  if data == nil or data.ref_text == nil then
     vim.notify('No diff reference here: formatted the whole buffer')
     return Config.format.buffer()
   end
