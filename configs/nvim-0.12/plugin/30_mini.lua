@@ -226,8 +226,16 @@ now_if_args(function()
   -- Add common bookmarks for every explorer. Example usage inside explorer:
   -- - `'c` to navigate into your config directory
   -- - `g?` to see available bookmarks
+  -- NOTE: the config is reached through the junction Neovim was started from,
+  -- and a file opened by that path has no root marker above it: `lua_ls` then
+  -- starts a second time with no root, in single file mode, where it publishes
+  -- no diagnostic at all (measured: `root: nil` there against the repository
+  -- for the same file). `:h resolve()` keeps the bookmark on the real path,
+  -- the same way `config_file()` of 'plugin/20_keymaps.lua' keeps every
+  -- `<Leader>e` mapping on it.
   local add_marks = function()
-    MiniFiles.set_bookmark('c', vim.fn.stdpath('config'), { desc = 'Config' })
+    local config_dir = vim.fn.resolve(vim.fn.stdpath('config'))
+    MiniFiles.set_bookmark('c', config_dir, { desc = 'Config' })
     local vimpack_plugins = vim.fn.stdpath('data') .. '/site/pack/core/opt'
     MiniFiles.set_bookmark('p', vimpack_plugins, { desc = 'Plugins' })
     MiniFiles.set_bookmark('w', vim.fn.getcwd, { desc = 'Working directory' })

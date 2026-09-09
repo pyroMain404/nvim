@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-09
 
+- Reach the config through its real path from the `'c` bookmark of the file
+  explorer, as `<Leader>ei` and the other `<Leader>e` mappings already do. It
+  pointed at the junction Neovim starts from, where no root marker is reachable,
+  so a file opened that way got a second `lua_ls` with no root at all - single
+  file mode, in which it publishes no diagnostic.
+
 - Format a file Git does not track yet with `<Leader>lf`, instead of answering
   "No changed lines to format". 'mini.diff' attaches to such a file as well, so
   the check for "no reference here" never fired: it looked at whether there was
