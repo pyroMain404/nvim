@@ -49,6 +49,21 @@ vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- - `javac` (`:h compiler-javac`, `:h errorformat-javac`) for a file that
 --   belongs to no build at all, where `:make %` compiles just this one.
 --
+-- Only `:make` is affected by this list. The language server is not: it asks
+-- its own importer, so a Gradle project gets its classpath and its compliance
+-- level from jdtls whatever is decided here.
+--
+-- TODO: Gradle falls through to `javac`, which compiles the single file instead
+-- of running the build - silently, because a file that compiles on its own
+-- leaves the quickfix list empty, exactly like a build that succeeded. Neovim
+-- ships no 'compiler/gradle', so this needs an `errorformat` written from
+-- scratch, and one that matches nothing is indistinguishable from a green
+-- build. Not now: there is no Gradle project on this machine to derive it from
+-- or check it against. First step is to make one fail on purpose and read the
+-- raw output - `gradlew compileJava` on a file with a type error - because the
+-- format changes with the console mode ('rich', 'plain'), and `--console=plain`
+-- is probably part of the answer.
+--
 -- Walking up for the build file costs a handful of `stat` calls per buffer,
 -- which is what the runtime does for `Cargo.toml`; nothing here reads a file.
 local build_files = { ['pom.xml'] = 'maven', ['build.xml'] = 'ant' }
