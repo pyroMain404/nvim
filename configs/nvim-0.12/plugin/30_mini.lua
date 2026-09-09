@@ -676,8 +676,8 @@ later(function()
 
   -- Map built-in navigation characters to force map refresh
   for _, key in ipairs({ 'n', 'N', '*', '#' }) do
+    -- `zv` also opens enough folds to show the match jumped to
     local rhs = key
-      -- Also open enough folds when jumping to the next match
       .. 'zv'
       .. '<Cmd>lua MiniMap.refresh({}, { lines = false, scrollbar = false })<CR>'
     vim.keymap.set('n', key, rhs)
