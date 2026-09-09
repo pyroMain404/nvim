@@ -253,7 +253,9 @@ lascia intendere la documentazione). Quindi `mvn` invocato dallo shim vede il
 shim non vede niente**: un IDE, un doppio clic, e soprattutto un server di linguaggio
 avviato da Neovim, che Neovim esegue direttamente. Se un server ha bisogno di una
 variabile — una `DATABASE_URL`, un flag che legge all'avvio — la sede è il `.nvim.lua`
-del progetto (`:h 'exrc'`, già abilitato), non il suo `mise.toml`.
+del progetto (`:h 'exrc'`, già abilitato), non il suo `mise.toml`. Come si sceglie fra
+i due, come si scrive quel file e come si prova che è stato letto sta nella skill
+`nvim-project-environment`, che tiene anche il registro dei progetti già configurati.
 
 E il `PATH` non se lo mettono da soli: la directory degli shim
 (`%LOCALAPPDATA%\mise\shims`) va aggiunta una volta al `PATH` di sistema, perché
