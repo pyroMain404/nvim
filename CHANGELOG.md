@@ -105,6 +105,13 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-09
 
+- Stop `lua-language-server` from reading the three reference configs. They
+  define the same `Config` helpers as the one in use, so `gd` on one of them
+  offered a choice between 'configs/nvim-0.12/init.lua' and
+  'configs/nvim-0.13/init.lua', and the file in use carried six "Duplicate
+  field" warnings it had done nothing to earn. A '.luarc.json' at the root of
+  the repository now keeps them out of the workspace.
+
 - Fold a file opened with `<CR>` from a hunk the way the same file folds when
   opened by hand. The fold options inherited from the patch were dropped after
   the file was loaded, and `<` reads the global value back, so the drop also

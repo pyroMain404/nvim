@@ -37,6 +37,9 @@ Adapted from `mini.nvim-general-principles` (`:h mini.nvim-general-principles`, 
 
 ```
 setup.lua                 Generator script: copies a config into `stdpath('config')`
+.luarc.json               Workspace of `lua_ls` for this repository: it keeps
+                          the reference configs out, as they define the same
+                          `Config` helpers as the one in use
 configs/README.md         What each config directory is and how it is laid out
 configs/nvim-0.12         The config this machine runs — the only one to modify
 configs/nvim-0.10 … 0.13  Other reference configs, inherited from upstream
