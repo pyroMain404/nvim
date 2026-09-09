@@ -105,6 +105,14 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-09
 
+- Skip `MiniMisc.setup_termbg_sync()` on Windows, where it could only ever
+  fail. The synchronization begins by asking the terminal emulator for its
+  background color with an OSC 11 query, and on Windows every emulator is
+  reached through ConPTY, which answers the DA1 query itself and never relays
+  that one. After a second of waiting the module warned that it had got no
+  proper response - the first thing on screen in a session as short lived as
+  the editor Git opens to reword a commit.
+
 - Check a Java project against the class library it is really compiled with, and
   say so out loud when that is not possible. `jdtls` runs on the JDK that
   started it - 21 at least, it refuses to start on less - and compiled every

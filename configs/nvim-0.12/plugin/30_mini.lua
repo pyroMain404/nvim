@@ -273,7 +273,15 @@ now_if_args(function()
 
   -- Synchronize terminal emulator background with Neovim's background to remove
   -- possibly different color padding around Neovim instance
-  MiniMisc.setup_termbg_sync()
+  --
+  -- HACK: on Windows a terminal emulator is reached only through ConPTY, which
+  -- answers the DA1 query itself and never relays the OSC 11 background query
+  -- to the emulator. `setup_termbg_sync()` then waits a second for a reply that
+  -- can not arrive and warns about it, which in a short lived session like the
+  -- commit message editor is the first thing on screen. Delete the guard once
+  -- ConPTY forwards OSC queries: still absent in Windows 11 26200 with Windows
+  -- Terminal 1.24.
+  if vim.fn.has('win32') == 0 then MiniMisc.setup_termbg_sync() end
 end)
 
 -- Step two ===================================================================
