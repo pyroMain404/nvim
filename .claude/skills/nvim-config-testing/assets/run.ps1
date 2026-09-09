@@ -23,6 +23,11 @@ pay for ten indexings, while ten probes in a session pay for one. In a session
 the probe does not quit Neovim: it leaves its report in `g:probe_result`, which
 is read back over the RPC socket (`:h --listen`, `:h --remote-expr`).
 
+What the driver deliberately does not isolate, and that is sometimes the point:
+the environment of the calling shell reaches the process untouched. Running the
+same probe with and without a variable set ('$env:JDTLS_JVM_ARGS') compares two
+configurations of a language server without editing a single file.
+
 .PARAMETER Probe
 Probe to run: a path, or the name of a file in this directory ('win_layout').
 
