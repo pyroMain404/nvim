@@ -190,9 +190,19 @@ incatenare le sonde senza rileggerle a occhio.
 | `quickfix` | `:make` produce voci navigabili? | `make`, `makeprg`, `errorformat`, `min`, `pattern` |
 | `health` | `:checkhealth` in forma che uno script può far fallire | `sections`, `fail_on`, `allow`, `show` |
 | `startuptime` | quanto costa l'avvio, file per file? | `file`, `budget`, `top`, `filter` |
+| `java_toolchain` | su quale JDK gira `jdtls`, e contro quale controlla il progetto? | `release`, `timeout`, `before` |
 
 L'intestazione di ogni file dice cosa fa, perché, e documenta tutti i suoi
 parametri: leggila prima di aggiungerne uno, e aggiungilo lì quando manca.
+
+`java_toolchain` è l'unica sonda legata a un linguaggio, e la deroga è
+deliberata: il contratto che verifica si rompe **in silenzio** in tutte e tre le
+sue forme — il server non parte e nessun client si attacca senza che Neovim dica
+niente; il progetto viene controllato contro la class library sbagliata; l'import
+del build fallisce e il server continua a rispondere da una JDK nuda. Nessuna
+delle tre si vede guardando, e una sonda generica non le può nemmeno formulare.
+Prima di aggiungerne un'altra così, chiedersi se il guasto è invisibile davvero:
+se si vede, la sonda giusta è già in tabella.
 
 `option_origin` e `lsp` meritano una nota, perché rispondono a **quasi ogni**
 guasto di questa config: la prima (`:verbose set`) è l'unica che nomina il file
@@ -236,7 +246,7 @@ Da tenere presenti sia quando scrivi il comando sia quando ne leggi l'output.
 | `nvim --server ... --remote-expr` senza `--headless` **sul client** restituisce il valore sepolto nelle sequenze di escape del terminale | `--headless` anche sul client: `Invoke-Remote` in 'run.ps1' lo fa |
 | Aprire un file cambia la directory corrente (`MiniMisc.setup_auto_root()` in 'plugin/30_mini.lua'), quindi un path relativo significa un'altra cosa alla sonda successiva | passa path assoluti; in sessione il driver li rende assoluti da solo |
 | Il parametro `find` è una **regexp di Vim**, non un pattern Lua: lì `(` è letterale e `\(` apre un gruppo — un pattern sbagliato lancia `E54` | scrivi `^nmap_leader('ba'`, non `^nmap_leader\('ba'`; la sonda riporta l'errore come parametro invalido, non come guasto |
-| Il parametro `expect` è un **pattern Lua**, non una regexp: `\.` non è un punto letterale, così un pattern scritto con escape di regex non aggancia mai e il `FAIL` accusa la config invece del pattern | usa la sintassi Lua: `textwidth=85 .*after.ftplugin.lua%.lua`, non `after[\/]ftplugin[\/]lua\.lua` |
+| Il parametro `expect` — e `pattern` della sonda `quickfix`, che è lo stesso caso — è un **pattern Lua**, non una regexp: `\.` non è un punto letterale e l'alternanza `a|b` non esiste (`|` è un carattere qualsiasi), così un pattern scritto con la sintassi delle regex non aggancia mai e il `FAIL` accusa la config invece del pattern | usa la sintassi Lua: `textwidth=85 .*after.ftplugin.lua%.lua`, non `after[\/]ftplugin[\/]lua\.lua`; per più alternative, una sonda per ciascuna |
 | In sessione, `print()` dentro uno snippet finisce sullo stdout dell'istanza persistente e **non torna al chiamante** | riporta attraverso lo stato: `vim.b.<nome>` letto con `vars`, oppure `vim.g.probe_note` riletto da una sonda successiva |
 | `:normal <Space>ei` non preme il Leader: `:h :normal` mangia lo spazio iniziale dell'argomento | manda i tasti con `feedkeys` — cioè con `press` della sonda `keymap`, che usa `P.keys()`. Il `lhs` si scrive nella notazione della config (`<Leader>ei`): sia `maparg()` sia `P.keys()` la risolvono, e non va tradotta a mano in `<Space>` |
 | In PowerShell le variabili sono case-insensitive: una locale `$json` **è** lo switch `-Json` dello script, e assegnarla lancia una conversione fallita al binding | dai alle locali un nome che non collida con i parametri (`$payload`) |
@@ -266,6 +276,9 @@ Da tenere presenti sia quando scrivi il comando sia quando ne leggi l'output.
 | Il `find` delle sonde cerca **in avanti dal cursore** posato su (1,1), quindi un testo che sta sulla prima riga non viene mai trovato: la sonda `fold` risponde `FAIL \`class Prova\` found in the buffer / 0` su un buffer che quel testo ce l'ha | ancora il `find` a una riga che non sia la prima (`void f` invece di `class Prova`), oppure conta le righe della fixture prima di scriverlo |
 | Nessuna sonda controlla la **forma** di un parametro, e PowerShell ne sbaglia due in silenzio. Una lista dove si vuole una stringa (`absent = @('vim')`, che con un elemento solo sembra innocua) fa stampare `no message matches \`table: 0x...\`` e dà un `PASS` che non ha controllato niente; un array dove si vuole una tabella indicizzata (`levels = @(1, 1)` invece di `@{ '0' = 1; '1' = 1 }`) diventa offset 1..N e produce `FAIL` su righe scelte a caso, identici a un `foldexpr` rotto | rileggi l'intestazione della sonda per la forma di ogni parametro, e prima di credere a un esito guarda cosa la riga cita: il pattern con `table: 0x...` dentro, o un `FAIL` sulla riga sbagliata, accusa la chiamata e non la config |
 | La sonda `keymap` con `press` fotografa `after` subito dopo i tasti: per una mapping il cui effetto è asincrono (un `vim.system()`, uno `vim.schedule()`) il rapporto mostra `before` e `after` identici, indistinguibile da una mapping che non fa niente | leggi l'effetto nello snippet `after`, dopo un `vim.wait()` sulla condizione vera (`vim.fn.arglistid() ~= 0`). I `print()` di quello snippet escono su stderr **senza andare a capo**: il separatore va messo nella stringa |
+| Modificare il `.nvim.lua` di un progetto **annulla la fiducia** di `:h 'exrc'`, che è un hash del contenuto: da quel momento il file non viene più sorgentato e tutto ciò che impostava sparisce. In headless non c'è nessuna domanda: su stderr compare `exrc: Found untrusted code`, l'avvio prosegue, l'exit code resta 0 e la sonda accusa la modifica appena fatta invece della fiducia decaduta (misurato: `vim.env.JDTLS_JVM_ARGS` a `nil` con un hash alterato, il valore giusto dopo `:trust`) | dopo ogni edit di un file di progetto, `nvim --headless -u NONE <file> -c 'trust' -c 'qa!'` — `-u NONE` evita di leggerlo proprio mentre lo si autorizza — e conferma che `sha256sum` combacia con la sua riga in `stdpath('state')/trust` |
+| Un `getSettings` di `jdtls` risponde anche quando l'import del build è **fallito**: il server ripiega su un progetto JDK nudo e riporta la *propria* release, che un runtime ce l'ha sempre. Una sonda che legge solo la compliance passa su un progetto in cui non è stato importato niente — diagnostiche comprese | chiedi prima `java.project.getAll`: lista vuota vuol dire che nessuna risposta del server viene dal build. È il controllo che la sonda `java_toolchain` fa per primo, e l'errore vero sta come diagnostica sul file di build |
+| Cercare i processi rimasti con `Get-CimInstance Win32_Process \| Where-Object { $_.CommandLine -match '<pattern>' }` trova **sé stesso**: la riga di comando di quel PowerShell contiene il pattern. Sembra un residuo che rinasce, con un PID diverso a ogni giro, e si finisce per ammazzare le proprie shell | filtra prima sul nome del processo (`-Filter "Name='java.exe'"`) e solo dopo sulla riga di comando; e prima di uccidere qualcosa guarda `CreationDate` e il padre, perché gli `nvim` dell'utente sono più vecchi del giro di sonde |
 
 ## Antipattern
 
