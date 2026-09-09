@@ -58,6 +58,23 @@ P.run(function()
   local injected = P.param('injected')
   if injected == nil then return end
   local row, col = cursor[1] - 1, cursor[2]
-  local at = parser:language_for_range({ row, col, row, col })
-  P.check('`' .. injected .. '` injected here', at:lang() == injected, at:lang())
+
+  -- Every language whose tree covers the position, not the first one found:
+  -- `:h LanguageTree:language_for_range()` returns the first child that
+  -- contains the range and iterates with `pairs()`, so where injections nest -
+  -- the body of a Rust macro is inside a `rust` injection and the `sql` one at
+  -- the same time - it answered either of them at random.
+  local langs, found = {}, {}
+  parser:for_each_tree(function(tree, ltree)
+    local srow, scol, erow, ecol = tree:root():range()
+    local after_start = row > srow or (row == srow and col >= scol)
+    local before_end = row < erow or (row == erow and col <= ecol)
+    if after_start and before_end and not langs[ltree:lang()] then
+      langs[ltree:lang()] = true
+      table.insert(found, ltree:lang())
+    end
+  end)
+  table.sort(found)
+  local evidence = table.concat(found, ', ')
+  P.check('`' .. injected .. '` injected here', langs[injected] == true, evidence)
 end)
