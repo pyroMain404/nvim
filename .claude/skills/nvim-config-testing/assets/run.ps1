@@ -1,3 +1,9 @@
+# pwsh 7 e non Windows PowerShell 5.1, come ogni script di 'pyro-resources'
+# (docs/GESTIONE_TOOL.md, quarto vincolo). Qui la ragione e' locale: il driver
+# Lua di ogni sonda viene scritto con `Set-Content -Encoding UTF8`, che sulla
+# 5.1 significa **con BOM** - tre byte in testa a un file che Neovim sorgenta
+# con `-S`, per un fallimento che accuserebbe la sonda invece della shell.
+#requires -Version 7 -PSEdition Core
 <#
 .SYNOPSIS
 Run one probe inside a real headless Neovim, with this configuration loaded.
