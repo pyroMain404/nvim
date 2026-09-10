@@ -85,7 +85,7 @@ la distinzione è tutta la lezione.
 | `[env]` | `PASS_MVN_SETTINGS` punta al `settings-pass.xml` in `~/.m2`, usato da ogni build con `mvn -s` |
 | `[tasks]` | `verify`, `platform:build-first`, `platform:build`, `platform:run`, `portal:build`, `portal:serve-local`, `portal:serve-trt`, `batch:build`, `bom:build` |
 | `mise.toml` per repo | uno in ciascuno dei quattro, `java = "temurin-11"` (più `node` nel portale), ognuno in `.git/info/exclude` |
-| `.nvim.lua` | **nessuno**, e non serve |
+| `.nvim.lua` | **uno solo, alla radice**, e copre tutti e quattro i repo perché `exrc` risale le directory padre. Tre cose, tutte discendenti dalle settings Maven PASS — sotto |
 
 **La storia, perché è il tipo di errore che si ripete**: qui `jdtls` non partiva —
 nessun client, nessun errore, progetto sano. Il primo rimedio è stato dichiarare
@@ -108,24 +108,44 @@ server), `temurin-11`, `temurin-8`, `maven 3.6.3` e `node 14.21.3` sono tutte
 versioni `mise`, e l'health check della config avvisa se manca la JDK su cui
 `jdtls` dovrebbe girare.
 
-**Non versionati** e da rifare su una macchina nuova: il `mise.toml` padre — sta
-in una directory che non è un repository, quindi basta ricrearlo — e i quattro
-`mise.toml` dei repo, ognuno con la sua riga in `.git/info/exclude`.
+**Il `.nvim.lua`, e perché ce n'è uno** (2026-09-10). Tutto quello che c'è dentro
+discende da un fatto solo: `~/.m2/settings.xml` — quello che legge un Maven a cui
+non si dice niente — contiene soltanto il redirect di `localRepository` sul Dev
+Drive. Nessun repository RGI, nessuna credenziale. Le settings vere sono
+`~/.m2/settings-paas.xml`, e vanno consegnate a mano a tre destinatari diversi:
 
-NOTE: `~/.m2/settings-pass.xml` esiste ma le tre variabili d'ambiente che
-referenzia (`RGI_REPO_PWD`, `RGI_NPM_AUTH`, `GIT_TOKEN`) non sono settate, quindi
-nessun build Maven di questi repository è ancora stato eseguito. Il `mise.toml` di
-ognuno è dichiarato, non provato.
+| Cosa | Perché |
+|---|---|
+| `init_options.settings` **e** `settings` di `jdtls`, entrambe con `java.configuration.maven.userSettings` | il Maven interno di jdtls legge quella chiave una volta sola, quando parte m2e. `settings` da sola risponde a `workspace/configuration` e a `didChangeConfiguration`, che arrivano **dopo** `initialize`: config perfetta, effetto nessuno — misurato, i `.lastUpdated` che Maven lasciava dietro nominavano ancora `repo.maven.apache.org` |
+| `vim.g.maven_makeprg_params = '-s <settings>'` | `$VIMRUNTIME/compiler/maven.vim` **appende** questa variabile a `mvn --batch-mode`, e appendere qui va bene: `-s <file>` è un argomento, non un prefisso, quindi i goal che `:make` aggiunge cadono dopo. Letta mentre `:compiler maven` viene sorgentato, cioè molto dopo il `.nvim.lua`: basta un'assegnazione, senza autocomando |
+| un `BufEnter` che fa `lcd` sulla directory Angular del portale | vedi la sezione del portale qui sotto |
 
-NOTE: **finché quelle variabili non ci sono, `jdtls` qui non sta leggendo il
-progetto vero.** Senza credenziali il parent POM `com.rgigroup.cm:
-model-project-assimoco` non risolve, l'import Maven fallisce e il server ripiega
-su un progetto JDK nudo: misurato su `assimoco-pass-platform-batch`,
-`java.project.getAll` risponde vuoto e la compliance risulta **21** mentre il
-`pom.xml` dice 11. Diagnostiche, completamento e `gd` valgono quello che vale un
-progetto senza dipendenze. La config lo dice all'apertura (`no project was
-imported…`) e la sonda `java_toolchain` fallisce su questo controllo; sparirà da
-sé alla prima build andata a buon fine, non c'è niente da configurare.
+**Verificato** su `assimoco-pass-platform-batch`, con la workspace di jdtls
+cancellata e i `.lastUpdated` azzerati: import riuscito (`java.project.getAll`
+elenca `batch-ext`, `batch-jib`, `batch-zip`), compliance **11** come il
+`pom.xml`, `NopeType` inserito apposta segnalato alla riga giusta mentre
+`javax.servlet.ServletRequest` risolve in silenzio, e **zero** `.lastUpdated`
+nuovi, cioè ogni download è arrivato dai repository RGI.
+
+**Fuori dal repository**: `~/.m2/settings-paas.xml`, e le due variabili
+d'ambiente che referenzia. `RGI_REPO_PWD` e `RGI_NPM_AUTH` sono variabili
+**utente persistenti** (`[Environment]::GetEnvironmentVariable(…, 'User')`), non
+export di shell: è ciò che le fa ereditare anche a un Neovim aperto da un'icona,
+e quindi a jdtls. `GIT_TOKEN` non è settata e serve solo al
+`maven-release-plugin`. Il `.nvim.lua` controlla che il file esista e avvisa con
+`notify_once` se non c'è, perché la sua assenza si presenta come un progetto rotto.
+
+**Non versionati** e da rifare su una macchina nuova: il `.nvim.lua` e il
+`mise.toml` padre — stanno in una directory che non è un repository, quindi basta
+ricrearli (il primo va poi autorizzato con `:trust`) — e i quattro `mise.toml`
+dei repo, ognuno con la sua riga in `.git/info/exclude`.
+
+NOTE: la cancellazione della workspace di jdtls
+(`stdpath('cache')/jdtls/workspace/<progetto>`) fa parte del rimedio, non è
+igiene. Un import fallito resta **cachato lì dentro**: sistemate le settings, il
+server continuava a rispondere da progetti senza source path, con
+`java.project.listSourcePaths` vuoto e **nessuna** diagnostica su un errore
+inserito apposta — che è indistinguibile da un file corretto.
 
 ## `W:\RGI\assimoco-passportal-client`
 
@@ -152,13 +172,40 @@ una proprietà del checkout e di nessun altro:
 |---|---|---|
 | `mise.toml` (non versionato) | `java = "temurin-11"`, `maven = "3.6.3"`, `node = "14.21.3"` | la toolchain dell'onboarding, invariata |
 | `mise.toml` | `"npm:@angular/language-server" = "15"` | `ngserver` carica `@angular/language-service` **dal progetto**. Il globale è la 17, che pretende `typescript/lib/tsserverlibrary` ≥ 5.0 mentre qui TypeScript è 4.9.5: misurato, `Error: Failed to resolve 'typescript/lib/tsserverlibrary' with minimum version '5.0'` |
-| `.nvim.lua` | **nessuno**, e non serve | niente qui deve dire una variabile d'ambiente a un server: il Node è del server, la major la risolve lo shim dalla directory |
+| `.nvim.lua` | quello di `W:\RGI`, con un `BufEnter` che porta la directory della finestra su `passportal-client/src/main/angular` | nessuna variabile d'ambiente c'entra: quello che serve è **la directory corrente**, vedi sotto |
 
-**Verificato** headless, aprendo un `.component.ts` con cwd sulla directory
-`angular`: due client attaccati (`angularls` e `ts_ls`); una diagnostica `ngtsc`
-dentro un template su una proprietà che la classe non dichiara — cioè il language
-service del progetto è caricato e compatibile, che è la prova che il pin serve; e
-una diagnostica `typescript` su un errore di tipo in un `.ts`.
+**La directory corrente è una configurazione, qui.** `MiniMisc.setup_auto_root()`
+la mette sulla radice del repository, che è quattro livelli sopra il progetto
+Angular. Da lassù `npx --no-install ngc` — il `makeprg` di `compiler/ngc.lua` —
+non trova nessun `node_modules` e risponde `not found: ngc`, lasciando il
+quickfix vuoto: identico a un `:make` andato bene. `-p <tsconfig>` non è la via
+d'uscita, perché `ngc` continua a stampare ogni percorso relativo al tsconfig e
+da lì le voci del quickfix puntano a file che non esistono. Restava l'`lcd`, e
+metterlo al posto giusto ha richiesto due misure:
+
+- **`BufEnter`, non `FileType`**: `auto_root` chiama `vim.fn.chdir()` da un
+  `BufEnter` suo, e `chdir()` sovrascrive anche la directory locale di finestra;
+- **schedulato**, perché l'ordine di registrazione non basta: `setup_auto_root()`
+  parte da `Config.later()`, cioè da un timer **dopo** l'avvio, quindi il suo
+  handler è registrato dopo il `.nvim.lua` e gira dopo. `vim.schedule()` sposta
+  l'`lcd` al tick successivo, dove auto_root non lo insegue;
+- **più una passata iniziale**, perché il file passato come argomento a `nvim`
+  viene aperto **prima** che `exrc` sia sorgentato: quel primo `BufEnter` non
+  passa mai dall'autocomando, e in headless non ne arriva un altro.
+
+**Verificato** headless con cwd sulla **radice del checkout** — il caso che
+prima falliva: `:make` su un errore di tipo inserito apposta produce 30 voci, la
+prima con `bufnr` e riga giusti. E, da una verifica precedente con cwd già sulla
+directory `angular`: due client attaccati (`angularls` e `ts_ls`); una
+diagnostica `ngtsc` dentro un template su una proprietà che la classe non
+dichiara — cioè il language service del progetto è caricato e compatibile, che è
+la prova che il pin serve; e una diagnostica `typescript` su un errore di tipo in
+un `.ts`.
+
+NOTE: `:make` su questo progetto parte già rosso, e non è un guasto: delle 30
+voci una sola era l'errore inserito. Le altre 29 sono errori preesistenti degli
+`.spec.ts` sotto `src/app/ext/` e di due `@types` in `node_modules`, che
+`tsconfig.json` include.
 
 **Fuori dal repository**: niente da installare a mano oltre a `mise install`.
 
