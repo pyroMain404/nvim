@@ -185,6 +185,34 @@ local function check_angular()
     'Install it with `mise use -g node@20`'
   )
 
+  -- The Node of *this directory* is not the one the servers run on, and the
+  -- difference is the whole point: a `mise` shim resolves from the current
+  -- directory, so a project pinning an old Node hands it to every program
+  -- started inside it. The files in 'after/lsp/' override that for the two
+  -- servers alone (`MISE_NODE_VERSION`), which is why a project can keep the
+  -- Node its build needs. Reported here because neither half is visible from
+  -- inside Neovim: below the minimum the server dies on its own source and no
+  -- client ever attaches, with nothing wrong in the project.
+  --
+  -- 18 is the floor of `typescript-language-server` 6, the older of the two
+  -- requirements; `ngserver` asks for less. Measured on Node 14, the ceiling of
+  -- Angular 15 and the pin of the PASS portal: `SyntaxError: Unexpected token
+  -- '??='`, in a message that reaches no log Neovim reads.
+  local project_node = first_line({ 'node', '--version' })
+  local major = tonumber((project_node or ''):match('^v?(%d+)'))
+  if project_node == nil then
+    health.info('node: no version answered here, so nothing to compare')
+  elseif major ~= nil and major < 18 then
+    health.info(
+      ('node %s in this directory, below the 18 `ts_ls` needs: the servers '):format(
+        project_node
+      )
+        .. 'take the newest one `mise` has instead, see `after/lsp/ts_ls.lua`'
+    )
+  else
+    health.ok('node in this directory: ' .. project_node)
+  end
+
   -- `ngserver --version` is not a way to ask: the binary refuses to start
   -- without the `--tsProbeLocations` that 'nvim-lspconfig' computes from the
   -- project, so presence is all this can honestly report. Which major is
@@ -219,7 +247,25 @@ local function check_angular()
   -- language service, and `:make` runs the project's own compiler through
   -- `npx`. Both fail in a checkout where nobody ran the install, and the
   -- failure looks like a broken config rather than a missing directory.
-  local root = vim.fs.root(0, { 'angular.json', 'nx.json' })
+  --
+  -- Searched from the buffer the reader came from, not from buffer 0 as this
+  -- used to do: `:checkhealth` opens its own report buffer first and runs the
+  -- checks inside it, so buffer 0 is a nameless scratch buffer and
+  -- `vim.fs.root()` answers nil for it. Every run therefore said "not inside an
+  -- Angular project", one started from a project included - and with it went
+  -- the version check below, the one voice of this section that catches a
+  -- server on the wrong major.
+  --
+  -- NOTE: the working directory is not the answer either, and it is the
+  -- tempting one. `MiniMisc.setup_auto_root()` puts it on the root of the
+  -- *repository*, while 'angular.json' can sit well below it: measured on the
+  -- PASS portal, cwd is the checkout and the Angular project is four
+  -- directories down, so a search upward from cwd finds nothing.
+  local source = vim.fn.bufnr('#')
+  if source == -1 or vim.api.nvim_buf_get_name(source) == '' then
+    source = vim.fn.getcwd()
+  end
+  local root = vim.fs.root(source, { 'angular.json', 'nx.json' })
   if root == nil then
     health.info('not inside an Angular project: nothing else to check here')
   elseif vim.uv.fs_stat(vim.fs.joinpath(root, 'node_modules')) == nil then

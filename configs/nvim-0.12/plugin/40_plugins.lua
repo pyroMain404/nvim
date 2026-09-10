@@ -148,11 +148,16 @@ now_if_args(function()
     -- `prettier` below is declared for these filetypes, so 'conform.nvim'
     -- never reaches its `lsp_format` fallback.
     --
-    -- Neither is configured in 'after/lsp/': what 'nvim-lspconfig' ships is
-    -- already right, and `angularls` in particular computes its `cmd` from the
-    -- project - the probe paths into its 'node_modules' and the Angular
-    -- version read from its 'package.json'. There is nothing to add that
-    -- would not be a copy.
+    -- What 'nvim-lspconfig' ships for `angularls` is already right, and there
+    -- is nothing to add: it computes its `cmd` from the project - the probe
+    -- paths into its 'node_modules', the Angular version read from its
+    -- 'package.json' - and it starts on any Node a project may pin, down to the
+    -- 14 of a project on Angular 15. Its one constraint is a version, and it
+    -- belongs to the project (see the NOTE below), not to a file here.
+    --
+    -- `ts_ls` is the one with a file in 'after/lsp/', and for the opposite
+    -- reason: below Node 18 it dies while parsing its own source, so it is the
+    -- server that cannot take the Node of the project it opens.
     --
     -- NOTE: `ngserver` loads the `@angular/language-service` of the project it
     -- opens, so its major has to be the project's. A newer server calls into
