@@ -187,12 +187,53 @@ se un giorno serve davvero, è un `errorformat` che riconosca la riga di riepilo
 
 ## 6. Ambiente di progetto
 
-Il `.nvim.lua` serve per ciò che né la config né `mise.toml` sanno, e in Java è
-quasi sempre una cosa sola: **Lombok**. Dove va un file del genere e come si
+Il `.nvim.lua` serve per ciò che né la config né `mise.toml` sanno, e in Java
+sono due cose: **Lombok** e, su un progetto dietro un repository Maven privato,
+**quale `settings.xml` legge l'import**. Dove va un file del genere e come si
 verifica che sia stato letto è nella skill `nvim-project-environment`; qui c'è
 solo il perché.
 
 Ciò che **non** è lavoro di progetto, per quanto lo sembri, sta subito qui sotto.
+
+### Il `settings.xml` dell'import Maven
+
+`jdtls` importa il build con un Maven **suo**, embedded, che di `mvn -s` non sa
+niente: legge `~/.m2/settings.xml` e basta. Su un progetto le cui dipendenze
+stanno in un Nexus privato — cioè quasi ogni progetto aziendale — l'import
+fallisce, e il modo in cui fallisce è la parte che costa:
+
+- il server **resta attaccato e continua a rispondere**, da un progetto JDK nudo:
+  `java.project.getAll` vuoto, la compliance riportata è quella del runtime del
+  server (una 21) e non quella del `pom.xml`;
+- l'errore vero non è una diagnostica del file Java: sta sul **file di build**,
+  ed è `Non-resolvable parent POM … (present, but unavailable)` — Maven che
+  rifiuta un POM che ha già in locale, perché l'`_remote.repositories` accanto lo
+  attribuisce a un repository che le settings in vigore non dichiarano.
+
+La chiave è `java.configuration.maven.userSettings`, e va data **due volte**:
+
+```lua
+local maven = {
+  java = { configuration = { maven = { userSettings = '/percorso/settings.xml' } } },
+}
+vim.lsp.config('jdtls', { init_options = { settings = maven }, settings = maven })
+```
+
+`settings` da sola non basta e non lo dice: Neovim la usa per rispondere a
+`workspace/configuration` e per `didChangeConfiguration`, entrambi **dopo**
+`initialize`, mentre m2e legge quella chiave una volta sola quando parte. Il
+sintomo di averla messa solo lì è che i `*.lastUpdated` lasciati dietro da Maven
+continuano a nominare `repo.maven.apache.org`.
+
+NOTE: le credenziali restano fuori. Un `settings.xml` che le referenzia con
+`${env.X}` funziona anche qui, ma solo se `X` è una variabile **persistente a
+livello utente**: un export di shell non arriva a un Neovim aperto da un'icona, e
+quindi non arriva alla JVM del server.
+
+NOTE: sistemare le settings non basta se un import è già fallito una volta. Lo
+stato sta nella workspace di `jdtls`
+(`stdpath('cache')/jdtls/workspace/<progetto>`) e va cancellato, insieme ai
+`*.lastUpdated` del repository locale.
 
 ### Due JDK, non uno
 
