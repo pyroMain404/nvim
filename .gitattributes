@@ -1,1 +1,11 @@
+# Line endings of the working tree, so that they do not depend on the machine
+# (`core.autocrlf`) or on whichever tool wrote a file last. Git stores every
+# text file with LF and checks it out with CRLF: what is committed is the same
+# on any machine, and what is on disk here is what Windows tools expect.
+* text=auto eol=crlf
+
+# Binary files Git must not touch, named rather than left to detection
+*.png binary
+
+# Word diff for Lua, kept from before
 *.lua diff=lua
