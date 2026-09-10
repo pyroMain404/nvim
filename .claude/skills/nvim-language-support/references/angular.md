@@ -206,6 +206,25 @@ Un progetto la cui Angular non è quella dichiarata globalmente vuole il proprio
 `.nvim.lua`: qui non serve una variabile d'ambiente, serve che lo shim risolva un
 altro eseguibile, e per quello la directory corrente basta.
 
+**La versione di Node del progetto è invece un problema del server, e va tenuta
+fuori dal progetto.** Un checkout su una Angular vecchia pinna un Node vecchio —
+Angular 15 regge al massimo la 14, ed è un soffitto, non un pavimento — e uno
+shim `mise` risolve i tool dalla directory corrente, quindi consegna quel Node
+anche ai language server. I due si comportano diversamente, e conviene sapere
+quale sintomo è quale:
+
+- **`ts_ls` non parte affatto**. Misurato con `typescript-language-server` 6.0.0
+  su Node 14.21.3: muore parsando il proprio sorgente, `SyntaxError: Unexpected
+  token '??='` — l'assegnazione nullish, che Node ha dalla 15. Da dentro Neovim
+  non si vede niente: nessun errore, nessun client, un progetto sano. Il rimedio
+  è in `after/lsp/ts_ls.lua` (`MISE_NODE_VERSION` sul Node più nuovo installato),
+  e per la trappola del `cmd` che è una funzione vedi `nvim-config-testing`.
+- **`angularls` parte e risponde** anche sulla 14, template compresi: non ha
+  bisogno di niente. Il suo vincolo resta la major, cioè il paragrafo qui sopra.
+
+Il Node del progetto non va toccato per farli contenti: è quello che serve a
+`:make`, a `npx` e al build, ed è l'unico allineato ai sorgenti.
+
 ## 7. Health check
 
 Le domande a cui `check_angular()` deve rispondere: `node` c'è (tutto il resto ci

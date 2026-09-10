@@ -141,6 +141,12 @@ stato configurato e dove, cosa serve installato fuori dal repository. È la
 risposta alla domanda che torna sempre — *perché questo progetto ha un
 `.nvim.lua`?* — e a quella che arriva su una macchina nuova.
 
+In testa al file sta **il nome della macchina** a cui tutto il resto si riferisce,
+con il percorso assoluto di ogni progetto nel suo titolo. Non è cerimonia: il
+registro esiste per essere letto da un'altra macchina, dove nessuna di quelle
+righe è già vera, e una configurazione descritta senza dire dove viveva è un
+indizio invece che una procedura.
+
 Una sezione si aggiunge quando il progetto viene configurato, non "poi": la
 conoscenza che non viene scritta subito viene riscoperta indagando, e quella
 indagine è il costo che questa skill esiste per non pagare due volte.
