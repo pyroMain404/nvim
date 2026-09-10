@@ -35,6 +35,8 @@
 -- - `Config.git.diff_staged(buf_id)` - patch of what is already staged.
 -- - `Config.git.diff_commit(buf_id, rev)` - patch of everything changed since
 --   a commit.
+-- - `Config.git.diff_commit_only(buf_id, rev)` - patch of what a commit changed
+--   by itself.
 -- - `Config.git.lazygit()` - Git client in a floating window.
 -- - `Config.git.update_config()` - merge upstream changes into this config.
 --
@@ -257,7 +259,7 @@ end
 -- - `<CR>` shows data at cursor: full commit if it is a hash (like in the
 --   output of `:Git log`), the file of the patch entry if it is inside a patch,
 --   evolution of the line otherwise. Unlike `gF`, it opens the file itself when
---   the patch is against the working tree (like in `<Leader>gd`/`<Leader>gh`).
+--   the patch is against the working tree (like in `<Leader>gd`/`<Leader>gs`).
 -- - `zm` / `zr` fold and unfold by hunk, then by file, then by log entry.
 --   Nothing is folded initially, as 'foldlevel' starts at the deepest level.
 -- - `q` closes the output window.
@@ -534,12 +536,11 @@ Config.git.diff_staged = function(buf_id)
   show_patch(buf_id, { '--cached' }, 'staged')
 end
 
--- Patch of everything changed since a commit, of the repository or of one file.
--- The commit is picked from the Git log - of that file when one is given, so
--- that the list holds only commits which have something to show - or passed as
--- `rev` to skip the picker. Example usage:
--- - `:lua Config.git.diff_commit()` - what `<Leader>gh` does
--- - `:lua Config.git.diff_commit(0, 'HEAD~3')` - the buffer since `HEAD~3`
+-- The commit a patch is asked about, picked from the Git log - of one file when
+-- `buf_id` names it, so that the list holds only commits which have something
+-- to show - or passed as `rev` to skip the picker. `patch_of` is what the two
+-- functions below differ in: it gets the buffer and the commit, and shows the
+-- patch it stands for.
 -- NOTE: the path is resolved before the picker starts, and `0` is turned into
 -- the buffer it means there and then: by the time `choose` runs the current
 -- buffer is the one of the picker, and both would name it instead.
@@ -547,17 +548,44 @@ end
 -- (`:h MiniPick-source.choose` - it runs while the picker is current). Nothing
 -- defers it here because `show_patch()` asks Git first: its callback lands
 -- after the picker has closed, which is what makes the window openable.
-Config.git.diff_commit = function(buf_id, rev)
+local pick_commit_patch = function(buf_id, rev, patch_of)
   if buf_id ~= nil then
     if buf_path(buf_id) == nil then return end
     buf_id = buf_id == 0 and vim.api.nvim_get_current_buf() or buf_id
   end
-  local show = function(commit) show_patch(buf_id, { commit }, 'since ' .. commit) end
+  local show = function(commit) patch_of(buf_id, commit) end
   if rev ~= nil then return show(rev) end
 
   local choose = function(item) show(item:match('^%S+')) end
   local path = buf_id ~= nil and vim.api.nvim_buf_get_name(buf_id) or nil
   MiniExtra.pickers.git_commits({ path = path }, { source = { choose = choose } })
+end
+
+-- Patch of everything changed since a commit, of the repository or of one file.
+-- Example usage:
+-- - `:lua Config.git.diff_commit()` - what `<Leader>gs` does
+-- - `:lua Config.git.diff_commit(0, 'HEAD~3')` - the buffer since `HEAD~3`
+Config.git.diff_commit = function(buf_id, rev)
+  local patch_of = function(id, commit)
+    show_patch(id, { commit }, 'since ' .. commit)
+  end
+  pick_commit_patch(buf_id, rev, patch_of)
+end
+
+-- Patch of what a commit changed by itself: the same picker, read against the
+-- commit before it instead of against the working tree, so that nothing which
+-- happened afterwards is in it. Example usage:
+-- - `:lua Config.git.diff_commit_only()` - what `<Leader>gp` does
+-- - `:lua Config.git.diff_commit_only(0, 'HEAD~3')` - the buffer in `HEAD~3`
+-- NOTE: written `<rev>^!` rather than `<rev>~..<rev>` because the first commit
+-- of a repository has no parent to name: `^!` is the commit excluding its
+-- parents (`:h gitrevisions`, "rev^!"), which Git resolves against the empty
+-- tree there, while the range is refused as an unknown revision.
+Config.git.diff_commit_only = function(buf_id, rev)
+  local patch_of = function(id, commit)
+    show_patch(id, { commit .. '^!' }, 'in ' .. commit)
+  end
+  pick_commit_patch(buf_id, rev, patch_of)
 end
 
 -- Blame ======================================================================

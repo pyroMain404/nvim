@@ -33,13 +33,15 @@
 --   buffers it opened and restore the diff reference it found.
 -- - `Config.review.git(rev, pathspec)` - files changed since a revision, opened
 --   as a review.
+-- - `Config.review.commit_only(rev, pathspec)` - files a commit changed by
+--   itself.
 -- - `Config.review.unstaged(pathspec)` - files changed and not staged yet.
 -- - `Config.review.staged(pathspec)` - files changed and already staged.
 --
 -- Mappings carry no logic of their own: 'plugin/20_keymaps.lua' binds
--- `<Leader>rc`, `<Leader>rh`, `<Leader>rd` and `<Leader>ra` to the last four,
--- under the `<Leader>r` group. Read that file for what a review looks like from
--- the keyboard; read this one for how it is implemented.
+-- `<Leader>rc`, `<Leader>rs`, `<Leader>rp`, `<Leader>rd` and `<Leader>ra` to
+-- the last five, under the `<Leader>r` group. Read that file for what a review
+-- looks like from the keyboard; read this one for how it is implemented.
 --
 -- A review since a revision references it on its own - what `<Leader>gr` does
 -- by hand - so every buffer holds the change it received since then, hunk by
@@ -191,14 +193,16 @@ end
 
 -- Git ========================================================================
 
--- Git names three sets of files worth reading as a whole, and each is a review:
--- what changed since some revision (`Config.review.git()`), what is changed and
--- not staged yet (`Config.review.unstaged()`), and what is staged and about to
--- be committed (`Config.review.staged()`). They are the same command with
--- different arguments - `git diff --name-only`, the revision or `--cached` or
--- neither - and the same three sets `<Leader>gh`, `<Leader>gd` and `<Leader>ga`
--- show as a patch: the group answers "what changed", this file opens it, and
--- the mapping of each keeps the second key of the patch it answers.
+-- Git names four sets of files worth reading as a whole, and each is a review:
+-- what changed since some revision (`Config.review.git()`), what one commit
+-- changed by itself (`Config.review.commit_only()`), what is changed and not
+-- staged yet (`Config.review.unstaged()`), and what is staged and about to be
+-- committed (`Config.review.staged()`). They are the same command with
+-- different arguments - `git diff --name-only`, the revision or `<rev>^!` or
+-- `--cached` or neither - and the same four sets `<Leader>gs`, `<Leader>gp`,
+-- `<Leader>gd` and `<Leader>ga` show as a patch: the group answers "what
+-- changed", this file opens it, and the mapping of each keeps the second key of
+-- the patch it answers.
 --
 -- NOTE: a file Git does not track yet is in none of them, `git diff` being
 -- about what Git already knows. It is the same blind spot the patches have, so
@@ -208,7 +212,7 @@ end
 -- `git diff --name-only <rev>`, and `rev` is handed over as it is. That is
 -- enough for every shape a review takes, because the range syntax of Git is
 -- itself the expressive part. Example usage:
--- - `:lua Config.review.git()` - what `<Leader>rh` does: pick a commit from the
+-- - `:lua Config.review.git()` - what `<Leader>rs` does: pick a commit from the
 --   Git log and review everything changed since it
 -- - `:lua Config.review.git('HEAD')` - the working tree, staged or not
 -- - `:lua Config.review.git('main')` - every file this branch differs in
@@ -273,7 +277,7 @@ local git_changed = function(diff_args, root, pathspec, label, on_open)
 end
 
 -- Root of the repository to review, `nil` outside one - which is answered once
--- here rather than in each source, all three of them starting with the question.
+-- here rather than in each source, all four of them starting with the question.
 local review_root = function()
   local root = Config.git.root()
   if root == nil then
@@ -310,7 +314,7 @@ end
 -- 'mini.diff' reference text, so every file opened shows the change it received
 -- since then - hunk navigation, hunk textobject and overlay included - without
 -- picking the same commit a second time under `<Leader>gr`. Example usage:
--- - `:lua Config.review.git()` - what `<Leader>rh` does
+-- - `:lua Config.review.git()` - what `<Leader>rs` does
 -- - `:lua Config.review.git('HEAD~3')` - skip the picker
 -- - `:lua Config.review.git(nil, 'configs/')` - pick, then keep that directory
 -- NOTE: the root is resolved before the picker starts, so that a call from
@@ -326,6 +330,34 @@ Config.review.git = function(rev, pathspec)
   if rev ~= nil then return since(rev) end
 
   local choose = function(item) since(item:match('^%S+')) end
+  MiniExtra.pickers.git_commits({}, { source = { choose = choose } })
+end
+
+-- Review the files a commit changed by itself - what `<Leader>gp` shows as a
+-- patch - picking it from the Git log when `rev` is not given. What
+-- the files are read against is the commit before the picked one, so each of
+-- them shows exactly the change that commit made and nothing of what came
+-- after. Example usage:
+-- - `:lua Config.review.commit_only()` - what `<Leader>rp` does
+-- - `:lua Config.review.commit_only('HEAD~3')` - skip the picker
+-- - `:lua Config.review.commit_only(nil, 'configs/')` - pick, then keep that
+--   directory
+-- NOTE: `<rev>^!` names the commit excluding its parents (`:h gitrevisions`),
+-- which is what makes the first commit of a repository readable too - the range
+-- `<rev>~..<rev>` has no parent to name there and Git refuses it. The reference
+-- is still written `<rev>~`, being a state a file is shown at rather than a set
+-- of commits: on that first commit there is none, and every file falls back on
+-- the Git index the way a range does.
+Config.review.commit_only = function(rev, pathspec)
+  local root = review_root()
+  if root == nil then return end
+  local only = function(commit)
+    local reference = function() reference_rev(commit .. '~') end
+    git_changed({ commit .. '^!' }, root, pathspec, 'in ' .. commit, reference)
+  end
+  if rev ~= nil then return only(rev) end
+
+  local choose = function(item) only(item:match('^%S+')) end
   MiniExtra.pickers.git_commits({}, { source = { choose = choose } })
 end
 

@@ -187,7 +187,7 @@ nmap_leader('fv', '<Cmd>Pick visit_paths cwd=""<CR>',           'Visit paths (al
 nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cwd)')
 
 -- g is for 'Git'. Common usage:
--- - `<Leader>gs` - show information at cursor
+-- - `<Leader>gi` - show information at cursor
 -- - `<Leader>go` - toggle 'mini.diff' overlay to show in-buffer unstaged changes
 -- - `<Leader>gd` - show unstaged changes as a patch in separate tabpage
 -- - `<Leader>gL` - show Git log of current file
@@ -224,17 +224,26 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- started below the root, and Git then gets a path which matches nothing and
 -- answers with an empty output.
 --
--- To review already committed changes the commit to start from is picked from
--- the Git log, by subject rather than by distance from `HEAD`:
--- - `<Leader>gh` / `<Leader>gH` - patch of everything changed since the picked
---   commit (all/buffer), in a separate tabpage. The list of `<Leader>gH` holds
---   only the commits which touched the current file.
+-- To review already committed changes the commit is picked from the Git log, by
+-- subject rather than by distance from `HEAD`, and the key says which of the
+-- two questions about it is being asked:
+-- - `<Leader>gs` / `<Leader>gS` - patch of everything changed *since* the
+--   picked commit (all/buffer), in a separate tabpage.
+-- - `<Leader>gp` / `<Leader>gP` - patch of the picked commit *alone*, what it
+--   changed against the commit before it, in a separate tabpage.
+--
+-- The list of the uppercase ones holds only the commits which touched the
+-- current file. Which of the two is wanted follows from what is being read:
+-- "is this file still the way that commit left it" is the first, "what did this
+-- commit do" is the second, and a commit at the tip of the branch answers the
+-- same in both.
 --
 -- Reading only the patch is not always enough: a change is also judged next to
 -- the code that stayed, which means opening the files it touched. That is the
 -- `<Leader>r` group below, where every diff above has its counterpart under the
 -- same second key: `<Leader>rd` opens the files `<Leader>gd` shows as a patch,
--- `<Leader>ra` the ones `<Leader>ga` shows, `<Leader>rh` those of `<Leader>gh`.
+-- `<Leader>ra` the ones `<Leader>ga` shows, `<Leader>rs` those of `<Leader>gs`,
+-- `<Leader>rp` those of `<Leader>gp`.
 --
 -- Reading the code as it was at some revision is done by referencing it: the
 -- revision becomes the 'mini.diff' reference text, which makes every commit
@@ -243,7 +252,7 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 -- - `<Leader>gr` / `<Leader>gR` - reference a revision in every buffer / in the
 --   current one. Pressing it again restores the reference to the Git index.
 -- - The revision is picked from the Git log (of the current file for
---   `<Leader>gR`), the same way `<Leader>gh` picks the commit to diff against.
+--   `<Leader>gR`), the same way `<Leader>gs` picks the commit to diff against.
 --   `:lua Config.git.toggle_diff_ref(nil, 'HEAD~3')` names one without picking.
 -- - What is referenced can be read in `Config.git.diff_ref` and `vim.b.diff_ref`,
 --   the source that actually attached in `vim.b.minidiff_summary.source_name`.
@@ -251,15 +260,18 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 --   be staged against the index, which is not what is shown.
 -- - A file opened at some commit from a patch (`<CR>` / `gF`) references the
 --   commit before it on its own, so it is read as the change it received there.
--- - `<Leader>rh` references the commit it reviews, so the files it opens are
+-- - `<Leader>rs` references the commit it reviews, so the files it opens are
 --   read the same way without picking that commit twice. `<Leader>rc` puts back
 --   what was referenced before the review.
 --
 -- Everything these mappings call lives in 'plugin/41_git.lua', under
 -- `Config.git`, next to the 'mini.diff' and 'mini.git' setup it configures.
--- The two revision toggles are named here only to keep the block below aligned.
+-- The revision toggles and the patch of one commit are named here only to keep
+-- the block below aligned.
 local git_ref = '<Cmd>lua Config.git.toggle_diff_ref()<CR>'
 local git_ref_buf = '<Cmd>lua Config.git.toggle_diff_ref(0)<CR>'
+local git_patch = '<Cmd>lua Config.git.diff_commit_only()<CR>'
+local git_patch_buf = '<Cmd>lua Config.git.diff_commit_only(0)<CR>'
 
 nmap_leader('ga', '<Cmd>lua Config.git.diff_staged()<CR>',      'Added diff')
 nmap_leader('gA', '<Cmd>lua Config.git.diff_staged(0)<CR>',     'Added diff buffer')
@@ -268,14 +280,16 @@ nmap_leader('gc', '<Cmd>Git commit<CR>',                        'Commit')
 nmap_leader('gC', '<Cmd>Git commit --amend<CR>',                'Commit amend')
 nmap_leader('gd', '<Cmd>lua Config.git.diff_unstaged()<CR>',    'Diff')
 nmap_leader('gD', '<Cmd>lua Config.git.diff_unstaged(0)<CR>',   'Diff buffer')
-nmap_leader('gh', '<Cmd>lua Config.git.diff_commit()<CR>',      'Commit diff')
-nmap_leader('gH', '<Cmd>lua Config.git.diff_commit(0)<CR>',     'Commit diff buffer')
+nmap_leader('gi', '<Cmd>lua MiniGit.show_at_cursor()<CR>',      'Info at cursor')
 nmap_leader('gl', '<Cmd>lua Config.git.log()<CR>',              'Log')
 nmap_leader('gL', '<Cmd>lua Config.git.log(0)<CR>',             'Log buffer')
 nmap_leader('go', '<Cmd>lua MiniDiff.toggle_overlay()<CR>',     'Toggle overlay')
+nmap_leader('gp', git_patch,                                    'Commit patch')
+nmap_leader('gP', git_patch_buf,                                'Commit patch buffer')
 nmap_leader('gr', git_ref,                                      'Reference revision')
 nmap_leader('gR', git_ref_buf,                                  'Reference revision buffer')
-nmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>',      'Show at cursor')
+nmap_leader('gs', '<Cmd>lua Config.git.diff_commit()<CR>',      'Since commit')
+nmap_leader('gS', '<Cmd>lua Config.git.diff_commit(0)<CR>',     'Since commit buffer')
 
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 
@@ -348,8 +362,9 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
 -- r is for 'Review'. Common usage:
 -- - `<Leader>rd` - open the files changed and not staged yet
 -- - `<Leader>ra` - open the files already staged
--- - `<Leader>rh` - open the files changed since a commit picked from the Git
+-- - `<Leader>rs` - open the files changed since a commit picked from the Git
 --   log, read against it
+-- - `<Leader>rp` - open the files that commit changed by itself
 -- - `<Leader>rc` - close the review and drop the buffers it opened
 --
 -- This group opens files in order to read them, and its unit is the set of
@@ -363,8 +378,9 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
 -- is why it is not part of `<Leader>g` although Git is its only source today.
 -- The second key names the set being read, and it is the key that set has in
 -- `<Leader>g`, which shows the same one as a patch: `<Leader>rd` reads what
--- `<Leader>gd` shows, `<Leader>ra` what `<Leader>ga` shows, `<Leader>rh` what
--- `<Leader>gh` shows. Reading a change as a patch and reading it in its files
+-- `<Leader>gd` shows, `<Leader>ra` what `<Leader>ga` shows, `<Leader>rs` what
+-- `<Leader>gs` shows, `<Leader>rp` what `<Leader>gp` shows. Reading a change as
+-- a patch and reading it in its files
 -- are then the same two keys with the first one changed, and nothing has to be
 -- remembered twice. A set produced by something which is not Git gets a key
 -- here too, named after whatever names it, rather than a home in the group of
@@ -374,23 +390,26 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
 -- NOTE: a file Git does not track yet is in none of these, `git diff` being
 -- about what Git already knows - the same blind spot the patches have.
 --
--- `<Leader>rh` picks the commit from the Git log and reviews everything changed
--- since it. Another Git command defines another review, from the command line:
+-- `<Leader>rs` picks the commit from the Git log and reviews everything changed
+-- since it, `<Leader>rp` the files that commit changed by itself. Another Git
+-- command defines another review, from the command line:
 -- `:lua Config.review.git('main...')` is the branch being written against the
 -- point it left the one it will be merged into, and a second argument narrows
 -- the review to a part of the tree (`:lua Config.review.git('main', 'configs/')`).
--- The same argument narrows the other two (`:lua Config.review.staged('*.md')`).
+-- The same argument narrows the other three (`:lua Config.review.staged('*.md')`).
 --
 -- That commit is also referenced, which is `<Leader>gr` pressed on the same
 -- one: every buffer - of the review and not - then holds the change it received
 -- since then, walked with `[h` / `]h` and read in place with the overlay, and
--- nothing is picked twice. `<Leader>rc` puts the previous reference back,
+-- nothing is picked twice. `<Leader>rp` references the commit before the picked
+-- one instead, so what is shown in the files is what that commit did, which is
+-- the review it opens. `<Leader>rc` puts the previous reference back,
 -- unless it was changed by hand in the meantime: what a review is read against
 -- ends with it.
 --
 -- The other two set no reference - the Git index is what they are read against
 -- already - and a review named from the command line references its revision
--- like `<Leader>rh` does, `main...` and the other ranges excepted: there is no
+-- like `<Leader>rs` does, `main...` and the other ranges excepted: there is no
 -- single state to show a file at, and they fall back to the index.
 --
 -- `<Leader>rc` ends the review: the tabpage closes and the buffers it opened go
@@ -402,10 +421,11 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
 -- Everything these mappings call lives in 'plugin/43_review.lua', under
 -- `Config.review`.
 
-nmap_leader('ra', '<Cmd>lua Config.review.staged()<CR>',   'Added files')
-nmap_leader('rc', '<Cmd>lua Config.review.close()<CR>',    'Close review')
-nmap_leader('rd', '<Cmd>lua Config.review.unstaged()<CR>', 'Diff files')
-nmap_leader('rh', '<Cmd>lua Config.review.git()<CR>',      'Commit changes')
+nmap_leader('ra', '<Cmd>lua Config.review.staged()<CR>',       'Added files')
+nmap_leader('rc', '<Cmd>lua Config.review.close()<CR>',        'Close review')
+nmap_leader('rd', '<Cmd>lua Config.review.unstaged()<CR>',     'Diff files')
+nmap_leader('rp', '<Cmd>lua Config.review.commit_only()<CR>',  'Commit files')
+nmap_leader('rs', '<Cmd>lua Config.review.git()<CR>',          'Since commit files')
 
 -- s is for 'Session'. Common usage:
 -- - `<Leader>sn` - start new session

@@ -103,6 +103,26 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-10
+
+- Read a commit in two ways instead of one, and say in the key which of the two
+  is being asked. `<Leader>gp` / `<Leader>gP` show the patch of the picked
+  commit alone (all/buffer) - what it changed against the commit before it,
+  with nothing that happened afterwards in it - next to `<Leader>gs` /
+  `<Leader>gS`, which keep showing everything changed *since* it. `<Leader>rp`
+  opens the files of that same commit as a review, read against its parent, the
+  way `<Leader>rs` opens the ones changed since the picked commit.
+
+  The commit is named `<rev>^!` rather than `<rev>~..<rev>`, which is what makes
+  the first commit of a repository readable too: it has no parent for the range
+  to name, and Git refuses it as an unknown revision.
+
+- Move the patch of a commit off `h` and onto the two keys that say what they
+  do: `<Leader>gh` / `<Leader>gH` / `<Leader>rh` are now `<Leader>gs` /
+  `<Leader>gS` / `<Leader>rs` ("since"), and `MiniGit.show_at_cursor()` moves
+  from `<Leader>gs` to `<Leader>gi` ("info at cursor"). The uppercase key keeps
+  meaning "this buffer only" everywhere in the group.
+
 ## 2026-09-09
 
 - Skip `MiniMisc.setup_termbg_sync()` on Windows, where it could only ever
