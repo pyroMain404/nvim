@@ -66,6 +66,40 @@ non serve. Il `mise.toml` (anch'esso non versionato) dichiara `node = "20"` e
 in `AGENTS.md` per un server che carica una libreria dal progetto, ed è ciò che lo
 allinea alla major di Angular di questo checkout invece che alla più nuova.
 
+## `W:\GDPR\registro-trattamenti-fe`
+
+Frontend Angular **8.2** di Registro Trattamenti — l'applicazione più vecchia del
+workspace GDPR, ferma a webpack 4 e TypeScript 3.5.
+
+**Cosa ha di diverso**: la versione di Node non si deduce dal framework. Angular 8
+è contemporaneo a Node 12, ma il `package-lock.json` committato è
+`lockfileVersion 3`, cioè prodotto da npm >= 7: con Node 12 (npm 6) il primo
+`npm install` riscriverebbe l'intero lock a `lockfileVersion 1`. La versione
+compatibile con *questo checkout* è quindi **Node 20**, la stessa con cui sono
+già stati costruiti i pacchetti di rilascio.
+
+**Configurato**: `mise.toml` (non versionato) con `node = "20.20.2"` e, in
+`[env]`, `NODE_OPTIONS = "--openssl-legacy-provider"`. Il flag è un HACK con la
+sua scadenza scritta: webpack 4 hasha i chunk con MD4, che OpenSSL 3 (Node >= 17)
+non espone più, e sparisce quando il progetto salirà ad Angular >= 12. In
+`package.json` lo imposta solo lo script `start`, per giunta come
+`SET NODE_OPTIONS=...`, che funziona unicamente in cmd.exe: da PowerShell o da
+Git Bash quello script non lo applica affatto, e `build` non lo applica in nessun
+caso. Nel `mise.toml` vale per ogni shell e ogni script.
+
+NOTE: nessun pin di `@angular/language-server`, al contrario di
+`riesame-privacy-fe`: il pacchetto esiste solo da Angular 9 in poi, quindi per
+questo checkout non c'è versione allineabile e il server Angular non si usa.
+
+**Verificato**: `mise current node` risponde `20.20.2` dentro il checkout e
+`NODE_OPTIONS` arriva sia via `mise exec` sia via **shim** (`node -v` nudo); da
+`W:\GDPR` la variabile torna `undefined`, cioè il `[env]` non sfugge al progetto.
+
+**Fuori dal repository**: niente da installare a mano oltre a `mise install`.
+
+**Non versionato** e da rifare su una macchina nuova: `mise.toml`, con la sua
+riga in `.git/info/exclude`.
+
 ## `W:\RGI`
 
 Non un repository ma una **directory che ne contiene diversi**
