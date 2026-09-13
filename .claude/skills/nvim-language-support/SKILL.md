@@ -90,6 +90,27 @@ presto, `globpath` risponde vuoto e la risposta si legge come "il plugin non dà
 niente". Aspetta l'evento, non un numero — è la stessa regola della skill
 `nvim-config-testing`, e qui costa un asse dichiarato mancante per sbaglio.
 
+**Un inventario può essere fatto davvero e restare falso a metà, ed è il modo in cui
+questa fase viene saltata senza accorgersene.** Le affermazioni sul runtime reggono,
+quelle sui plugin no, e nel testo finito nulla distingue le due: si leggono uguali.
+Misurato su Godot, dove due assi su tredici sono stati classificati male così — e in un
+caso l'asse non era *mancante* ma **attivo e sbagliato**, che è peggio:
+
+- «il parser `gdshader` dichiara `gdshaderinc`, quindi non copre `*.gdshader`».
+  `get_filetypes('gdshader')` risponde **`gdshader, gdshaderinc`**: la tabella di
+  'nvim-treesitter/plugin/filetypes.lua' registra i filetype **in più** rispetto al
+  nome del parser, che è già un filetype di suo. È additiva, ed era stata letta come
+  sostitutiva — lo stesso errore di categoria della tabella in
+  ["I livelli si sovrappongono"](#i-livelli-si-sovrappongono), applicato però a una
+  tabella *di un plugin* invece che a un file scritto da noi.
+- «'friendly-snippets' non offre un set per questo linguaggio». Ne caricava **25**, e
+  quattro espandevano sintassi di una major precedente del motore.
+
+La regola che ne esce: **un'affermazione su cosa un plugin contiene si scrive solo
+dopo il comando che l'ha prodotta.** Le tre righe qui sopra costano un secondo; senza,
+un asse archiviato come "non serve ora" può essere un asse già rotto, e nessuno lo
+riapre perché il documento dice che è stato valutato.
+
 Da qui esce la lista di **cosa manca**. Riportala all'utente prima di implementare:
 spesso è la parte più sorprendente del lavoro. E ciò che questi comandi mostrano non
 va riscritto né, peggio, sovrascritto per sbaglio: vedi
