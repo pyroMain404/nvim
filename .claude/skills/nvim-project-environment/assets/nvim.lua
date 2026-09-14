@@ -42,6 +42,26 @@ vim.api.nvim_create_autocmd('FileType', {
   callback = function() vim.bo.makeprg = '<command>' end,
 })
 
+-- Running ===================================================================
+
+-- `:Run` (the contract of 'lua/config/run.lua') asks here first, and unlike an
+-- option this needs no autocommand: the resolver is consulted when the command
+-- is invoked, which is always after this file has been read. A list is the whole
+-- command, and the arguments of the call are appended to it.
+vim.g.run_command = { '<program>', '<argument>' }
+
+-- Or a function - one of the two, not both - when the command depends on the
+-- buffer - a monorepo whose
+-- parts are started differently - or when some of them are not meant to be
+-- started at all. It answers like any resolver: the command, or `nil` and the
+-- reason, which is shown rather than swallowed.
+-- vim.g.run_command = function(args)
+--   if vim.bo.filetype ~= '<filetype>' then
+--     return nil, '<what this project actually runs>'
+--   end
+--   return vim.list_extend({ '<program>', '<argument>' }, args)
+-- end
+
 -- Editing this file voids its trust, and an untrusted file is not sourced at
 -- all - with no question asked in headless. Authorise it again after every
 -- edit, and check that the hash matches:

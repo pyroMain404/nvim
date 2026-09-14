@@ -93,7 +93,16 @@ Le due cose che ci finiscono più spesso:
 - **un'opzione che l'ftplugin della config imposta e qui va cambiata** — allora
   serve un autocomando `FileType`, non un'assegnazione: l'ftplugin gira **dopo**
   il `.nvim.lua`, e un valore assegnato al momento della lettura viene
-  sovrascritto senza lasciare traccia.
+  sovrascritto senza lasciare traccia;
+- **una variabile che un comando della config legge quando viene invocato**, e
+  qui l'ordine non è un problema: `:Run` (il contratto di `lua/config/run.lua`)
+  consulta `vim.g.run_command` al momento della chiamata, quindi una lista o una
+  funzione assegnata qui vince sul comando che il linguaggio avrebbe scelto,
+  senza autocomandi. Misurato su un progetto Maven: `{ 'mvn', 'spring-boot:run',
+  '-Dspring-boot.run.profiles=local' }` arriva intatta, e gli argomenti di
+  `:Run -X` le si aggiungono senza modificarla. La forma a funzione riceve quegli
+  argomenti e può rifiutare — `return nil, 'questo progetto avvia solo il
+  backend'` — che è come un monorepo dice quali dei suoi filetype si eseguono.
 
 Il file si scrive con lo stile della config (`AGENTS.md`): intestazione a box che
 dice **perché quel progetto è diverso**, separatori di sezione, e le quattro
