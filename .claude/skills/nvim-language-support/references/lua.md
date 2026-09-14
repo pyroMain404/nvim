@@ -136,6 +136,14 @@ Non c'è `:make`: il ciclo è il server per gli errori, `<Leader>lf` per la form
 `:checkhealth config` per l'ambiente, e `:source %` o un riavvio per provare la
 modifica.
 
+Questo è anche tutto ciò che resta dell'asse "esecuzione" (`capabilities.md` §19):
+il programma è l'editor che lo sta leggendo, quindi non c'è un processo da avviare né
+da staccare, e `:source %` lo esegue nello stesso Neovim. **È l'unico linguaggio di
+questa config che non definisce `:Run`**, e la ragione va detta perché il contratto è
+universale per costruzione: non manca un comando, manca qualcosa da eseguire. Uno
+script Lua standalone lanciato con `lua` sarebbe il caso in cui definirlo, e qui non
+è il lavoro che si fa.
+
 **I primi secondi di ogni sessione vanno conosciuti.** All'attacco, `lua_ls` carica
 la `library` prima di poter rispondere a una richiesta di posizione: 330 file circa
 (`VIMRUNTIME` più 'mini.nvim'), meno di dieci secondi a cache calda su questa

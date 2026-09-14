@@ -43,13 +43,37 @@ lo stile ufficiale sono esattamente le opzioni su cui poggiano `:make`,
 'mini.comment', `gf` e gli operatori di rientro.
 
 **Invecchiato, perché precede LSP e tree-sitter.** `syntax/rust.vim`, sostituito dal
-parser appena lo si installa; i comandi che invocano `cargo` in modo sincrono
-(`:Ccheck`, `:Ctest`), che fanno ciò che fa `:make` senza integrarsi col quickfix;
-`rust#Jump()` dietro `[[` e `]]`, navigazione a espressioni regolari dove l'albero sa
-la risposta esatta; `rustfmt#PreWrite()`, dove ci sono 'conform.nvim' e il server.
+parser appena lo si installa; `:Ccheck` e `:Ctest`, che rifanno `:make check` e
+`:make test` senza versare niente nel quickfix; `rust#Jump()` dietro `[[` e `]]`,
+navigazione a espressioni regolari dove l'albero sa la risposta esatta;
+`rustfmt#PreWrite()`, dove ci sono 'conform.nvim' e il server.
 
 Niente di tutto questo è rotto: semplicemente non è più la strada migliore. Il
 progetto a monte, `rust-lang/rust.vim`, è in manutenzione conservativa.
+
+### `:Crun` non è uno di quelli: copre l'asse "esecuzione"
+
+**Eseguire** il programma non è ciò che fa `:make`, che chiude una domanda e riempie
+il quickfix (`capabilities.md` §19). `:Crun` non duplica quindi niente, ed è l'unico
+dei comandi `:C*` che tocca un asse che resterebbe scoperto.
+
+Come lo esegue va saputo, perché non è quello che il nome lascia pensare.
+`cargo#cmd()` sceglie il proprio runner in quattro rami, e in Neovim
+`has('terminal')` risponde **0** — misurato con `-u NONE`, quindi non è una
+conseguenza di questa config — per cui cade sul ramo `has('nvim')`:
+`noautocmd new | terminal cargo run`, cioè una finestra nuova con dentro un buffer
+terminale. È la forma **catturata** di §19, non un `:!` sincrono, e il processo
+muore con Neovim.
+
+Questo però **non chiude l'asse**, ed è l'errore che questa reference ha fatto per un
+giro: il nome. `:Crun` vale solo in Rust, mentre ciò che si ricorda aprendo un
+repository qualunque è un tasto solo — il contratto di `:Run` in `capabilities.md`
+§19. La config lo definisce quindi anche qui (§4), *accanto* a `:Crun`, che resta
+dov'è per chi lo digita.
+
+`:RustRun` è invece un'altra cosa e non va confuso: compila con `rustc` il **solo
+file corrente** in una directory temporanea e lo lancia con `:!`, bloccando
+l'editor finché non esce. Serve per uno scratch, non per un progetto cargo.
 
 ### Il livello che si dimentica: 'nvim-lspconfig'
 
@@ -87,6 +111,17 @@ grafo delle crate, `docs.rs` per il simbolo sotto il cursore, spiegazione dei co
 di errore, structural search replace, e runnable e debuggable fatti bene: asincroni e
 agganciati a 'nvim-dap'.
 
+Letto il sorgente invece della sola pagina di presentazione, quello che porta si
+lascia dividere in tre, e solo una parte è nuova. I **metodi fuori dal protocollo**
+che implementa a mano — `experimental/ssr`, `experimental/moveItem`,
+`experimental/joinLines`, `experimental/parentModule`, `rust-analyzer/expandMacro`,
+`rust-analyzer/relatedTests` — sono la parte che non si ottiene in nessun altro modo
+(`capabilities.md` §4). Le **viste** (`viewCrateGraph`, `viewSyntaxTree`, `viewHir`,
+`viewMir`) sono l'asse di §19 e finiscono in un buffer o in un'immagine. Gli
+**executor** — una cartella con un modulo per destinazione: terminale, quickfix,
+diagnostiche nel buffer — non sono altro che la scelta di §19 resa configurabile, e
+un comando scritto a mano la fa una volta e basta.
+
 Il costo non è l'installazione: è che **prende possesso del server**. La sua
 documentazione chiede di non configurare `rust_analyzer` a mano né via
 'nvim-lspconfig'. È quindi il caso esclusivo descritto nella Fase 2: o il plugin, o
@@ -100,6 +135,12 @@ macro o il debug, migrando la configurazione e non affiancandola.
 `Cargo.toml`: completamento delle versioni, popup con versioni e feature, virtual
 text con l'ultima disponibile. Non tocca l'LSP di Rust, quindi è additivo e
 indipendente dalla scelta precedente. Va attivato su `BufRead Cargo.toml`.
+
+La sua lettura è l'esito opposto a quello di `rustaceanvim`, e serve saperlo: i suoi
+trenta moduli — parser TOML, client dell'API di crates.io, popup, completamento,
+diagnostiche sul manifesto — stanno **tutti dentro una riga che la tabella degli assi
+aveva già**, la gestione delle dipendenze. Nessun asse nuovo, e la decisione resta
+quella di prima.
 
 ## 3. Fase 4 — installazione
 
@@ -203,6 +244,14 @@ Finché resta così, `:make test` (§5) è la strada migliore per eseguire i tes
 
 ### Il resto
 
+**Esecuzione**: `:Run` in `after/ftplugin/rust.lua`, che è `cargo run` più gli
+argomenti dati. Qui non si legge il `Cargo.toml`, perché a leggerlo è cargo:
+`default-run`, un `[[bin]]` unico, o niente — e in quel caso rifiuta **elencando** i
+binari fra cui non ha saputo scegliere, che è esattamente il fallimento rumoroso che
+il contratto chiede (misurato su una workspace da sei membri: `cargo run` esce subito,
+senza compilare, elencando i tre binari). `:Run --bin <nome>` ne sceglie uno,
+`:Run --release` cambia profilo, `:Run -- <args>` passa gli argomenti al programma.
+
 **Formattazione**: `rustfmt` è il formatter ufficiale, quindi va dichiarato in
 `formatters_by_ft` anche se il server saprebbe formattare — stessa versione della
 riga di comando e della CI.
@@ -246,6 +295,7 @@ sia molto più rapido di `cargo build`. Con `makeprg=cargo $*` già impostato:
 | `:make test` | esegue i test; i panic finiscono nel quickfix | `cargo test`, inclusi i test in `tests/` |
 | `:make clippy` | i lint di clippy nel quickfix | il controllo che il libro mette in CI |
 | `:make fmt -- --check` | segnala i file non formattati | idem |
+| `:Run` | esegue il progetto in un terminale in split (`:Crun` fa lo stesso, §2) | il binario che il libro fa girare |
 
 Con il server attivo e `check.command = 'clippy'` gli stessi errori compaiono già
 come diagnostica: `:make` resta utile per eseguire i test, vedere l'output completo e

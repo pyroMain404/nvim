@@ -205,6 +205,7 @@ Per ogni asse decidi **serve / non serve / è già gratis**, sapendo già dove a
 | Formattazione | `formatters_by_ft` di 'conform.nvim' | esiste un formatter dedicato per il linguaggio |
 | Snippet | `after/snippets/<lang>.json` | ci sono costrutti ricorrenti propri del linguaggio |
 | Navigazione | `path`, `include`, `includeexpr`, LSP | `gf`, `[i`, `<C-]>` non arrivano dove dovrebbero |
+| Sorgenti che non stanno su disco | `BufReadCmd` sullo schema dell'URI, in `plugin/` | il server risponde con un `jdt://` invece che con un percorso, perché le librerie arrivano compilate |
 | Textobject e manipolazione | `vim.b.mini*_config` in `after/ftplugin/` | i costrutti del linguaggio meritano operatori propri |
 | Gestione dipendenze | plugin dedicato, attivato sul manifesto | il linguaggio ha un manifesto che si modifica spesso |
 | Debug del programma | `Termdebug`, o 'nvim-dap' + adapter | serve eseguire passo passo, non solo leggere errori |
@@ -223,13 +224,101 @@ nel repo.
 **Questa tabella non è chiusa, e un plugin del linguaggio è anche un inventario di
 assi.** Quando un plugin dedicato fa cose che qui non compaiono, la lettura immediata
 è "funzioni in più che non userei" — e a volte è vera. L'altra è che manchi una riga.
-Le quattro qui sopra nascono così, leggendo il sorgente di `godotdev.nvim` per
+Le righe di questo blocco nascono così, leggendo il sorgente di `godotdev.nvim` per
 decidere se adottarlo: la risposta è rimasta **no** (duplica livelli già installati e
 su Windows pretende `ncat` per fare ciò che `vim.lsp.rpc.connect` fa da sé), ma quattro
 dei suoi moduli nominavano assi che questa skill non aveva — il server posseduto
 dall'applicazione, l'esecuzione, l'editor esterno, la vista sul progetto. Leggere il
 codice di un plugin che si sta scartando è quindi parte della Fase 2, e ciò che se ne
 impara torna qui anche quando il plugin non entra.
+
+La regola vale anche **all'indietro**, sui plugin scartati prima che esistesse. Riletti
+`rustaceanvim`, `nvim-jdtls` e `crates.nvim` — tutti e tre respinti a suo tempo sulla
+sola documentazione — ne è uscita la riga sulle sorgenti che non stanno su disco
+(`plugin/jdtls.lua` registra un `BufReadCmd` su `jdt://*` e `*.class`) e una sezione
+su ciò che un server offre fuori dal protocollo, che è poi la sostanza di quei plugin:
+`capabilities.md` §4 e §8. `crates.nvim` è l'esito opposto e vale quanto gli altri: i
+suoi trenta moduli stanno tutti dentro una riga che c'era già, la gestione delle
+dipendenze, e non hanno aggiunto niente.
+
+### Gli assi dicono cosa serve, i contratti dicono come ci si arriva
+
+Un **contratto** è un nome solo — un comando, una mapping o un'opzione — con un
+significato fisso, che ogni linguaggio soddisfa a modo proprio in un punto stabilito.
+L'asse è la domanda ("questo progetto si compila? si esegue?"), il contratto è la
+leva, ed è uguale ovunque: `:make` non sa cosa stia compilando, lo sa `'makeprg'`;
+`gf` non sa come si risolve un import, lo sa `'includeexpr'`.
+
+Il valore è tutto nel **nome unico**. Ciò che si ricorda aprendo un repository che non
+si conosce deve essere un tasto, non il build tool che quel repository ha scelto — ed
+è il motivo per cui un contratto si definisce **anche quando l'ecosistema ha già il
+suo comando**: il runtime di Rust ha `:Crun`, e questa config gli affianca `:Run`
+senza toglierlo.
+
+| Contratto | Cosa promette | Chi lo soddisfa, e con quale precedenza | Di chi è |
+|---|---|---|---|
+| `:make`, `]q` | compila o testa, e i risultati si navigano | `'makeprg'` ed `'errorformat'` da un `compiler/<tool>.lua`, scelto con `:compiler` | Vim |
+| `:grep`, `]q` | cerca nel progetto, e i risultati si navigano | `'grepprg'` e `'grepformat'` — **per strumento, non per linguaggio** | Vim |
+| `gf`, `[I`, `:checkpath` | dal riferimento al file che lo definisce | `'path'`, `'include'`, `'includeexpr'`, `'suffixesadd'` | Vim |
+| `K` | la documentazione di ciò che è sotto il cursore | l'hover del server, che vince **salvo** un `'keywordprg'` personalizzato o una mappatura propria | Vim |
+| `gq` | impagina | `'formatexpr'` (che i default LSP riempiono), poi `'formatprg'`, poi l'interno — `gw` forza quest'ultimo | Vim |
+| `=` | rientra | `'equalprg'` se non vuoto, altrimenti `'indentexpr'`, `'cindent'` o `'lisp'` | Vim |
+| `gc` di 'mini.comment' | commenta come si commenta qui | `'commentstring'` | Vim |
+| `zc`, `zo` | piega per struttura | `'foldexpr'` | Vim |
+| `<C-x><C-o>` | completa con ciò che il linguaggio sa | `'omnifunc'`, di solito quello del server | Vim |
+| `<Leader>lf` | formatta come farebbe la CI | `formatters_by_ft` di 'conform.nvim' | questa config |
+| `<Leader>l*` | semantica: definizione, riferimenti, rename | un server in `after/lsp/` più `vim.lsp.enable()` | Neovim |
+| `:Run` | esegui **questo progetto**, in un terminale | un resolver in `after/ftplugin/<ft>.lua` (`capabilities.md` §19) | questa config |
+| `:checkhealth config` | dimmi se l'ambiente di questo linguaggio regge | un `check_<lang>()` in `lua/config/health.lua` | questa config |
+
+Due cose che la colonna centrale rende visibili, e che contano quando se ne definisce
+uno. La prima: **la parte variabile non è sempre il linguaggio.** `:grep` promette
+quanto `:make`, ma la sua risposta dipende da quale strumento c'è sulla macchina, non
+dal file aperto — si imposta una volta e vale per tutti i buffer. La seconda: **un
+contratto può avere più implementazioni, e la precedenza fra loro ne fa parte.** `K` e
+`gq` ne hanno due — quella di Vim e quella dell'LSP, che vince quando un server è
+attaccato e lascia la vecchia come ripiego. È esattamente ciò che `:Run` fa accanto a
+`:Crun`, solo che lì a farlo è stato Neovim: un contratto che guadagna
+un'implementazione migliore non cambia nome, dichiara chi risponde per primo.
+
+**Prima di inventarne uno, guarda se ce n'è già uno da alimentare.** Vim ne ha per
+quasi tutto, e un asse che ricade su uno di questi non vuole un comando nuovo: vuole
+che quell'opzione sia impostata per il linguaggio. È la stessa regola della Fase 2
+applicata ai nomi invece che ai plugin, e sbagliarla produce un `:Build` che fa
+peggio di `:make` perché non ha il quickfix dietro.
+
+Quando invece il buco è reale — l'operazione ha senso in ogni linguaggio, ogni
+ecosistema le dà un nome diverso, e nessun contratto di Vim la copre — un contratto
+nuovo si definisce dichiarando quattro cose, e nessuna è facoltativa:
+
+1. **il nome e la promessa**, in una frase che valga per ogni linguaggio;
+2. **dove il linguaggio lo soddisfa**, uno e un solo punto per linguaggio — e se le
+   implementazioni possibili sono due, **quale risponde per prima**, come `K` fa con
+   l'hover e `'keywordprg'`;
+3. **cosa succede quando quel linguaggio non può soddisfarlo**: rifiutare dicendolo,
+   mai fallire in silenzio, e — dove non c'è niente da fare — non definirlo affatto e
+   scrivere perché (il Lua di una config Neovim non ha niente da eseguire);
+4. **come il progetto lo sovrascrive**, perché il caso particolare di un checkout
+   esiste sempre e la sede è il suo `.nvim.lua` (skill `nvim-project-environment`).
+
+`:Run` è nato così. **Quanto un buco sia grande si misura su due cose**, non a
+impressione: quante volte al giorno serve l'operazione, e quanti nomi diversi
+l'ecosistema ha già inventato per farla — perché dove un contratto manca lo spazio
+viene occupato da comandi scoordinati, ed è quella proliferazione la prova che
+mancava. L'esecuzione le massimizza entrambe: sta nel ciclo quotidiano quanto la
+compilazione, e i nomi che la coprono sono `:Crun`, `:RustRun`, gli `executors/` di
+rustaceanvim, il test runner di 'nvim-jdtls', gli script che ogni progetto npm chiama
+a modo suo. Nessuno, per contrasto, ha mai inventato un comando per compilare un file
+Rust: `:make` c'era già.
+
+Le opzioni con cui Vim chiede a un linguaggio come si fa una cosa sono cinque —
+`'makeprg'`, `'grepprg'`, `'keywordprg'`, `'formatprg'`, `'equalprg'` — e di
+`'runprg'` non c'è traccia in tutta la documentazione (verificato sui tag). Dopo
+l'esecuzione resta poco: un REPL del linguaggio dentro l'editor
+(`capabilities.md` §15) è il solo candidato con la stessa forma, e vale meno perché
+non ogni linguaggio ne ha uno. "Eseguire i test" **non** è un candidato per quanto lo
+sembri: lì il contratto c'è già ed è `:make`, e dove manca qualcosa manca un compiler
+plugin.
 
 **Le decisioni che cambiano le abitudini dell'utente** — una mapping nuova, un
 formatter che scatta al salvataggio, un `textwidth` diverso — si propongono, non si
@@ -463,6 +552,7 @@ un'impressione.
 | Il server non si attacca | eseguibile assente, o `root_dir` che non trova la radice | `:checkhealth vim.lsp`, `:=vim.lsp.config['<server>']` |
 | Il server si attaccava, e dopo aver riaperto l'applicazione che lo ospita non più | il client è morto con il processo esterno, e nessuno lo richiama | `:edit` sul buffer rifà passare `FileType`, quindi l'attach — `capabilities.md` §17 |
 | Il server risponde, ma con simboli che in questo progetto non esistono | due istanze dell'applicazione esterna, **una porta sola**: sei attaccato all'altro progetto | la porta in `:=vim.lsp.config['<server>']` e chi la sta ascoltando — `capabilities.md` §17 |
+| Go to definition apre un **buffer vuoto** il cui nome non è un percorso (`jdt://…`) | la risposta del server è un URI, e nessuno sa leggerlo | serve un `BufReadCmd` sullo schema — `capabilities.md` §8 |
 | `method "..." is not supported by any server activated for this buffer` | non è il metodo a mancare: **nessun client è attaccato**, e quasi sempre il server non è nella lista abilitata | `:=vim.lsp.enable` in `plugin/40_plugins.lua`, poi `:checkhealth vim.lsp` |
 | Due client dello stesso server sullo stesso progetto | `root_dir` sovrascritto da `after/lsp/` | `:checkhealth vim.lsp` |
 | Un'impostazione di `settings` non ha effetto | nome sbagliato, **o una funzione ereditata sovrascritta** | il manuale del server, e `:=vim.lsp.config['<server>']` |
@@ -490,8 +580,10 @@ guasto di questo elenco è un livello che ne ha sovrascritto un altro.
   filetype che il runtime non riconosce, due server che si dividono il lavoro, uno
   di essi legato alla versione del progetto, e un compilatore che colora sempre.
 - `references/java.md` — Java: un runtime completo a cui manca solo la scelta del
-  compiler, un server che va installato con il backend `http:` di `mise`, e le
-  capability che compaiono solo a caricamento finito.
+  compiler, un server che va installato con il backend `http:` di `mise`, le
+  capability che compaiono solo a caricamento finito, e il primo comando di
+  esecuzione della config — la forma da riusare per un linguaggio con più build
+  tool.
 - `assets/` — gli scheletri dei file da creare.
 
 ### La forma di una reference di linguaggio

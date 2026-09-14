@@ -197,7 +197,31 @@ di indentazione invece che per elemento.
 
 Gli stessi errori compaiono già come diagnostica mentre si scrive: `:make` resta
 quello che dà la lista completa del progetto in un colpo solo, invece dei soli file
-aperti. Una build vera (`ng build`, `ng test`) è un'altra cosa e sta in un terminale.
+aperti.
+
+**Ciò che gira invece di finire** — `ng serve`, `ng test` in watch, una `ng build`
+intera — è l'asse separato di `capabilities.md` §19, e non va dato a `:make`, che è
+sincrono e terrebbe l'editor fermo per tutta la vita del dev server. È `:Run`, il
+contratto di §19, definito sia in `after/ftplugin/typescript.lua` sia in
+`htmlangular.lua` perché un componente è due file e un progetto solo:
+
+| Comando | Cosa esegue |
+|---|---|
+| `:Run` | lo script di avvio del `package.json`: `start`, poi `dev`, poi `serve` |
+| `:Run <task>` | `npm run <task>` — `build`, `e2e`, `cypress:open`, quello che il progetto ha |
+| — | senza `package.json` risalendo, o senza uno di quei tre script, rifiuta **dicendolo** e non apre niente |
+
+**Il default è `npm run start`, non `ng serve`, e la differenza non è di stile.** Un
+progetto Angular CLI scrive `"start": "ng serve"` nel proprio `package.json` — sui tre
+progetti Angular di questa macchina è vero in tutti e tre — quindi passare da npm dà
+la stessa cosa; ma un progetto che si avvia altrimenti (un proxy, uno script proprio,
+un `npm run dev`) lo dichiara **lì**, e `ng serve` lo eseguirebbe nel modo sbagliato
+senza dirlo. Leggere lo script è leggere ciò che il progetto ha deciso, indovinare il
+comando no.
+
+Resta vero che il caso davvero particolare — quale `configuration`, quale progetto di
+un workspace Nx — appartiene al checkout: la via è `:Run <task>`, o lo script che quel
+progetto si scrive (§6).
 
 ## 6. Ambiente di progetto
 
@@ -251,6 +275,13 @@ solo qui:
 - `:make` con un errore **nel template** deve produrre una voce navigabile che punta
   al `.html` alla riga e alla colonna giuste. Un errore nel `.ts` non basta a
   provarlo: è quello che `tsc` prenderebbe comunque;
+- e quella voce deve puntare a un file **che esiste su disco**, non solo a un `bufnr`:
+  `ngc` scrive percorsi relativi al progetto e Vim li risolve contro la cwd, che
+  `MiniMisc.setup_auto_root()` mette sulla radice del **repository**. Con un progetto
+  Angular annidato — in un monorepo, o sotto il `.git` di un repo che contiene
+  dell'altro — le due directory non coincidono, la voce si forma lo stesso e `]q` apre
+  un buffer vuoto dal nome plausibile (`capabilities.md` §6). La sonda `quickfix` lo
+  controlla da sé;
 - su un template devono essere attaccati **uno** e un solo client, `angularls`; su
   un `.ts` **due**, `angularls` e `ts_ls`. La sonda `lsp` aspetta il primo client e
   poi legge: con due server va data un'attesa esplicita, o riporta quello che è
@@ -259,4 +290,9 @@ solo qui:
   `ngtsc` come sorgente: è l'unica prova che il servizio di linguaggio caricato dal
   progetto sia compatibile con l'eseguibile, e quindi che il §3 sia stato rispettato;
 - il cursore dentro un `template:` inline deve dare `angular` come linguaggio
-  iniettato, non `typescript`.
+  iniettato, non `typescript`;
+- `:Run` deve esistere **in entrambi** i buffer di un componente, il `.ts` e il
+  `.html`, e risolvere lo stesso comando: è l'unica prova che il resolver guarda il
+  progetto e non il filetype. E su un file senza `package.json` sopra deve rifiutare
+  **senza aprire lo split** — misurato contando le finestre non flottanti, perché il
+  float di 'mini.notify' altrimenti si conta come finestra.

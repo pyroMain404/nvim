@@ -299,6 +299,39 @@ ereditate. Succede quando la config di 'nvim-lspconfig' dichiara al server, nell
 `capabilities`, dei comandi che poi non registra: per `rust_analyzer` è il caso di
 `showReferences` e `debugSingle`.
 
+### Il server come fonte di comandi, non solo di risposte
+
+Il protocollo standard copre definizione, riferimenti, rename, code action,
+formattazione. Alcuni server offrono molto di più attraverso **metodi propri**, fuori
+dallo standard, che il client deve saper chiamare: Neovim non li conosce e nessuna
+riga di `settings` li accende.
+
+Quanto sia la differenza si misura leggendo un plugin dedicato, non la sua pagina di
+presentazione. `nvim-jdtls` implementa in `lua/jdtls.lua` `organize_imports`,
+`extract_variable`, `extract_constant`, `extract_method`, `change_signature`,
+`super_implementation`, lo spostamento di un file, di un metodo di istanza, di un
+membro statico e di un tipo, più i generatori di `toString`, dei costruttori, dei
+delegati e di `hashCode`/`equals` — ciascuno con il proprio dialogo, perché il server
+chiede all'utente cosa generare. `rustaceanvim` fa lo stesso con `experimental/ssr`,
+`experimental/moveItem`, `experimental/joinLines`, `rust-analyzer/expandMacro`,
+`experimental/parentModule`. Niente di tutto questo arriva configurando il server: è
+**codice del client**, ed è la ragione per cui quei plugin esistono.
+
+Per la Fase 2 la conseguenza è che "configuro il server" e "installo il plugin" non
+coprono lo stesso insieme, e la lista di ciò che si rinuncia ad avere si legge solo
+nel sorgente. Quando invece il comando è già dichiarato al server ma non registrato
+nel client, il sintomo è il messaggio *"does not support command"* del paragrafo
+precedente, e la sede è `vim.lsp.commands`.
+
+**Un comando che serve in ogni linguaggio con un manifesto: ricaricare lo stato.** Un
+server che ha importato il build lo tiene in memoria, e una dipendenza aggiunta al
+`Cargo.toml` o al `pom.xml` non esiste finché non glielo si dice. `rust-analyzer` ha
+`rust-analyzer/reloadWorkspace` — che 'nvim-lspconfig' espone già come
+`:LspCargoReload` — e `jdtls` ha `java/projectConfigurationUpdate`, che
+`java.configuration.updateBuildConfiguration = 'automatic'` rende superfluo perché lo
+fa scattare da sé. La domanda va posta per ogni linguaggio che ha un manifesto; la
+risposta cambia da server a server.
+
 ### Navigazione e altre funzioni
 
 `vim.lsp.buf` offre più di quanto la config mappi: oltre a `definition()`,
@@ -423,6 +456,29 @@ attraverso il colore: `\%(\e\[[0-9;]*m\)*` fra un campo e l'altro. Come si scriv
 in un compiler plugin — dove due livelli di escaping si sovrappongono — è in
 `assets/compiler.lua`.
 
+### Un `%f` relativo si risolve contro la cwd, non contro il progetto
+
+L'altra quickfix che sembra a posto e non lo è. Molti strumenti scrivono percorsi
+relativi alla radice del **progetto** — `ngc`, i compilatori dei motori di gioco,
+qualunque cosa parta da un manifesto — e Vim li risolve contro la **directory
+corrente**, che è anche quella da cui `:make` esegue il comando (`:h :make`). Le due
+coincidono finché il progetto è la radice del repository, e `MiniMisc.setup_auto_root()`
+mette la cwd proprio lì: in un monorepo, o in un progetto annidato, è un'altra
+directory.
+
+Il sintomo non somiglia a un guasto: la voce si forma lo stesso, con un `bufnr`
+valido, `valid = 1` e la riga giusta, e `]q` apre un buffer vuoto dal nome
+plausibile. Misurato qui con `errorformat=%f:%l:%c\ -\ error\ %m` e
+`cexpr 'src/app.ts:1:5 - error TS2339: nope'` lanciato da una directory che non
+contiene `src/`: `bufnr=2`, `lnum=1`, `valid=1`, e `vim.uv.fs_stat()` sul nome del
+buffer risponde `nil`.
+
+È il motivo per cui la sonda `quickfix` della skill `nvim-config-testing` non si
+accontenta di un `bufnr` ma chiede che il file sia su disco. Quando non c'è, il
+sospetto non è l'`errorformat` ma **da dove il comando è partito**; e se deve partire
+altrove sono `%D` e `%X` a rimettere in fila i percorsi, non un `%f` più elaborato
+(`:h quickfix-directory-stack`).
+
 ### Quickfix e location list non sono la stessa lista
 
 È una distinzione poco sfruttata e utile proprio qui: la **quickfix è una sola per
@@ -522,6 +578,25 @@ distinta: valgono per il server, non per la directory corrente.
 > non compare in nessun altro tipo di progetto. Messo *prima* di `.git` nella lista,
 > fa fermare la risalita sulla config giusta. `init.lua` non è utilizzabile, come
 > osservato: ne esiste uno in ogni config e in molti plugin.
+
+### Quando la definizione non è un file
+
+Un server può rispondere a `textDocument/definition` con un URI che **non è un
+percorso**. `jdt://contents/...` è il caso di riferimento: una classe dentro un jar
+senza sorgenti allegati. Neovim prova ad aprire quella stringa come nome di file, e
+ne esce un buffer vuoto con quel nome — la navigazione sembra rotta proprio mentre il
+server ha risposto correttamente.
+
+Il pezzo mancante è un `BufReadCmd` sullo schema (`:h BufReadCmd`), che al posto
+della lettura da disco chiede il contenuto al server e riempie un buffer `nofile`.
+`nvim-jdtls` lo registra in `plugin/jdtls.lua` su `jdt://*` **e su `*.class`**, e
+chiama `java/classFileContents`; il buffer va poi attaccato al client con
+`vim.lsp.buf_attach_client()`, altrimenti da lì dentro non funziona più nulla — non
+si naviga oltre, e non si torna indietro.
+
+L'asse si pone solo dove le librerie si distribuiscono **compilate**: in Rust il
+registry contiene i `.rs` e `rust_analyzer` risponde con un percorso vero, in Java è
+la differenza fra leggere il codice di una dipendenza e guardare un buffer vuoto.
 
 ## 9. Completamento e snippet
 
@@ -733,11 +808,19 @@ ambiente grafico, un servizio già acceso — e Neovim si limita a **collegarsi 
 qualcosa che esiste già**. L'asse non è "LSP": è LSP con il ciclo di vita in mano a
 qualcun altro, e cambia cinque cose.
 
-**Come si riconosce.** In `:=vim.lsp.config['<server>']` il `cmd` è una **funzione** e
-non una lista: `vim.lsp.rpc.connect(host, port)` apre il socket TCP con libuv e
-restituisce ciò che Neovim userà per parlarci (`:h vim.lsp.rpc.connect()`). Una lista
-vuol dire "Neovim avvia un processo"; una funzione, qui, vuol dire "Neovim compone un
-numero".
+**Come si riconosce.** In `:=vim.lsp.config['<server>']` il `cmd` è una **funzione**
+che chiama `vim.lsp.rpc.connect(host, port)`, la quale apre il socket TCP con libuv e
+restituisce ciò che Neovim userà per parlarci (`:h vim.lsp.rpc.connect()`).
+
+**Il test non è "funzione invece di lista"**, ed è l'errore facile da fare: una
+funzione dice soltanto che la riga di comando va composta a runtime, e la maggior
+parte di quelle che si incontrano chiude con `vim.lsp.rpc.start()`, cioè **avvia** un
+processo esattamente come farebbe una lista — `jdtls` compone così la directory
+`-data` del progetto, `angularls` le `--tsProbeLocations`, `ts_ls` l'eseguibile
+locale. Quello che distingue è quale delle due funzioni viene chiamata. Sulla copia
+di 'nvim-lspconfig' installata qui il conto è netto: dei cinque server usati da
+questa config **tre hanno `cmd` funzione e nessuno si collega a niente**, mentre
+`rpc.connect` compare in un solo file di tutto il plugin, `lsp/gdscript.lua`.
 
 1. **"Nessun client" è uno stato legittimo.** L'applicazione può non essere aperta, e
    non è un guasto da riparare: è una scelta di chi lavora. Ciò che va deciso è **cosa
@@ -826,11 +909,127 @@ da fare consapevolmente, perché il sintomo — un programma che resta aperto do
 chiuso l'editor, o che si chiude insieme a esso — arriva molto dopo la riga che l'ha
 deciso.
 
+E "catturato" non dice ancora **dove** finisce l'output, che è una seconda scelta:
+`rustaceanvim` ne ha un modulo per destinazione in `lua/rustaceanvim/executors/` —
+terminale, quickfix riempito man mano con `setqflist(..., 'a', { lines = … })`, e
+perfino diagnostiche nel buffer, dove un `cargo test` in background diventa un segno
+sulla riga del test fallito. Per un comando scritto a mano la domanda resta la stessa,
+e la risposta dipende da cosa si fa dopo: si legge e basta (terminale), ci si naviga
+dentro (quickfix), oppure si continua a scrivere codice con il risultato sott'occhio
+(diagnostiche).
+
 La sede è un **comando buffer-local** in `after/ftplugin/<ft>.lua`
 (`:h nvim_create_user_command()`, con `-buffer`), non una mapping globale e non un
 compiler plugin. E quando gli argomenti dipendono dal singolo progetto — quale scena,
 quale profilo, quale target — l'asse non appartiene più al linguaggio: è un task del
 progetto, e vive nel suo manifesto o nel suo `.nvim.lua`.
+
+**Prima di scriverlo, però, vale la Fase 1**: questo è un asse che il runtime a volte
+copre già, e in una forma che il nome del comando non lascia indovinare. Il ftplugin
+Rust definisce `:Crun`, e `cargo#cmd()` in Neovim finisce su
+`noautocmd new | terminal cargo run` — cioè esattamente la riga "catturato" di questa
+tabella, scritta da qualcun altro (`references/rust.md` §2).
+
+### Un nome solo: il contratto di `:Run`
+
+Il primo istinto è dare a ogni linguaggio il nome che il suo ecosistema usa — `:Crun`
+per cargo, un `:NpmStart`, un `:MvnExec` — e l'ecosistema in effetti ce l'ha quasi
+sempre già. È l'istinto sbagliato: quello che va ricordato aprendo un repository che
+non si conosce è **un tasto**, non il build tool che quel repository ha scelto. Da qui
+un comando solo, `:Run`, con un significato definito che ogni filetype rispetta:
+
+1. **Esegue il progetto, non il file.** L'unica eccezione è un file che non appartiene
+   a nessun progetto, dove le due cose coincidono.
+2. **Cattura**: un terminale in split, così l'output si vede mentre arriva e il
+   processo muore con l'editor invece di restare a tenere una porta. Ciò che ha una
+   finestra propria va staccato, ed è l'altro ramo della tabella qui sopra.
+3. **Il default si legge dal progetto, mai si fissa.** Quale script, quale goal, quale
+   binario è una proprietà del checkout. Dove non si può leggere, il comando deve
+   **fallire rumorosamente** — `cargo run` in una workspace elenca i binari fra cui
+   non ha saputo scegliere (misurato su una da sei membri) — invece di eseguire in
+   silenzio la cosa sbagliata.
+4. **Gli argomenti sostituiscono quel default** (`:Run --bin server`, `:Run e2e`,
+   `:Run test -DskipTests`): è così che il caso particolare di un progetto trova
+   risposta senza che nessun file della config lo conosca.
+5. **Non è `:make`**, che chiude una domanda e riempie il quickfix. Questo avvia
+   qualcosa che vive.
+6. **Il progetto ha l'ultima parola.** `vim.b.run_command` o `vim.g.run_command`,
+   impostate dal `.nvim.lua` di quel checkout (`:h 'exrc'`, skill
+   `nvim-project-environment`), sostituiscono ciò che il linguaggio avrebbe risolto:
+   una lista, a cui gli argomenti della chiamata si aggiungono, oppure una funzione
+   di quegli argomenti, che risponde come qualunque altro resolver — ed è la forma
+   per un monorepo, dove il comando dipende anche da `vim.bo.filetype`.
+
+Il fatto che l'ecosistema offra già il comando non è un motivo per non definirlo: il
+runtime di Rust ha `:Crun`, e questa config definisce `:Run` accanto senza toglierlo.
+La duplicazione è il punto — un nome che vale ovunque, invece di uno per build tool.
+
+La clausola 6 è ciò che rende il contratto sopportabile in un progetto che non
+somiglia agli altri, e funziona per una ragione di tempi: il resolver è chiamato
+**quando il comando viene invocato**, non quando il ftplugin si carica, quindi non
+importa che `exrc` sia letto prima o dopo (misurato: una `vim.g` del `.nvim.lua` è
+già lì). È l'opposto del caso di un'opzione, dove il `.nvim.lua` perde contro
+l'ftplugin che gira dopo e serve un autocomando — la trappola che la skill
+`nvim-project-environment` documenta.
+
+Cosa sia un contratto, quali ne esistono già e come si decide di definirne uno nuovo
+invece di alimentarne uno di Vim, sta nella Fase 3 di `SKILL.md`: `:Run` è il caso
+lavorato di quella regola, non la regola.
+
+**Dove un linguaggio non ha niente da eseguire, non si definisce.** Il Lua di una
+config Neovim è il caso: il programma è l'editor che lo sta leggendo, e `:source %` lo
+esegue già.
+
+### La forma, quando i build tool sono più di uno
+
+Un linguaggio con un solo modo di essere eseguito sta in un `if`. Quasi nessuno ne ha
+uno solo — Java ha Maven, Gradle e Ant; l'ecosistema npm ha gli script del
+`package.json` — e il modo in cui quell'`if` invecchia decide quanto costa il terzo
+caso. La forma che ha retto: il contratto in un modulo solo
+(`lua/config/run.lua`, che definisce il comando, l'ordine e la finestra), e per
+linguaggio un **resolver** che dice soltanto quale comando eseguire.
+
+```lua
+local builds = {
+  ['<manifesto>'] = { compiler = '<compiler plugin>', run = function(args, file) … end },
+  ['<altro>']     = {                                 run = function(args, _) … end },
+}
+local found = vim.fs.find(vim.tbl_keys(builds), { upward = true, path = … })[1]
+local build = found and builds[vim.fs.basename(found)] or <caso senza build>
+
+if build.compiler then vim.cmd('compiler ' .. build.compiler) end
+require('config.run').command(function(args) return build.run(args, found) end)
+```
+
+Tre cose la tengono in piedi, e ognuna è un guasto evitato:
+
+- **`compiler` è facoltativo, `run` no.** Una voce risponde a due domande diverse —
+  quale compiler plugin usa `:make`, quale comando esegue il progetto — e i due non
+  esistono sempre insieme: per Gradle il runtime non ha un compiler plugin, e
+  `:compiler gradle` non è un'operazione nulla ma `E666: Compiler not supported`,
+  sollevato **mentre il ftplugin si carica**, su ogni file di quel progetto.
+- **Il comando si compone prima di aprire la finestra.** `:vertical new` rende
+  corrente un buffer senza nome, quindi un resolver che chiede il file su cui è stato
+  invocato — il caso "fuori da ogni progetto" — riceve una stringa vuota. Passa
+  silenziosamente per ogni altro ramo, ed è il motivo per cui quel caso va verificato
+  per primo.
+- **Il default si legge dal manifesto.** Dove il build tool non ha un comando
+  universale (Maven: `spring-boot:run` esiste solo con il plugin Spring Boot,
+  `exec:java` solo se il progetto configura `exec-maven-plugin`) sceglierne uno fisso
+  sbaglia metà dei progetti in silenzio. Lo stesso vale un livello più in là: per
+  l'ecosistema npm il default non è `ng serve` ma **lo script che il progetto
+  dichiara**, `npm run start`, perché un progetto che si avvia altrimenti lo scrive lì
+  (verificato: tre progetti Angular su questa macchina, tutti con
+  `"start": "ng serve"`).
+
+`jobstart()` con una lista non passa da `'shell'`, quindi niente dipende dalle regole
+di quoting di `cmd.exe` o di PowerShell; in compenso **solleva** `E903: Process failed
+to start` quando l'eseguibile non c'è, invece di restituire un codice. E il nome
+dell'eseguibile va preso sul serio su Windows: `npm` si risolve dal `PATH` attraverso
+`PATHEXT` mentre `npm.cmd` qui **non esiste** (`E475`), e al contrario un wrapper che
+sta nel progetto va nominato per intero (`gradlew.bat`, perché lo `gradlew` senza
+estensione accanto non è eseguibile). I casi completi, con i controlli che li
+falsificano, sono in `references/java.md` §5 e `references/angular.md` §5.
 
 ### Una vista che non è un file
 

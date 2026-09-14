@@ -61,6 +61,21 @@ vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 --   vim.system({ 'mylang', 'doc', '--open' })
 -- end, { desc = 'Open language documentation' })
 
+-- Running the project is a different axis from `:make`, which answers a question that
+-- ends and fills the quickfix list: a process that lives and writes goes to a
+-- terminal instead. The command, its name and the window it opens are the contract of
+-- 'lua/config/run.lua' (`references/capabilities.md` §19) — what belongs here is only
+-- the resolver, which says which command answers for this language and reads its
+-- default from the project rather than fixing one.
+-- require('config.run').command(function(args)
+--   return vim.list_extend({ 'mylang', 'run' }, args)
+-- end)
+--
+-- Where the language has several build tools, the resolver comes off a table with a
+-- `run` per manifest and an *optional* `compiler`: the two answers do not always both
+-- exist, and a `:compiler` that the runtime does not ship raises `E666` while this
+-- file loads. The worked example is 'after/ftplugin/java.lua'.
+
 -- When this file sets many options and defines commands, teach Neovim how to undo
 -- them, so that a later `:setfiletype` does not leave a hybrid buffer
 -- (`:h undo_ftplugin`). For two options it is overhead; for ten it is not.

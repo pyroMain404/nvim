@@ -76,6 +76,23 @@ partire dalla configurazione diretta del server, che con il livello di
 code action e formattazione, e passare a `nvim-jdtls` solo quando servono il
 debug o il test runner — migrando la configurazione, non affiancandola.
 
+Leggerne il sorgente cambia due cose in questa valutazione, e nessuna delle due si
+vede dal README. La prima è **quanto** sia la lista: `lua/jdtls.lua` implementa a mano
+`change_signature`, `extract_variable`/`constant`/`method`, `super_implementation`,
+lo spostamento di un file, di un metodo di istanza, di un membro statico e di un
+tipo, i generatori di `toString`, dei costruttori, dei delegati e di
+`hashCode`/`equals`, più `javap`, `jshell` e `jol` dentro l'editor — ognuno con il
+proprio dialogo, perché il server chiede cosa generare (`capabilities.md` §4). È la
+metà del refactoring che un IDE Java offre, e nessuna riga di `settings` la avvicina.
+
+La seconda è che **un pezzo si può prendere senza adottare il plugin**. Il go to
+definition verso una libreria senza sorgenti allegati risponde con un URI `jdt://`,
+e oggi qui apre un buffer vuoto dal nome bizzarro: `plugin/jdtls.lua` risolve il caso
+con un `BufReadCmd` su `jdt://*` e `*.class` che chiede `java/classFileContents` al
+client già attaccato — una dozzina di righe in `plugin/`, indipendenti da tutto il
+resto (`capabilities.md` §8). È il primo lavoro da fare qui se la navigazione nelle
+dipendenze diventa quotidiana, e non richiede di migrare niente.
+
 **Un formatter dedicato: no.** Java non ha un formatter ufficiale. `jdtls`
 formatta con il formatter di Eclipse e rispetta le impostazioni del progetto,
 quindi `lsp_format = 'fallback'` di 'conform.nvim' arriva già alla risposta
@@ -174,6 +191,42 @@ Con il compiler scelto dal ftplugin:
 `:make` è sincrono, e per Maven l'attesa si sente più che per `cargo check`; vale
 la nota della Fase 6 di `capabilities.md` §6 e il TODO già scritto sopra le
 mapping `<Leader>l` di 'plugin/20_keymaps.lua'.
+
+### Eseguire l'applicazione non passa da `:make`
+
+Ognuna delle righe qui sopra chiude una domanda e riempie il quickfix. Far **girare**
+l'applicazione — `mvn spring-boot:run`, `mvn exec:java`, un `java -jar` sul package
+appena costruito — è l'asse separato di `capabilities.md` §19: un processo che vive,
+che scrive finché non lo si chiude, e che non produce niente di navigabile. Dato a
+`:make`, che è sincrono, tiene l'editor fermo finché l'applicazione non esce, cioè
+per tutto il tempo in cui la si vorrebbe usare.
+
+Quale delle due forme di §19 serva qui lo decide il programma, e per un servizio non
+c'è scelta: il suo output **è** il log, quindi va catturato e non staccato, e il
+processo deve morire con l'editor invece di restare a tenere la porta occupata. È
+quello che fa `:Run`, il contratto di §19 (`lua/config/run.lua`); di Java è soltanto
+il resolver, in `after/ftplugin/java.lua`:
+
+| Cosa si apre | Cosa parte con `:Run` |
+|---|---|
+| un POM che dichiara `spring-boot-maven-plugin` | `mvn spring-boot:run` |
+| un POM che non lo dichiara | `mvn exec:java` |
+| un `build.xml` | `ant run` |
+| un `.java` fuori da ogni build | `java <file>`, che dalla 11 non ha bisogno di compilare prima |
+
+Gli argomenti, se ci sono, sostituiscono il goal indovinato (`:Run test -DskipTests`).
+Nessun goal è universale in Maven, ed è il motivo per cui va letto dal POM: scegliere
+`exec:java` sempre farebbe fallire ogni progetto Spring Boot, e viceversa. Quello che
+va oltre — il profilo Spring, la classe `main`, gli argomenti della JVM — non è del
+linguaggio: si passa a mano o vive nel `.nvim.lua` del checkout (§6).
+
+**Gradle non c'è, e non è dimenticanza.** Nella tabella `builds` una voce porta due
+risposte diverse, il compiler plugin di `:make` e il comando di esecuzione, e per
+Gradle la prima non esiste: `:compiler gradle` non è un'operazione nulla ma
+`E666: Compiler not supported`, che scatterebbe **mentre il ftplugin si carica**, su
+ogni file Java di quel progetto. Per questo `compiler` è facoltativo e solo `run` è
+obbligatorio: il giorno che serve, Gradle entra con la sola riga di esecuzione, e il
+quickfix resta il lavoro separato del TODO già scritto nel file.
 
 **Il limite da conoscere sui test falliti.** La voce di quickfix di un
 fallimento porta il **primo frame** dello stack, che per un `assertEquals` è
@@ -355,6 +408,18 @@ solo qui:
 - go to definition da un file di test a uno di `src/main` deve funzionare: è ciò
   che distingue un `root_dir` giusto dalla modalità a file singolo, in cui
   `jdtls` risponde comunque ma solo sul file aperto;
+- `:Run` deve esistere **solo** in un buffer Java e scegliere il comando dal build,
+  nei quattro casi della tabella di §5. Si verifica senza avviare niente, stubando
+  `vim.fn.jobstart` nello `before` della sonda `command` (la skill
+  `nvim-config-testing` lo documenta). Due dei quattro casi valgono più degli altri:
+  quello **negativo** — `:Run` assente in un buffer di altro filetype e assente fra
+  i comandi globali — e quello **fuori da ogni build**, l'unico che legge il nome del
+  buffer, e quindi l'unico che si accorge se il comando viene composto dopo aver
+  aperto lo split invece che prima (osservato: `java` con il nome vuoto, mentre i tre
+  rami del build passavano);
+- `:verbose setlocal makeprg?` deve continuare a nominare `compiler/maven.vim`,
+  `ant.vim` o `javac.vim` a seconda del build: `:Run` e `:make` leggono la stessa
+  tabella, e una modifica all'uno può spegnere l'altro senza che nulla lo dica;
 - in un progetto Lombok, che l'agent sia davvero agganciato lo dice la sonda
   `diagnostics` con `absent = 'undefined for the type'`. Da sola però non basta:
   quel controllo passa identico in un progetto che Lombok non lo usa, quindi
