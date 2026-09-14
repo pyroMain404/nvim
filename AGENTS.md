@@ -265,7 +265,7 @@ Follow the formatting of the entries already in the section: a `## YYYY-MM-DD` h
 
 ## Verifying a change
 
-There is no test suite in this repository. Verification is manual, deliberate, and described in **one place only**: the `nvim-config-testing` skill (`.claude/skills/nvim-config-testing/`). It holds the rules (what is worth checking, when to check it, what to hand back to the user instead of simulating it), the known traps of headless checks on this config, the antipatterns already paid for, and a parameterised probe for every common operation.
+There is no test suite in this repository. Verification is manual, deliberate, and described in **one place only**: the `nvim-config-testing` skill (`.omp/skills/nvim-config-testing/`). It holds the rules (what is worth checking, when to check it, what to hand back to the user instead of simulating it), the known traps of headless checks on this config, the antipatterns already paid for, and a parameterised probe for every common operation.
 
 Nothing about *how* to verify is written here, or in any other document of this repository: a rule kept in two places diverges at the first update, and from then on neither copy can be trusted. Read the skill before the final pass, and record there whatever that pass taught you.
 

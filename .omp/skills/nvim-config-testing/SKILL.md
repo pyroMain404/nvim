@@ -89,11 +89,11 @@ Tutto sta in `assets/`, ed è fatto di tre pezzi:
 
 ```powershell
 # La forma generale
-.claude/skills/nvim-config-testing/assets/run.ps1 <sonda> -File <file> -Params @{ ... }
+.omp/skills/nvim-config-testing/assets/run.ps1 <sonda> -File <file> -Params @{ ... }
 
 # Il caso vero da cui è nato questo banco: dove finiscono le finestre quando si
 # aprono tre file di seguito da un patch di `:Git diff`
-.claude/skills/nvim-config-testing/assets/run.ps1 win_layout -File README.md -Params @{
+.omp/skills/nvim-config-testing/assets/run.ps1 win_layout -File README.md -Params @{
   before  = "vim.cmd('Git diff HEAD~3')"
   between = "vim.fn.cursor(1, 1) vim.fn.search('^@@', 'W') vim.cmd('normal! 2j')"
   keys    = @('<CR>', '<CR>', '<CR>')
@@ -122,7 +122,7 @@ config con `lua_ls`: **14 s la prima sonda, 2-4 s ognuna delle successive**,
 contro i 40-60 s di ciascuna sonda one-shot.
 
 ```powershell
-$R = '.claude/skills/nvim-config-testing/assets/run.ps1'
+$R = '.omp/skills/nvim-config-testing/assets/run.ps1'
 & $R lsp_request -File 'configs/nvim-0.12/plugin/20_keymaps.lua' -Session lua `
     -Cwd $repo -Reset -Params @{ find = "^nmap_leader\('ba'"; count = 2 }
 & $R diagnostics -File 'configs/nvim-0.12/lua/config/health.lua' -Session lua `
