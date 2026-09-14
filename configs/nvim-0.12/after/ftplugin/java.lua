@@ -53,26 +53,101 @@ vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- its own importer, so a Gradle project gets its classpath and its compliance
 -- level from jdtls whatever is decided here.
 --
--- TODO: Gradle falls through to `javac`, which compiles the single file instead
--- of running the build - silently, because a file that compiles on its own
--- leaves the quickfix list empty, exactly like a build that succeeded. Neovim
--- ships no 'compiler/gradle', so this needs an `errorformat` written from
--- scratch, and one that matches nothing is indistinguishable from a green
--- build. Not now: there is no Gradle project on this machine to derive it from
--- or check it against. First step is to make one fail on purpose and read the
--- raw output - `gradlew compileJava` on a file with a type error - because the
+-- TODO: Gradle falls through to `javac`, which compiles the single file
+-- instead of running the build - silently, because a file that compiles on its
+-- own leaves the quickfix list empty, exactly like a build that succeeded. The
+-- missing piece is only the `:make` half: an entry in `builds` below with a
+-- `run` and no `compiler` already gives a Gradle project its `:Run`, while the
+-- quickfix needs a 'compiler/gradle.lua' written from scratch, and an
+-- `errorformat` that matches nothing is indistinguishable from a green build.
+-- Not now: there is no Gradle project on this machine to derive it from or
+-- check it against. First step is to make one fail on purpose and read the raw
+-- output - `gradlew compileJava` on a file with a type error - because the
 -- format changes with the console mode ('rich', 'plain'), and `--console=plain`
--- is probably part of the answer.
+-- is probably part of the answer. NOTE: on Windows the wrapper to call is
+-- `gradlew.bat`; `jobstart()` runs a '.bat' from a list just fine, while the
+-- extensionless POSIX `gradlew` next to it raises `E903: Process failed to
+-- start` - and raises rather than returning -1.
 --
 -- Walking up for the build file costs a handful of `stat` calls per buffer,
--- which is what the runtime does for `Cargo.toml`; nothing here reads a file.
-local build_files = { ['pom.xml'] = 'maven', ['build.xml'] = 'ant' }
-local found = vim.fs.find(vim.tbl_keys(build_files), {
+-- which is what the runtime does for `Cargo.toml`; nothing here reads a file
+-- until `:Run` is called.
+--
+-- One table, two answers, and they are not the same answer: which compiler
+-- plugin `:make` uses, and which command runs the project. Holding them in a
+-- single field is what made a third build tool expensive, because the two do
+-- not always both exist - Gradle has a `run` task and no compiler plugin in
+-- the runtime, and `:compiler gradle` is not a no-op but `E666: Compiler not
+-- supported`, raised while this ftplugin loads, on every Java file of that
+-- project. So here `compiler` may be absent and only `run` is required.
+--
+-- Every `run` takes the same two arguments, the build file included where it
+-- is not read: two of them with different arities is what turns a correct call
+-- into a `redundant-parameter` warning from the server.
+local function goal(args, default) return #args > 0 and args or { default } end
+
+local builds = {
+  ['pom.xml'] = {
+    compiler = 'maven',
+    -- Maven has no universal goal for running a project: `spring-boot:run`
+    -- exists only with the Spring Boot plugin, `exec:java` only where the
+    -- project configures `exec-maven-plugin`. Reading which one off the POM
+    -- and letting the other fail loudly in the terminal beats picking one and
+    -- doing nothing quietly.
+    run = function(args, build_file)
+      local boot = false
+      for _, line in ipairs(vim.fn.readfile(build_file)) do
+        if line:find('spring%-boot%-maven%-plugin') then
+          boot = true
+          break
+        end
+      end
+      local task = boot and 'spring-boot:run' or 'exec:java'
+      return vim.list_extend({ 'mvn' }, goal(args, task))
+    end,
+  },
+  ['build.xml'] = {
+    compiler = 'ant',
+    -- NOTE: `run` is a convention among Ant builds, not a target Ant defines,
+    -- so this one is a guess in a way the Maven goals above are not. Unproven:
+    -- there is no Ant project on this machine to check it against.
+    run = function(args, _) return vim.list_extend({ 'ant' }, goal(args, 'run')) end,
+  },
+}
+
+-- A file that belongs to no build at all: `javac` (`:h compiler-javac`) so
+-- that `:make %` compiles just this one, and `java` on the file itself to run
+-- it, which since Java 11 needs no compilation step first.
+local loose = {
+  compiler = 'javac',
+  run = function(args, _)
+    return vim.list_extend({ 'java', vim.api.nvim_buf_get_name(0) }, args)
+  end,
+}
+
+local found = vim.fs.find(vim.tbl_keys(builds), {
   upward = true,
   path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
 })[1]
+local build = found and builds[vim.fs.basename(found)] or loose
 
 -- `:compiler` defines its options through a command it creates and deletes
 -- while sourcing, so it has no Lua API and `vim.cmd()` is the only way here.
-local compiler = found and build_files[vim.fs.basename(found)] or 'javac'
-vim.cmd('compiler ' .. compiler)
+if build.compiler then vim.cmd('compiler ' .. build.compiler) end
+
+-- Running the application is not what `:make` does, and the two are worth
+-- keeping apart. `:make` asks a question that ends - does it compile, do the
+-- tests pass - fills the quickfix list and returns; running is a process that
+-- lives, writes until it is stopped, and produces nothing to navigate. Handing
+-- it to `:make`, which is synchronous, would freeze the editor for exactly as
+-- long as the application is useful.
+--
+-- The command, its name and its shape are the contract of 'lua/config/run.lua',
+-- kept by every filetype that has something to run. What belongs to Java is
+-- only the resolver: which build tool answers, and which goal it is given.
+--
+-- Anything more specific than the default of `run` above - a Spring profile, a
+-- main class, JVM arguments - belongs to the project and not to the language,
+-- so it is passed as arguments here or it lives in the project's '.nvim.lua'
+-- (`:h 'exrc'`).
+require('config.run').command(function(args) return build.run(args, found) end)

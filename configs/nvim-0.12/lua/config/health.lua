@@ -6,9 +6,10 @@
 -- which external programs are installed, at which version, and what stops working
 -- when one of them is missing. Run it with `:checkhealth config`.
 --
--- It is the only file under 'lua/' in this config. `:checkhealth` discovers any
--- 'lua/**/health.lua' on `:h 'runtimepath'` and names the check after its path,
--- so this one is reachable as `config`.
+-- `:checkhealth` discovers any 'lua/**/health.lua' on `:h 'runtimepath'` and
+-- names the check after its path, so this one is reachable as `config`. It is
+-- also why this file is not `require`d from anywhere: unlike 'config/run.lua'
+-- next to it, which the ftplugins ask for by name, this one is found.
 --
 -- Structure: one `check_*()` function per area, called from `M.check()` in the
 -- order they should be read. This is the shape every healthcheck in Neovim's own

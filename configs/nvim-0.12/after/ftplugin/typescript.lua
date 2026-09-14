@@ -13,3 +13,13 @@
 -- `:compiler` has no Lua API — it defines its options through a command it
 -- creates and deletes — so `vim.cmd()` is the call, not a shortcut.
 vim.cmd('compiler ngc')
+
+-- Running the project, under the contract of 'lua/config/run.lua': `:Run` alone
+-- starts the script the 'package.json' declares (`start`, then `dev`, then
+-- `serve`), and `:Run <task>` is `npm run <task>` - which is how a project whose
+-- start is not `ng serve` says so. The resolver is shared with
+-- 'after/ftplugin/htmlangular.lua', because a component is two files and one
+-- project; why it goes through npm rather than straight to `ng serve` is
+-- explained there.
+local run = require('config.run')
+run.command(run.npm)

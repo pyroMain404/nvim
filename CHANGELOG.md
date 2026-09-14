@@ -103,6 +103,35 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-14
+
+- Run the project from the editor with `:Run`, one command with one meaning in
+  every language that has something to run: Java, Rust, TypeScript and Angular
+  templates. `:make` answers a question that ends - does it compile, do the
+  tests pass - and is synchronous; an application is a process that lives and
+  writes until it is stopped, so the two do not share a command. The name is
+  deliberately not the one each ecosystem uses (`:Crun`, an `:NpmStart`): what
+  is worth remembering when opening an unfamiliar repository is a single key.
+
+  With no argument the command is read off the project, never fixed: the goal
+  its POM implies (`spring-boot:run` with the Spring Boot plugin, `exec:java`
+  otherwise), `ant run`, `cargo run` - which cargo resolves from the manifest
+  and which refuses loudly, listing the binaries, in a workspace - or the start
+  script of a 'package.json' (`start`, then `dev`, then `serve`). Arguments
+  replace that default: `:Run --bin server`, `:Run e2e`, `:Run test -DskipTests`.
+  Outside any project, a lone '.java' file runs through `java` on itself.
+
+  A project has the last word over all of it: `vim.g.run_command` in its
+  '.nvim.lua' - a list, to which the arguments of the call are appended, or a
+  function of those arguments that can also refuse, saying why. Unlike an option
+  this needs no autocommand, because the command asks when it is invoked rather
+  than when the ftplugin loads.
+
+  The contract, the terminal split it opens and the order the two happen in live
+  in 'lua/config/run.lua'; each 'after/ftplugin' only says which command answers
+  for its language. Lua is the one that defines nothing, and not by omission:
+  the program is the editor reading it, and `:source %` already runs it.
+
 ## 2026-09-10
 
 - Read a commit in two ways instead of one, and say in the key which of the two
