@@ -1,6 +1,6 @@
 ---
 name: nvim-language-support
-description: Use when adding, extending, or fixing support for a programming language, platform, or file format — LSP server, tree-sitter parser and queries, :make and quickfix, formatter, snippets, ftplugin options, code navigation, debugging, package manager integration, toolchain installation, health check entries. Make sure to use this skill whenever the user says things like "aggiungi il supporto per <linguaggio>", "configura rust/python/go/zig", "manca l'LSP per X", "il quickfix non prende gli errori di X", "voglio compilare/testare da dentro nvim", "installa <server>", or asks where a language specific setting belongs — even when they name only one piece (just the server, just the parser), because the procedure decides what the rest of the config needs in order to stay coherent.
+description: Use when adding, extending, or fixing support for a programming language, platform, or file format — LSP server, tree-sitter parser and queries, :make and quickfix, formatter, snippets, ftplugin options, code navigation, debugging, package manager integration, toolchain installation, health check entries, plus running the program from the editor, a language server that lives inside an external application, and Neovim as that application's external editor. Make sure to use this skill whenever the user says things like "aggiungi il supporto per <linguaggio>", "configura rust/python/go/zig", "manca l'LSP per X", "il quickfix non prende gli errori di X", "voglio compilare/testare da dentro nvim", "installa <server>", "voglio lanciare il gioco/l'app da dentro nvim", "il server sta dentro l'editor di <X>", "far aprire i file a nvim da <applicazione>", or asks where a language specific setting belongs — even when they name only one piece (just the server, just the parser), because the procedure decides what the rest of the config needs in order to stay coherent.
 ---
 
 # Supporto di un nuovo linguaggio
@@ -208,6 +208,10 @@ Per ogni asse decidi **serve / non serve / è già gratis**, sapendo già dove a
 | Textobject e manipolazione | `vim.b.mini*_config` in `after/ftplugin/` | i costrutti del linguaggio meritano operatori propri |
 | Gestione dipendenze | plugin dedicato, attivato sul manifesto | il linguaggio ha un manifesto che si modifica spesso |
 | Debug del programma | `Termdebug`, o 'nvim-dap' + adapter | serve eseguire passo passo, non solo leggere errori |
+| Server di un'applicazione esterna | `after/lsp/<server>.lua`, più la porta nel `.nvim.lua` del progetto | il server non lo avvia Neovim: vive dentro un'applicazione che l'utente apre a parte |
+| Esecuzione del programma | `:command! -buffer` in `after/ftplugin/<ft>.lua` | il progetto si **esegue**, e sapere se compila non basta |
+| Neovim come editor esterno | l'avvio dell'editor (`--listen`) e le impostazioni dell'applicazione | l'applicazione deve poter aprire un file a una riga dentro Neovim |
+| Vista sullo stato del progetto | un picker di 'mini.pick', o un buffer scratch | l'albero delle scene, delle dipendenze o lo schema non si leggono come file |
 | Toolchain e installazione | `mise`, health check | sempre, appena serve un binario esterno |
 | Salute | `lua/config/health.lua` | sempre, se hai aggiunto una dipendenza esterna |
 
@@ -215,6 +219,17 @@ Il catalogo completo — cosa dà ciascun asse, come scoprire se è già coperto
 helptag — è in `references/capabilities.md`. Leggilo quando decidi l'ambito, invece
 di andare a memoria: citare un `:h` inesistente in un commento è un danno che resta
 nel repo.
+
+**Questa tabella non è chiusa, e un plugin del linguaggio è anche un inventario di
+assi.** Quando un plugin dedicato fa cose che qui non compaiono, la lettura immediata
+è "funzioni in più che non userei" — e a volte è vera. L'altra è che manchi una riga.
+Le quattro qui sopra nascono così, leggendo il sorgente di `godotdev.nvim` per
+decidere se adottarlo: la risposta è rimasta **no** (duplica livelli già installati e
+su Windows pretende `ncat` per fare ciò che `vim.lsp.rpc.connect` fa da sé), ma quattro
+dei suoi moduli nominavano assi che questa skill non aveva — il server posseduto
+dall'applicazione, l'esecuzione, l'editor esterno, la vista sul progetto. Leggere il
+codice di un plugin che si sta scartando è quindi parte della Fase 2, e ciò che se ne
+impara torna qui anche quando il plugin non entra.
 
 **Le decisioni che cambiano le abitudini dell'utente** — una mapping nuova, un
 formatter che scatta al salvataggio, un `textwidth` diverso — si propongono, non si
@@ -446,6 +461,8 @@ un'impressione.
 | Un parser non si installa e **nessun messaggio lo dice**: `install()` riporta successo senza scaricare niente | 'nvim-treesitter' lo crede già presente | `get_installed()` conta anche i nomi in `site/queries/`, e lì un symlink **rotto** vale come installato, così `install_lang()` esce con `return true` prima di provarci. Confronta quella cartella con `site/parser/`, togli le voci morte, poi reinstalla con `{ force = true }` |
 | Highlight che *era* completo e ora è parziale | query che ha sostituito quella del plugin | la **prima riga** dei file in `after/queries/`: manca `; extends` |
 | Il server non si attacca | eseguibile assente, o `root_dir` che non trova la radice | `:checkhealth vim.lsp`, `:=vim.lsp.config['<server>']` |
+| Il server si attaccava, e dopo aver riaperto l'applicazione che lo ospita non più | il client è morto con il processo esterno, e nessuno lo richiama | `:edit` sul buffer rifà passare `FileType`, quindi l'attach — `capabilities.md` §17 |
+| Il server risponde, ma con simboli che in questo progetto non esistono | due istanze dell'applicazione esterna, **una porta sola**: sei attaccato all'altro progetto | la porta in `:=vim.lsp.config['<server>']` e chi la sta ascoltando — `capabilities.md` §17 |
 | `method "..." is not supported by any server activated for this buffer` | non è il metodo a mancare: **nessun client è attaccato**, e quasi sempre il server non è nella lista abilitata | `:=vim.lsp.enable` in `plugin/40_plugins.lua`, poi `:checkhealth vim.lsp` |
 | Due client dello stesso server sullo stesso progetto | `root_dir` sovrascritto da `after/lsp/` | `:checkhealth vim.lsp` |
 | Un'impostazione di `settings` non ha effetto | nome sbagliato, **o una funzione ereditata sovrascritta** | il manuale del server, e `:=vim.lsp.config['<server>']` |

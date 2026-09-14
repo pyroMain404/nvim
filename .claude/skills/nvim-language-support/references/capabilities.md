@@ -25,7 +25,10 @@ ogni linguaggio è un errore quanto attivare troppo poco.
 14. [Toolchain, versioni e ambiente di progetto](#14-toolchain-versioni-e-ambiente-di-progetto)
 15. [Documentazione, REPL, terminale](#15-documentazione-repl-terminale)
 16. [Health check](#16-health-check)
-17. [Cosa Neovim non fa](#17-cosa-neovim-non-fa)
+17. [Un runtime esterno che possiede il server](#17-un-runtime-esterno-che-possiede-il-server)
+18. [Neovim come editor esterno di un'applicazione](#18-neovim-come-editor-esterno-di-unapplicazione)
+19. [Eseguire il programma, e le viste che non sono file](#19-eseguire-il-programma-e-le-viste-che-non-sono-file)
+20. [Cosa Neovim non fa](#20-cosa-neovim-non-fa)
 
 ## Interrogare la config: quale strumento per quale domanda
 
@@ -722,7 +725,127 @@ conviene controllare, per un linguaggio:
 - **Il consiglio come comando eseguibile**: con `mise` è quasi sempre una riga sola,
   il che rende il check anche una guida all'installazione.
 
-## 17. Cosa Neovim non fa
+## 17. Un runtime esterno che possiede il server
+
+Non tutti i server di linguaggio li avvia Neovim. Alcuni vivono dentro
+un'applicazione che l'utente apre per conto suo — l'editor di un motore di gioco, un
+ambiente grafico, un servizio già acceso — e Neovim si limita a **collegarsi a
+qualcosa che esiste già**. L'asse non è "LSP": è LSP con il ciclo di vita in mano a
+qualcun altro, e cambia cinque cose.
+
+**Come si riconosce.** In `:=vim.lsp.config['<server>']` il `cmd` è una **funzione** e
+non una lista: `vim.lsp.rpc.connect(host, port)` apre il socket TCP con libuv e
+restituisce ciò che Neovim userà per parlarci (`:h vim.lsp.rpc.connect()`). Una lista
+vuol dire "Neovim avvia un processo"; una funzione, qui, vuol dire "Neovim compone un
+numero".
+
+1. **"Nessun client" è uno stato legittimo.** L'applicazione può non essere aperta, e
+   non è un guasto da riparare: è una scelta di chi lavora. Ciò che va deciso è **cosa
+   resta** senza server — editing, tree-sitter, formatter esterno, tutto quello che non
+   dipende dal processo altrui — e va scritto nella reference del linguaggio. Il health
+   check **descrive** l'ambiente, non lo giudica: "nessuna risposta su 127.0.0.1:6005"
+   è un'informazione, un `ERROR` è un'accusa rivolta all'utente per una scelta sua.
+2. **Una porta è una risorsa della macchina, non del progetto.** Con due progetti
+   aperti nella stessa applicazione il primo prende la porta e il secondo resta senza —
+   misurato su Godot: la seconda istanza **non** ripiega su un'altra porta, resta viva
+   e semplicemente non ascolta. Neovim si attacca allora al **progetto sbagliato** e
+   risponde con la semantica di un altro albero di sorgenti, senza un messaggio. È il
+   guasto peggiore della categoria, perché ha l'aspetto del funzionamento. Il rimedio
+   ha due metà e servono entrambe: l'applicazione va avviata su una porta diversa, e
+   Neovim va informato di quale — di solito attraverso una variabile d'ambiente che la
+   configurazione del server legge, e la sede di quella variabile è il `.nvim.lua` del
+   progetto (`:h 'exrc'`, skill `nvim-project-environment`), mai un file globale, che
+   varrebbe per tutti i progetti insieme.
+3. **`root_markers` va stretto.** Un server che appartiene a *quel* progetto non deve
+   accettare un file qualunque: lasciare `.git` fra i marker significa che un file
+   isolato in un repository qualsiasi si attacca all'applicazione aperta su tutt'altro.
+   Come la lista si sostituisce invece di fondersi è in §4.
+4. **Il client non si riattacca da solo** quando l'applicazione viene chiusa e
+   riaperta: i buffer già aperti restano senza server, e non esiste un "riprova" da
+   chiamare. Ciò che rifà scattare l'attach è `:edit` sul buffer, perché ripassa da
+   `FileType` — è la forma che `godotdev.nvim` usa per il suo comando di
+   riconnessione, e sta in tre righe come comando buffer-local.
+5. **Non serve un ponte esterno.** La ricetta che circola per Windows — `ncat` o
+   `socat` messi fra Neovim e la porta, cioè `cmd = { 'ncat', host, port }` — risale a
+   quando `cmd` doveva essere una lista di eseguibili. Con `vim.lsp.rpc.connect` il
+   socket lo apre libuv su ogni sistema. Plugin ancora manutenuti lo chiedono come
+   requisito su Windows: è una dipendenza in più per ottenere di meno, e va riconosciuta
+   prima di adottarli.
+
+## 18. Neovim come editor esterno di un'applicazione
+
+Il verso opposto del §17: non Neovim che interroga l'applicazione, ma l'applicazione
+che chiede a Neovim di aprire un file a una riga. È l'*external editor* dei motori di
+gioco e degli strumenti grafici, l'inverse search di un visualizzatore di documenti,
+`$EDITOR` di qualunque programma.
+
+**Non è configurazione di filetype e non ha sede in `after/ftplugin/`.** Un ftplugin
+gira quando un file di quel tipo è già aperto, mentre qui l'applicazione deve poter
+parlare con Neovim **prima**, per chiedere proprio quell'apertura: qualunque cosa metta
+in ascolto da lì arriva sempre tardi per la prima richiesta. L'ascolto si stabilisce
+all'**avvio dell'editor** (`:h --listen`, `:h serverstart()`), e il resto vive nelle
+impostazioni dell'applicazione, cioè fuori dal repository: la reference del linguaggio
+documenta i passi, non li esegue.
+
+| Pezzo | Forma |
+|---|---|
+| Mettersi in ascolto | `nvim --listen 127.0.0.1:<porta>`, oppure una named pipe |
+| Dire all'applicazione cosa lanciare | il percorso completo dell'eseguibile: un processo avviato da un'icona non eredita il `PATH` di una shell |
+| Portare il cursore | `--server <indirizzo> --remote-send "<C-\><C-N>:e {file}<CR>:call cursor({line},{col})<CR>"` (`:h --remote-send`, `:h clientserver`) |
+
+Tre cose che si scoprono solo provandole:
+
+- **TCP e named pipe non sono equivalenti.** L'indirizzo TCP si scrive uguale ovunque;
+  una pipe su Windows ha la forma `\\.\pipe\<nome>`, su Unix è un file nel filesystem
+  che **resta lì se Neovim muore male** e va rimosso prima di rimettersi in ascolto —
+  su Windows il problema non esiste, la pipe sparisce con il processo. `sockconnect()`
+  è ciò che distingue un socket vivo da uno abbandonato.
+- **Il socket non va messo dentro il repository.** La ricetta diffusa
+  `--listen {project}/server.pipe` crea un file dentro il progetto, che poi va escluso
+  dal versionamento e nascosto in ogni picker: due problemi creati per risolverne uno.
+- **La base della riga non è garantita.** Alcune applicazioni contano da 1, altre da 0,
+  e sbagliare non produce nessun sintomo: il file si apre e il cursore è semplicemente
+  sulla riga sbagliata. Si verifica una volta sola, aprendo dall'applicazione un errore
+  su una riga nota.
+
+## 19. Eseguire il programma, e le viste che non sono file
+
+`:make` risponde a una domanda che finisce — "compila?" — riempie il quickfix ed esce.
+**Eseguire** il programma è un'altra cosa: un processo che vive, che scrive finché non
+lo si chiude, e che non produce niente di navigabile. Confonderli porta a metterli
+nello stesso file, e quel file (`compiler/`) è il posto sbagliato.
+
+| Forma | Come | Quando |
+|---|---|---|
+| Staccato | `vim.system({ … }, { detach = true })` (`:h vim.system()`) | l'applicazione ha una finestra propria: il suo output non serve, e non deve morire con l'editor |
+| Catturato | `:terminal` (`:h terminal-emulator`), o `jobstart()` con `on_stdout` (`:h job-control`) | l'output serve, e serve dentro Neovim |
+| Sincrono | `:!` | quasi mai: blocca l'editor finché il programma non esce |
+
+Un processo staccato **sopravvive a Neovim**, uno catturato muore con lui. È una scelta
+da fare consapevolmente, perché il sintomo — un programma che resta aperto dopo aver
+chiuso l'editor, o che si chiude insieme a esso — arriva molto dopo la riga che l'ha
+deciso.
+
+La sede è un **comando buffer-local** in `after/ftplugin/<ft>.lua`
+(`:h nvim_create_user_command()`, con `-buffer`), non una mapping globale e non un
+compiler plugin. E quando gli argomenti dipendono dal singolo progetto — quale scena,
+quale profilo, quale target — l'asse non appartiene più al linguaggio: è un task del
+progetto, e vive nel suo manifesto o nel suo `.nvim.lua`.
+
+### Una vista che non è un file
+
+Alcune piattaforme hanno uno stato di progetto che non si legge bene come testo:
+l'albero delle scene di un motore, l'albero delle dipendenze di un build tool, lo
+schema di un database. La forma neutra è un **buffer scratch** (`:h scratch-buffer`:
+`buftype=nofile`, `bufhidden=wipe`, non modificabile) riempito dall'output di un
+comando, con `<CR>` che apre ciò a cui la riga si riferisce.
+
+Prima di scriverne uno, però: se la vista serve a **scegliere una cosa da aprire**, è
+un picker, e 'mini.pick' con 'mini.extra' copre già il caso. Un buffer proprio si
+giustifica quando la struttura conta — un albero che si esplora, non una lista da cui
+si pesca.
+
+## 20. Cosa Neovim non fa
 
 Sapere dove finisce il built-in evita di cercare a lungo una funzione che non esiste.
 
