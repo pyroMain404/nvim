@@ -11,7 +11,8 @@
 ---   errorformat  same, for the error format
 ---   before    snippet run before (to open a file that fails to compile)
 ---   min       minimum number of entries expected, default 1
----   valid     require an entry to have a buffer and a line, default true
+---   valid     require an entry to have a line and a buffer whose file is on
+---             disk, default true. The file has to exist: see `located` below
 ---   entry     which entry that has to be, default 1, or 'any'. A build tool
 ---             that opens its report with a banner ('[ERROR] COMPILATION
 ---             ERROR :' from Maven) puts a legitimately fileless entry first,
@@ -45,8 +46,17 @@ P.run(function()
 
   local which = P.param('entry', 1)
   if P.param('valid', true) and list[1] ~= nil then
+    -- A buffer id and a line are not enough. An 'errorformat' whose `%f` is
+    -- relative to something other than the current directory still produces an
+    -- entry, and Vim resolves it against the cwd into a file that does not
+    -- exist: `]q` opens an empty buffer with a plausible name, and the entry
+    -- reports here with a perfectly good `bufnr`. Measured on a Godot project
+    -- whose paths are relative to the project root, with `:make` run from a
+    -- subdirectory. So the file has to be on disk for the entry to count.
     local located = function(e)
-      return e ~= nil and e.bufnr ~= 0 and e.lnum > 0
+      if e == nil or e.bufnr == 0 or e.lnum <= 0 then return false end
+      local name = vim.api.nvim_buf_get_name(e.bufnr)
+      return name ~= '' and vim.uv.fs_stat(name) ~= nil
     end
     local found = nil
     for index, entry in ipairs(list) do
@@ -59,7 +69,13 @@ P.run(function()
     P.check(
       ('entry %s points at a file and a line'):format(which),
       found ~= nil,
-      vim.inspect({ bufnr = shown.bufnr, lnum = shown.lnum, text = shown.text })
+      vim.inspect({
+        bufnr = shown.bufnr,
+        -- The name is the evidence: a wrong `%f` shows up here and nowhere else
+        name = shown.bufnr ~= 0 and vim.api.nvim_buf_get_name(shown.bufnr) or nil,
+        lnum = shown.lnum,
+        text = shown.text,
+      })
     )
   end
 
