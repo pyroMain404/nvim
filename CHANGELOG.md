@@ -121,6 +121,11 @@ a merge from 'minimax' conflict-free.
   `on_attach` of 'nvim-lspconfig' is what defines
   `:LspClangdSwitchSourceHeader`, the header/source jump, and a function
   written there would replace it silently.
+- Format C and C++ with `clang-format`, which comes with the same LLVM release
+  as the server, so `<Leader>lf` and the command line agree by construction. It
+  reads the project's '.clang-format', which the server would not; without that
+  file it falls back to the LLVM style, at the two spaces this config already
+  sets.
 
 ## 2026-09-14
 

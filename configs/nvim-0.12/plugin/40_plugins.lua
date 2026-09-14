@@ -269,6 +269,13 @@ later(function()
       css = { 'prettier' },
       scss = { 'prettier' },
       json = { 'prettier' },
+      -- Comes with LLVM, next to the server, so formatter and editor agree by
+      -- construction. It reads the project's '.clang-format', which the
+      -- server would not: the same reason `rustfmt` and `prettier` are
+      -- declared here. Without that file it falls back to the LLVM style, at
+      -- 2 spaces, which is already the default of 'plugin/10_options.lua'.
+      cpp = { 'clang-format' },
+      c = { 'clang-format' },
     },
   })
 end)
