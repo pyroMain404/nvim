@@ -547,9 +547,10 @@ later(function() require('mini.git').setup() end)
 -- - `:h MiniHipatterns.get_matches()` returns the matches of a single buffer,
 --   already parsed, so a location list of the current file costs a few lines
 --   (`:h setloclist()`). Per window, which is what a per file list should be.
--- - The whole project needs a search instead: `:h :grep` with `'grepprg'` set to
---   `ripgrep` fills the quickfix list, and the pattern is just the alternation of
---   the words highlighted below.
+-- - The whole project needs a search instead: `:h :grep` fills the quickfix list,
+--   and the pattern is just the alternation of the words highlighted below.
+--   Nothing to set up for it: since 0.11 Neovim defaults `:h 'grepprg'` to
+--   `rg --vimgrep -uu` when ripgrep is on the PATH (verified with `-u NONE`).
 --
 -- Keep the word list in one place when doing it: the highlighters here and the
 -- search pattern must not drift apart.
