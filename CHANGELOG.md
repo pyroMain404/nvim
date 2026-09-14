@@ -126,6 +126,19 @@ a merge from 'minimax' conflict-free.
   reads the project's '.clang-format', which the server would not; without that
   file it falls back to the LLVM style, at the two spaces this config already
   sets.
+- Give a C++ buffer the four things the runtime leaves out. `:make` builds the
+  project, through a 'compiler/cmake.lua' written here because the runtime
+  ships no compiler plugin for CMake - it inherits the 'errorformat' of `gcc`,
+  which already reads the diagnostics of clang, adds the two failures CMake
+  reports about itself, and discards the progress lines of Ninja. A plain
+  makefile takes `:compiler gcc` instead, whose default `make` is already the
+  right command. Folds follow functions and classes instead of indentation.
+  'path' gains the directories of the project, so `gf` on an `#include` reaches
+  a header that is not a sibling of the file - and gains only those, because
+  system include paths in a shared config are wrong by construction. And `:Run`
+  starts what the build produced, looked for under 'build/' and at the root:
+  with several programs it names them and refuses, with none it says to run
+  `:make` first.
 
 ## 2026-09-14
 
