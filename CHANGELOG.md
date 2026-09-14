@@ -110,6 +110,17 @@ a merge from 'minimax' conflict-free.
   to the legacy syntax files. The `cpp` parser requires `c`, which ships with
   Neovim but is named in the list anyway, because that list is also what the
   health check reads.
+- Attach `clangd` to C and C++ buffers, with `--background-index` so that
+  references and rename answer about files that were never opened,
+  `--clang-tidy` so that no separate linter is needed, and
+  `--header-insertion=never` so that accepting a completion does not edit the
+  top of the file. Which C++ standard a buffer is checked against is read per
+  translation unit from the project's compilation database, so a C++14 project
+  and a C++20 project opened in the same session each get their own; nothing is
+  written here. 'after/lsp/clangd.lua' holds `cmd` and nothing else, because the
+  `on_attach` of 'nvim-lspconfig' is what defines
+  `:LspClangdSwitchSourceHeader`, the header/source jump, and a function
+  written there would replace it silently.
 
 ## 2026-09-14
 

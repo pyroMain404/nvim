@@ -180,6 +180,10 @@ now_if_args(function()
     'ts_ls',
     -- Installed with `mise`, configured in 'after/lsp/jdtls.lua'
     'jdtls',
+    -- Installed with LLVM (WinGet), configured in 'after/lsp/clangd.lua'.
+    -- Covers C, C++, Objective-C and CUDA: the `filetypes` of
+    -- 'nvim-lspconfig' are already the right ones and are not copied over.
+    'clangd',
   })
 
   -- Code lens are actions a server announces at a precise place in the code:
