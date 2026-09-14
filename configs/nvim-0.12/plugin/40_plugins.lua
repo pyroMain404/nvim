@@ -86,6 +86,17 @@ now_if_args(function()
     -- plugins and the test configuration live, so it is read as often as the
     -- code. Neovim detects it as `xml`, not as a filetype of its own
     'xml',
+    -- C and C++, which are one parser set and not two: the `cpp` parser
+    -- declares `c` among its `requires` in 'parsers.lua' of
+    -- 'nvim-treesitter', so it does not build without it. `c` ships with
+    -- Neovim, and naming it here is what also makes it explicit to the
+    -- health check.
+    'cpp',
+    'c',
+    -- The files a C or C++ project is built from, read as often as the code -
+    -- the same reason `toml` sits next to `rust` and `xml` next to `java`
+    'cmake',
+    'make',
   }
   local isnt_installed = function(lang)
     return #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0

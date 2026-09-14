@@ -103,6 +103,14 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-15
+
+- Parse C, C++, CMake and makefiles with tree-sitter: highlighting, structural
+  folds and the textobjects of 'nvim-treesitter-textobjects' stop falling back
+  to the legacy syntax files. The `cpp` parser requires `c`, which ships with
+  Neovim but is named in the list anyway, because that list is also what the
+  health check reads.
+
 ## 2026-09-14
 
 - Run the project from the editor with `:Run`, one command with one meaning in
