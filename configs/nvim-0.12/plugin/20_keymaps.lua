@@ -150,7 +150,8 @@ local pick_workspace_symbols_live = '<Cmd>Pick lsp scope="workspace_symbol_live"
 -- command arguments to a table by loading them as Lua code, where backslashes of
 -- an expanded path are parsed as (mostly invalid) escape sequences.
 -- Call the picker directly with the path as a proper Lua value instead.
--- Remove after this is fixed upstream (still present in 'mini.nvim' 0.18.0).
+-- Remove after this is fixed upstream (still present in 'mini.nvim' ac5dffc,
+-- 2026-09-13).
 local pick_buf_path = function(picker, scope)
   return function()
     local path = vim.api.nvim_buf_get_name(0)

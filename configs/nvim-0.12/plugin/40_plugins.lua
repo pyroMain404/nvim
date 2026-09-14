@@ -189,7 +189,7 @@ now_if_args(function()
   -- the editor decides how to show them. The gap is the same one the comment
   -- on `lens.debug` in 'after/lsp/rust_analyzer.lua' describes, except this
   -- one is worth filling instead of turning off. Still missing in
-  -- 'nvim-lspconfig' ee1e369 (2026-09-01); delete this once it ships a handler.
+  -- 'nvim-lspconfig' ac9d2f7 (2026-09-10); delete this once it ships a handler.
   vim.lsp.commands['rust-analyzer.showReferences'] = function(command, ctx)
     -- Arguments are `{ uri, position, locations }`; only the third is needed.
     local locations = command.arguments and command.arguments[3] or {}

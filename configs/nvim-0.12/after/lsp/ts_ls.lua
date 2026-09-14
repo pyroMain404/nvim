@@ -86,7 +86,7 @@ return {
   -- the server, no client attached - which is the failure the whole file exists
   -- to prevent, wearing a different mask.
   --
-  -- Still true in 'nvim-lspconfig' ee1e369 (2026-09-01) on Neovim v0.12.5.
+  -- Still true in 'nvim-lspconfig' ac9d2f7 (2026-09-10) on Neovim v0.12.5.
   -- Delete this and go back to a plain `cmd_env` the day either the plugin
   -- forwards it or `cmd` stops being a function.
   --

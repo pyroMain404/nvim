@@ -100,7 +100,8 @@ end
 -- a patch against the working tree then fails with `:h E484`. Run those calls
 -- from the root instead and restore the directory after, as `setup_auto_root()`
 -- sets it anew (on the next event loop tick) for the buffer that gets opened.
--- Remove once 'mini.git' resolves the paths itself (still needed in 0.18.0).
+-- Remove once 'mini.git' resolves the paths itself (still needed in
+-- 'mini.nvim' ac5dffc, 2026-09-13).
 local at_repo_root = function(f, opts)
   local root = repo_root()
   if root == nil then return f(opts) end
