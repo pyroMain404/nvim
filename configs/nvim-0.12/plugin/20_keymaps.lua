@@ -14,7 +14,8 @@ local nmap = function(lhs, rhs, desc)
   vim.keymap.set('n', lhs, rhs, { desc = desc })
 end
 
--- Paste linewise before/after current line
+-- Paste linewise before/after current line, replacing the built-in `[p`/`]p`
+-- (indent-adjusted put, `:h ]p`) with an unindented one instead.
 -- Usage: `yiw` to yank a word and `]p` to put it on the next line.
 nmap('[p', '<Cmd>exe "iput! " . v:register<CR>', 'Paste Above')
 nmap(']p', '<Cmd>exe "iput "  . v:register<CR>', 'Paste Below')

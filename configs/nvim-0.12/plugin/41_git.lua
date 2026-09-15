@@ -445,7 +445,7 @@ local setup_patch_buf = function()
   -- would shadow useful defaults inside a regular patch or commit file
   if not vim.api.nvim_buf_get_name(0):find('^mini%a+://') then return end
   local bmap = function(lhs, rhs, desc)
-    vim.keymap.set('n', lhs, rhs, { buffer = 0, desc = desc })
+    vim.keymap.set('n', lhs, rhs, { buf = 0, desc = desc })
   end
   bmap('<CR>', show_at_cursor, 'Show at cursor')
   bmap('gF', show_diff_source, 'Show diff source')

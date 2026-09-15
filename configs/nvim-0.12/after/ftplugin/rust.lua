@@ -21,7 +21,7 @@
 -- buffer by mapping the key to itself (`:h MiniPairs.unmap_buf()`), which is
 -- what this line does. Double quotes keep pairing, and a character literal is
 -- typed in full.
-vim.keymap.set('i', "'", "'", { buf = true, desc = 'Insert a plain quote' })
+vim.keymap.set('i', "'", "'", { buf = 0, desc = 'Insert a plain quote' })
 
 -- Running the project, under the contract of 'lua/config/run.lua'. No reading of
 -- 'Cargo.toml' is needed here because cargo reads it: `default-run`, a single
