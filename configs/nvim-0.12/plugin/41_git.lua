@@ -147,14 +147,38 @@ end
 -- the one that matters, as staging happens against the index and not `rev`.
 -- The Git source is kept as a fallback for files absent from that revision,
 -- and reused across calls because it watches '.git/index' on its own.
+-- Per-(revision, directory) cache of which paths that revision has, relative
+-- to that directory - the same relative form `git show <rev>:./<path>` reads
+-- from the same `cwd` below. Answers `attach`'s fallback contract
+-- synchronously (mini.diff requires a synchronous `false` for a path the
+-- revision does not have, so `attach` itself can never become async) without
+-- a blocking `git show` on every buffer attach: only the FIRST attach for a
+-- given (revision, directory) pair pays a blocking `git ls-tree`, because
+-- that one answer has to exist before `attach` can return anything at all.
+local ls_tree_cache = {}
+local ls_tree = function(rev, cwd)
+  local key = rev .. '\30' .. cwd
+  if ls_tree_cache[key] ~= nil then return ls_tree_cache[key] end
+  local out = vim
+    .system({ 'git', 'ls-tree', '-r', '--name-only', rev }, { cwd = cwd, text = true })
+    :wait()
+  local files = {}
+  if out.code == 0 then
+    for _, line in ipairs(vim.split(out.stdout, '\n', { trimempty = true })) do
+      files[line] = true
+    end
+  end
+  ls_tree_cache[key] = files
+  return files
+end
+
 local diff_source_git = nil
 local diff_sources_at = function(rev)
   local attach = function(buf_id)
     local loc = buf_git_location(buf_id)
     if loc == nil then return false end
-    local cmd = { 'git', 'show', rev .. ':./' .. loc.path }
-    local out = vim.system(cmd, { cwd = loc.cwd }):wait()
-    if out.code ~= 0 then
+    local files = ls_tree(rev, loc.cwd)
+    if not files[loc.path] then
       -- A path the revision does not have is left to the Git source below.
       -- For a state at some commit there is no such fallback, as the buffer
       -- is not a file: read it as fully added, which is what the commit did
@@ -162,8 +186,32 @@ local diff_sources_at = function(rev)
       if not loc.at_commit then return false end
       return MiniDiff.set_ref_text(buf_id, '')
     end
-    -- Account for possible 'crlf' end of line in Git object
-    MiniDiff.set_ref_text(buf_id, (out.stdout:gsub('\r\n', '\n')))
+    -- The revision HAS this path, so `git show` only ever runs when there is
+    -- real content to fetch - and it runs asynchronously: `attach` only had
+    -- to answer whether a reference exists (from `ls_tree` above), not
+    -- supply it. `MiniDiff.set_ref_text()` is what hands the content back on
+    -- mini.diff's own schedule, matching the shape its own git source uses.
+    local cmd = { 'git', 'show', rev .. ':./' .. loc.path }
+    vim.system(
+      cmd,
+      { cwd = loc.cwd, text = true },
+      vim.schedule_wrap(function(out)
+        if out.code ~= 0 then
+          -- A real Git failure, not "the path is absent from this revision"
+          -- - that question was already answered by `ls_tree` above. Report
+          -- it as what it is, naming the command as it was run.
+          local why = vim.trim(out.stderr) ~= '' and vim.trim(out.stderr)
+            or ('exited with code ' .. out.code)
+          vim.notify(
+            ('`git show %s:./%s` failed: %s'):format(rev, loc.path, why),
+            vim.log.levels.ERROR
+          )
+          return
+        end
+        -- Account for possible 'crlf' end of line in Git object
+        MiniDiff.set_ref_text(buf_id, (out.stdout:gsub('\r\n', '\n')))
+      end)
+    )
   end
   -- NOTE: `error()`, not `vim.notify()`, is correct HERE and only here: this
   -- is called by 'mini.diff' itself when `gh` stages a hunk, and it does so
