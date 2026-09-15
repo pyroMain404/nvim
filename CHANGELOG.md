@@ -105,6 +105,26 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-15
 
+- Resolve the "to be measured" callout on the Godot cursor-line offset in
+  `godot-project-setup`'s SKILL.md and in `docs/analisi_funzionale_godot.md`:
+  both pointed at an open question that `nvim-language-support/references/godot.md`
+  §8 had already closed (godotengine/godot#118228 — `p_line` is already
+  1-based, `cursor({line},{col})` without `+1` is correct). Replaced the open
+  callout with a link to that conclusion instead of duplicating it. Also added
+  the missing Godot entry to `nvim-project-environment/references/projects.md`
+  for `W:/repos/godot-sandbox`.
+
+- Report a program that `:Run` started detached and that died on the spot. The
+  branch has no window to show output in, so a start that failed was
+  indistinguishable from one that worked: measured on a Godot project without
+  `run/main_scene`, `:Run` said nothing at all, while `godot --path .` on the
+  command line printed `Can't run project: no main scene defined in the project`
+  and exited 1. A non-zero exit now arrives as an error naming the program and
+  the last line it wrote — from stderr, or from stdout, which is where Godot
+  writes that message (measured: 65 bytes there, 0 on stderr). A program that
+  is still running is reported by nothing, and what is kept of its output is
+  bounded, so a game running for hours cannot grow Neovim's memory.
+
 - Open the file a `res://` reference points at as a buffer that behaves like
   one. The `BufReadCmd` resolving the scheme was not `nested`, and an
   autocommand does not trigger other autocommands by default
