@@ -6,9 +6,11 @@
 -- which external programs are installed, at which version, and what stops working
 -- when one of them is missing. Run it with `:checkhealth config`.
 --
--- It is the only file under 'lua/' in this config. `:checkhealth` discovers any
--- 'lua/**/health.lua' on `:h 'runtimepath'` and names the check after its path,
--- so this one is reachable as `config`.
+-- `:checkhealth` discovers any 'lua/**/health.lua' on `:h 'runtimepath'` and names
+-- the check after its path, so this one is reachable as `config`. It is not the
+-- only file under 'lua/': `lua/config/run.lua` and `lua/config/mise.lua` also live
+-- there, required by name rather than found by path - see `language-declaration.md`
+-- for the test that decides which of the two a new module belongs to.
 --
 -- Structure: one `check_*()` function per area, called from `M.check()` in the
 -- order they should be read. This is the shape every healthcheck in Neovim's own
@@ -25,34 +27,44 @@
 local M = {}
 local health = vim.health
 
--- Read the first line of `cmd` output, or `nil` if it can not be run
+-- Read the first line of `cmd` output, or `nil` if it can not be run.
 local function first_line(cmd)
   local ok, out = pcall(function() return vim.system(cmd):wait() end)
   if not ok or out.code ~= 0 then return nil end
-  return vim.split(vim.trim(out.stdout), '\n')[1]
+  return vim.trim(vim.split(vim.trim(out.stdout), '\n')[1] or '')
 end
 
--- External tools =============================================================
--- Programs the config uses when they are there and does without when they are
--- not. None of them is required for startup (`:h mini.nvim-general-principles`).
-local function check_external_tools()
-  health.start('config: external tools')
+-- Report an external program: its version when present, what breaks when not.
+-- Every executable check in this file goes through this one function, so a
+-- new language's tools read `report('<tool>', '<what breaks>', '<fix>')`
+-- rather than hand-rolling the executable/version/warn dance again.
+local function report(name, why, advice)
+  if vim.fn.executable(name) ~= 1 then
+    health.warn('`' .. name .. '` is not available', { advice, why })
+    return nil
+  end
+  local version = first_line({ name, '--version' }) or 'found'
+  health.ok(name .. ': ' .. version)
+  return version
+end
 
-  local tools = {
-    { name = 'git', why = "'mini.git' and 'mini.diff' show no data" },
-    { name = 'rg', why = '`<Leader>ff` and `<Leader>fg` get slower' },
-    { name = 'lazygit', why = '`<Leader>tl` warns and does nothing' },
-    -- Not reported by any runtime healthcheck, yet `AGENTS.md` requires
-    -- `stylua --check .` to pass before a change is finished
-    { name = 'stylua', why = 'config formatting can not be checked' },
-  }
-
-  for _, tool in ipairs(tools) do
-    if vim.fn.executable(tool.name) ~= 1 then
-      health.warn('`' .. tool.name .. '` is not available', tool.why)
+-- Whether each of `langs` has an installed tree-sitter parser, not merely
+-- available - the same check 'plugin/40_plugins.lua' uses to decide what to
+-- install. `advice` is a function of the language name giving the fix line;
+-- omit it to use the default ("restart with `<lang>` in `languages`").
+local function check_parsers(langs, advice)
+  advice = advice
+    or function(lang)
+      return "Restart Neovim once with '" .. lang .. "' in `languages`, and wait"
+    end
+  for _, lang in ipairs(langs) do
+    if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
+      health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
+        advice(lang),
+        'Highlighting falls back to the legacy syntax file',
+      })
     else
-      local version = first_line({ tool.name, '--version' }) or 'found'
-      health.ok(tool.name .. ': ' .. version)
+      health.ok('tree-sitter parser `' .. lang .. '`: installed')
     end
   end
 end
@@ -70,28 +82,16 @@ end
 local function check_lang()
   health.start('config: <lang>')
 
-  if vim.fn.executable('<tool>') ~= 1 then
-    return health.warn('`<tool>` is not available', {
-      'Install it with `mise use -g <tool>@latest`',
-      '<what stops working without it>',
-    })
-  end
-  health.ok('<tool>: ' .. (first_line({ '<tool>', '--version' }) or 'found'))
+  report(
+    '<tool>',
+    '<what stops working without it>',
+    'Install it with `mise use -g <tool>@latest`'
+  )
 
-  -- The tree-sitter parser has to be installed, not just available. This is the
-  -- same check 'plugin/40_plugins.lua' uses to decide what to install.
-  if #vim.api.nvim_get_runtime_file('parser/<lang>.*', false) == 0 then
-    health.warn('tree-sitter parser for `<lang>` is not installed', {
-      "Add '<lang>' to `languages` in 'plugin/40_plugins.lua' and restart",
-      'Highlighting falls back to the legacy syntax file',
-    })
-  else
-    health.ok('tree-sitter parser: installed')
-  end
+  check_parsers({ '<lang>' })
 end
 
 function M.check()
-  check_external_tools()
   check_lang()
 end
 
