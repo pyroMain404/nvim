@@ -27,6 +27,8 @@
 --   in a single one.
 -- - `Config.git.toggle_diff_ref(buf_id, rev)` - reference a revision, or restore
 --   the Git index when one is already referenced.
+-- - `Config.git.toggle_overlay(buf_id)` - turn the in-buffer overlay of the
+--   reference text on and off, guarded against a buffer where it does not apply.
 -- - `Config.git.blame` - whether the line under the cursor is blamed.
 -- - `Config.git.toggle_blame()` - turn that annotation on and off.
 -- - `Config.git.log(buf_id)` - Git log of the repository or of one file.
@@ -109,7 +111,7 @@ local at_repo_root = function(f, opts)
   vim.fn.chdir(root)
   local ok, err = pcall(f, opts)
   vim.fn.chdir(cwd)
-  if not ok then error(err, 0) end
+  if not ok then vim.notify(tostring(err), vim.log.levels.ERROR) end
 end
 
 -- Diff reference =============================================================
@@ -163,6 +165,13 @@ local diff_sources_at = function(rev)
     -- Account for possible 'crlf' end of line in Git object
     MiniDiff.set_ref_text(buf_id, (out.stdout:gsub('\r\n', '\n')))
   end
+  -- NOTE: `error()`, not `vim.notify()`, is correct HERE and only here: this
+  -- is called by 'mini.diff' itself when `gh` stages a hunk, and it does so
+  -- without a `pcall` (`:h MiniDiff.apply_hunks()` source), so raising is
+  -- the only way to refuse the apply. Every other `error()` in this file was
+  -- a config mapping callback, where nothing calls it inside a `pcall` and
+  -- the traceback reaches the user as a raw error instead of a clean
+  -- notification - the contrast is deliberate.
   local apply_hunks = function()
     error('Hunks are shown against ' .. rev .. '. Restore the index to apply.')
   end
@@ -254,6 +263,20 @@ Config.git.toggle_diff_ref = function(buf_id, rev)
   end
   local choose = function(item) Config.git.set_diff_ref(buf_id, item:match('^%S+')) end
   MiniExtra.pickers.git_commits({ path = path }, { source = { choose = choose } })
+end
+
+-- Turn the in-buffer overlay of the reference text on and off, guarded
+-- against `MiniDiff.toggle_overlay()`'s own raise on a buffer where
+-- 'mini.diff' is not enabled (`:h MiniDiff.toggle_overlay()`) - a scratch
+-- buffer, a `minigit://` patch buffer, or a file outside a repository, all
+-- reachable from `<Leader>go`. Example usage:
+-- - `:lua Config.git.toggle_overlay()` - what `<Leader>go` does
+Config.git.toggle_overlay = function(buf_id)
+  buf_id = buf_id == nil and vim.api.nvim_get_current_buf() or buf_id
+  if MiniDiff.get_buf_data(buf_id) == nil then
+    return vim.notify('mini.diff is not enabled here', vim.log.levels.WARN)
+  end
+  MiniDiff.toggle_overlay(buf_id)
 end
 
 -- Patch navigation ===========================================================
@@ -478,14 +501,33 @@ end
 -- NOTE: the path is written out rather than left as `%:p`, which would name the
 -- current buffer and not the one asked for.
 local git_log_cmd = [[Git log --pretty=format:\%h\ \%as\ │\ \%s --topo-order]]
+-- NOTE: probed first with `git log --oneline -1`, mirroring `show_patch()`
+-- below: 'mini.git' opens no window and says nothing when the log it runs
+-- is empty (a path with no commits, `--follow` included), which reads
+-- exactly like a mapping that does not work.
 Config.git.log = function(buf_id)
-  local postfix = ''
+  local postfix, label = '', 'here'
   if buf_id ~= nil then
     local path = buf_path(buf_id)
     if path == nil then return end
     postfix = ' --follow -- ' .. vim.fn.fnameescape(path)
+    label = vim.fn.fnamemodify(path, ':t')
   end
-  vim.cmd(git_log_cmd .. postfix)
+  local root = repo_root()
+  if root == nil then
+    return vim.notify('Not inside a Git repository', vim.log.levels.WARN)
+  end
+  local probe = { 'git', 'log', '--oneline', '-1' }
+  if buf_id ~= nil then
+    vim.list_extend(probe, { '--follow', '--', buf_path(buf_id) })
+  end
+  local on_done = function(out)
+    if out.code ~= 0 or vim.trim(out.stdout) == '' then
+      return vim.notify('No commits for ' .. label, vim.log.levels.WARN)
+    end
+    vim.cmd(git_log_cmd .. postfix)
+  end
+  vim.system(probe, { cwd = root, text = true }, vim.schedule_wrap(on_done))
 end
 
 -- Patches ====================================================================
@@ -626,6 +668,11 @@ local blame_clear = function(buf_id)
 end
 
 local blame_show = function(buf_id, lnum)
+  -- Guarded like `blame_clear()` above: this runs from a 150 ms timer
+  -- (`blame_track()` below), so the buffer can have been wiped by the time
+  -- it fires - `MiniGit.get_buf_data()` raises on an invalid id instead of
+  -- answering `nil` (`:h MiniGit.get_buf_data()`).
+  if not vim.api.nvim_buf_is_valid(buf_id) then return end
   local root = (MiniGit.get_buf_data(buf_id) or {}).root
   if root == nil or vim.bo[buf_id].modified then return end
 
