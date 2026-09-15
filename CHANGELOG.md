@@ -134,6 +134,24 @@ a merge from 'minimax' conflict-free.
   `export(type)`, `onready` and `setget`, and `inpute` - whose `_input_event`
   signature changed in Godot 4 - is removed rather than left to expand into
   code the engine rejects.
+- Give a GDScript buffer what talks to the engine. `:make` asks Godot whether
+  the current script parses, through a 'compiler/godot.lua' written here, and a
+  parse error lands in the quickfix list with its line. It answers a smaller
+  question than the other compiler plugins, and deliberately: `--check-only`
+  needs a script, so "does this project build" is not a question the engine
+  answers from the command line, and a semantic error - a method that does not
+  exist - produces no output and exit code 0, which leaves type checking to the
+  language server alone. `:make` also runs from the project root, because the
+  file names the engine prints are relative to it while Neovim resolves
+  quickfix names against its own directory: without that, `:make` from
+  'scripts/' produced entries pointing at 'scripts/scripts/…' and `]q` opened
+  an empty buffer with a plausible name. `:Run` starts the game, and its
+  default is the main scene the project declares - a project that declares none
+  refuses loudly instead of starting the wrong thing. `:GodotDoc` opens the
+  documentation of the word under the cursor, which the LSP hover also gives
+  but only with the editor open, that is not while reading code. And
+  `:GodotReconnect` reattaches the server after Godot has been restarted, which
+  otherwise leaves every open buffer without a client and nothing to say so.
 - Parse C, C++, CMake and makefiles with tree-sitter: highlighting, structural
   folds and the textobjects of 'nvim-treesitter-textobjects' stop falling back
   to the legacy syntax files. The `cpp` parser requires `c`, which ships with
