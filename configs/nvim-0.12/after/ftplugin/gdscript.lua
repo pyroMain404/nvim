@@ -167,3 +167,24 @@ vim.api.nvim_buf_create_user_command(0, 'GodotReconnect', function()
   end
   vim.cmd.edit()
 end, { desc = 'Reattach the language server after restarting Godot' })
+
+-- Keys for the two commands above, in the `<Leader>o` group of
+-- 'plugin/20_keymaps.lua' - which already exists, so no clue entry is added
+-- there: 'mini.clue' reads the mappings that are actually set, and these are
+-- buffer-local, so they appear in a '.gd' buffer and nowhere else.
+--
+-- Only inside a Godot project. Both commands are defined in every GDScript
+-- buffer, because reading a loose '.gd' is a real thing to do and the
+-- documentation is useful there too; a KEY is a different promise - it says
+-- the engine is part of what this buffer is - and outside a project the second
+-- one has no server to reattach to.
+--
+-- `<Leader>o` and not `<Leader>l`: that group is the language server, and one
+-- of these two exists precisely because the server is not answering.
+if root ~= nil then
+  local map = function(lhs, rhs, desc)
+    vim.keymap.set('n', lhs, rhs, { buffer = true, desc = desc })
+  end
+  map('<Leader>og', '<Cmd>GodotDoc<CR>', 'Godot docs (word)')
+  map('<Leader>oG', '<Cmd>GodotReconnect<CR>', 'Godot server reattach')
+end

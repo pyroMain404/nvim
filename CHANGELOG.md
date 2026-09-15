@@ -105,6 +105,13 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-15
 
+- Reach the two Godot commands from a key, inside a Godot project and nowhere
+  else: `<Leader>og` opens the documentation of the word under the cursor and
+  `<Leader>oG` reattaches the language server after the editor was restarted.
+  Both are buffer-local, so they cost nothing in any other buffer and only show
+  up in 'mini.clue' where they exist. They sit in the *Other* group and not in
+  *Language*, because one of the two exists precisely for when the language
+  server is not answering. `:Run` keeps no mapping, as in every other language.
 - Read the rest of a Godot project, not only its scripts. The `gdshader` and
   `godot_resource` parsers join `gdscript`, so a shader and a '.tscn' are
   parsed rather than left to a syntax file, and 'ftdetect/godot.lua' gives a
