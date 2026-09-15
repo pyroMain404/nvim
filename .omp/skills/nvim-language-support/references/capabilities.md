@@ -510,6 +510,29 @@ sospetto non è l'`errorformat` ma **da dove il comando è partito**; e se deve 
 altrove sono `%D` e `%X` a rimettere in fila i percorsi, non un `%f` più elaborato
 (`:h quickfix-directory-stack`).
 
+Quando lo strumento **non stampa nessuna riga di directory** — `%D` e `%X` non hanno
+niente da consumare, perché nessun `Entering directory` viene mai scritto — l'unica
+leva rimasta è *da dove* `:make` parte, e non sta in `compiler/`: un compiler plugin
+imposta opzioni, e questa è una directory. La forma che regge è una coppia
+`QuickFixCmdPre` / `QuickFixCmdPost` in `after/ftplugin/<ft>.lua`, con due dettagli
+che costano un giro ciascuno:
+
+- **non può essere buffer-local.** Quei due eventi confrontano il `pattern` con il
+  **nome del comando** (`make`, `lmake`), quindi `buffer = 0` chiede un pattern che
+  non corrisponderà mai. Serve un augroup con nome, creato con `clear = true` così
+  che il secondo buffer di quel filetype sostituisca la coppia invece di
+  aggiungerne una, più il test sul filetype dentro la callback;
+- **`vim.fn.chdir()` e non `:lcd`.** Cambia la directory nello scope che quella
+  corrente ha già — finestra, tab o globale — e restituisce la precedente, che è
+  esattamente ciò che serve per rimetterla a posto. `:lcd` lascerebbe alla finestra
+  una directory locale che non aveva, e da lì `MiniMisc.setup_auto_root()` non la
+  muoverebbe più.
+
+L'output viene analizzato dentro `:make`, quindi **prima** di `QuickFixCmdPost`:
+ripristinare lì la directory non disfa le voci già risolte. Misurato su Godot con
+`:make` lanciato da una sottodirectory — una sola voce, riga giusta, file esistente
+su disco, e cwd identica prima e dopo.
+
 ### Quickfix e location list non sono la stessa lista
 
 È una distinzione poco sfruttata e utile proprio qui: la **quickfix è una sola per

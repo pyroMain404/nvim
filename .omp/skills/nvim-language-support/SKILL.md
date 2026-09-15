@@ -589,6 +589,11 @@ guasto di questo elenco è un livello che ne ha sovrascritto un altro.
   sapere qualcosa; un compiler plugin da scrivere che ne **eredita** uno del
   runtime invece di ricopiarlo; e lo standard del linguaggio come proprietà del
   progetto e non della config.
+- `references/godot.md` — Godot e GDScript: il caso in cui il server non lo avvia
+  Neovim ma un'applicazione che l'utente apre a parte, con una porta sola per
+  macchina e l'assenza come stato legittimo; un `:make` che risponde a una
+  domanda più piccola di quella che sembra; e un set di snippet già attivo e già
+  sbagliato, che è il modo in cui la Fase 1 viene saltata senza accorgersene.
 - `assets/` — gli scheletri dei file da creare.
 
 ### La forma di una reference di linguaggio
