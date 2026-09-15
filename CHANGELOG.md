@@ -152,6 +152,13 @@ a merge from 'minimax' conflict-free.
   but only with the editor open, that is not while reading code. And
   `:GodotReconnect` reattaches the server after Godot has been restarted, which
   otherwise leaves every open buffer without a client and nothing to say so.
+- Report the Godot toolchain in `:checkhealth config`, but only inside a Godot
+  project, because the whole toolchain is a game's rather than the machine's.
+  Presence and version of the engine are two checks and not one: a `mise` shim
+  is on PATH whatever version it does or does not resolve, so a directory that
+  declares none answers `No version is set for shim` while `executable()` keeps
+  saying everything is installed. The port is reported and never tested -
+  connecting would turn a closed editor, which is a choice, into a failure.
 - Parse C, C++, CMake and makefiles with tree-sitter: highlighting, structural
   folds and the textobjects of 'nvim-treesitter-textobjects' stop falling back
   to the legacy syntax files. The `cpp` parser requires `c`, which ships with

@@ -641,6 +641,91 @@ local function check_cpp()
   end
 end
 
+-- Godot is the only section that reports on nothing when it does not apply, and
+-- the reason is that its whole toolchain is a game's, not the machine's: a
+-- section saying "no Godot project here" is not a check, it is noise in every
+-- other report.
+--
+-- Searched from the buffer the reader came from and not from buffer 0, for the
+-- reason `check_angular()` documents above: `:checkhealth` runs inside its own
+-- nameless report buffer, so `vim.fs.root(0, …)` answers nil for every run.
+local function check_godot()
+  local source = vim.fn.bufnr('#')
+  if source == -1 or vim.api.nvim_buf_get_name(source) == '' then
+    source = vim.fn.getcwd()
+  end
+  local root = vim.fs.root(source, { 'project.godot' })
+  if root == nil then return end
+
+  health.start('config: Godot')
+  health.ok('Godot project: ' .. root)
+
+  -- The engine is the prerequisite of everything else here: it holds the
+  -- language server, and it is what `:make` calls. Two failures, not one, and
+  -- the second is the one `vim.fn.executable()` alone would call healthy - a
+  -- `mise` shim exists on PATH whatever version it does or does not resolve,
+  -- and a directory that declares none answers `No version is set for shim`
+  -- while everything keeps looking installed
+  if vim.fn.executable('godot') ~= 1 then
+    health.warn('`godot` is not available', {
+      'Install it with `mise use -g godot@4`',
+      'No engine means no language server, and `:make` has nothing to call',
+    })
+  else
+    local version = first_line({ 'godot', '--version' })
+    if version == nil then
+      health.warn('`godot` is on PATH but answers no version in this directory', {
+        ('Declare one for the game: `mise use godot@4`, run in %s'):format(root),
+        'A `mise` shim resolves the version from the current directory, so it '
+          .. 'exists and refuses to run where no mise.toml names the engine',
+      })
+    else
+      health.ok('godot: ' .. version)
+    end
+  end
+
+  -- Declared in 'plugin/40_plugins.lua' for `gdscript`. Without it `<Leader>lf`
+  -- falls through to `lsp_format`, and the Godot server does not format at all
+  report(
+    'gdformat',
+    '`<Leader>lf` and `<Leader>lF` have nothing to call in a GDScript buffer',
+    'Install it with `mise use -g pipx:gdtoolkit@4.5.0`'
+  )
+
+  -- The port is a machine resource and not a project one, which is the failure
+  -- worth naming here: a second Godot opened on another game gets NO port at
+  -- all - it does not fall back to another one - so a buffer of this project
+  -- attaches to the first editor and answers with the symbols of the other
+  -- game, silently. Reported, never tested: connecting would turn "the editor
+  -- is closed", which is a legitimate choice, into a failure of the user's
+  local port = vim.env.GDScript_Port
+  if port == nil then
+    health.info(
+      'the language server is the Godot editor itself, on 127.0.0.1:6005 - no '
+        .. 'client at all means it is closed, and only the semantics are gone. '
+        .. 'A second game opened at the same time needs `godot --lsp-port` and '
+        .. "a matching `GDScript_Port` in its own '.nvim.lua'"
+    )
+  else
+    health.info(
+      ('GDScript_Port is %s, so this project expects a Godot started with '):format(
+        port
+      ) .. ('`--lsp-port %s` rather than the default 6005'):format(port)
+    )
+  end
+
+  -- The parser has to be installed, not merely available. This is the same
+  -- check 'plugin/40_plugins.lua' uses to decide what to install
+  if #vim.api.nvim_get_runtime_file('parser/gdscript.*', false) == 0 then
+    health.warn('tree-sitter parser for `gdscript` is not installed', {
+      "Restart Neovim once with 'gdscript' in `languages`, and wait",
+      'Highlighting falls back to the legacy syntax file',
+    })
+  else
+    health.ok('tree-sitter parser `gdscript`: installed')
+  end
+end
+
 function M.check()
   check_external_tools()
   check_lua()
@@ -648,6 +733,7 @@ function M.check()
   check_angular()
   check_java()
   check_cpp()
+  check_godot()
 end
 
 return M
