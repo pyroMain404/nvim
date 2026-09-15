@@ -290,15 +290,9 @@ local git_changed = function(diff_args, root, pathspec, label, on_open)
   vim.system(cmd, { cwd = root, text = true }, vim.schedule_wrap(on_done))
 end
 
--- Root of the repository to review, `nil` outside one - which is answered once
--- here rather than in each source, all four of them starting with the question.
-local review_root = function()
-  local root = Config.git.root()
-  if root == nil then
-    vim.notify('Not inside a Git repository', vim.log.levels.WARN)
-  end
-  return root
-end
+-- Root of the repository to review, `nil` outside one - `Config.git`'s own
+-- resolver and warning, reused instead of repeated across all four sources.
+local review_root = function() return Config.git.require_root() end
 
 -- Reference `rev` in every buffer, which is what `<Leader>gr` does by hand, and
 -- write down in the review tabpage both it and the reference it replaces.
@@ -366,8 +360,14 @@ Config.review.commit_only = function(rev, pathspec)
   local root = review_root()
   if root == nil then return end
   local only = function(commit)
-    local reference = function() reference_rev(commit .. '~') end
-    git_changed({ commit .. '^!' }, root, pathspec, 'in ' .. commit, reference)
+    local reference = function() reference_rev(Config.git.parent(commit)) end
+    git_changed(
+      { Config.git.only(commit) },
+      root,
+      pathspec,
+      'in ' .. commit,
+      reference
+    )
   end
   if rev ~= nil then return only(rev) end
 

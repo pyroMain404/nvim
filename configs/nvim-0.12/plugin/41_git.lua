@@ -21,6 +21,10 @@
 --
 -- - `Config.git.root()` - root of the repository the current directory belongs
 --   to, `nil` outside one.
+-- - `Config.git.require_root(buf_id)` - a root, preferring the buffer's own
+--   when it has one, with the "not inside a repository" warning included.
+-- - `Config.git.parent(rev)` / `Config.git.only(rev)` - the revision right
+--   before `rev`, or `rev` excluding its parents.
 -- - `Config.git.diff_ref` - revision used as 'mini.diff' reference text in every
 --   buffer, `nil` for the Git index. Per buffer it is `vim.b.diff_ref`.
 -- - `Config.git.set_diff_ref(buf_id, rev)` - reference `rev` in every buffer, or
@@ -71,6 +75,15 @@ local later = Config.later
 
 Config.git = {}
 
+-- Revision expressions Git understands, written once instead of at every
+-- call site that names a commit's parent or excludes it. Example usage:
+-- - `:lua Config.git.parent('abc1234')` - the commit right before it
+-- - `:lua Config.git.only('abc1234')` - the commit EXCLUDING its parents
+--   (`:h gitrevisions`, "rev^!"), which resolves against the empty tree for
+--   the first commit of a repository, where `<rev>~..<rev>` has none to name
+Config.git.parent = function(rev) return rev .. '~' end
+Config.git.only = function(rev) return rev .. '^!' end
+
 -- Repository =================================================================
 
 -- Root of the repository the current directory belongs to, `nil` outside one.
@@ -82,6 +95,23 @@ Config.git = {}
 -- answering it in two places is how the two answers start to differ.
 local repo_root = function() return vim.fs.root(vim.fn.getcwd(), '.git') end
 Config.git.root = repo_root
+
+-- `repo_root()`, and the one "Not inside a Git repository" warning written
+-- once instead of at every call site that needs a root before it can do
+-- anything. `buf_id`, when given, prefers the buffer's OWN resolved root
+-- from 'mini.git' over the cwd-based answer - the fix G11 needed for
+-- `show_at_cursor()`, generalised here for every other caller. Example
+-- usage:
+-- - `:lua Config.git.require_root()` - the repository root, or a WARN
+-- - `:lua Config.git.require_root(0)` - the current buffer's own root
+Config.git.require_root = function(buf_id)
+  local root = (buf_id ~= nil and (MiniGit.get_buf_data(buf_id) or {}).root)
+    or repo_root()
+  if root == nil then
+    vim.notify('Not inside a Git repository', vim.log.levels.WARN)
+  end
+  return root
+end
 
 -- Path on disk of the file `buf_id` holds, `nil` when it holds none - the case
 -- for a scratch buffer and for the copy of a file at some commit which
@@ -399,7 +429,7 @@ local diff_ref_at_parent = function(buf_id)
   local name = vim.api.nvim_buf_get_name(buf_id)
   local commit = name:match('^minigit://%d+/.*show (%x+~*):')
   if commit == nil then return end
-  Config.git.set_diff_ref(buf_id, commit .. '~')
+  Config.git.set_diff_ref(buf_id, Config.git.parent(commit))
 end
 
 -- Only the first file opened from a patch takes a full height column of its
@@ -565,10 +595,8 @@ Config.git.log = function(buf_id)
     postfix = ' --follow -- ' .. vim.fn.fnameescape(path)
     label = vim.fn.fnamemodify(path, ':t')
   end
-  local root = repo_root()
-  if root == nil then
-    return vim.notify('Not inside a Git repository', vim.log.levels.WARN)
-  end
+  local root = Config.git.require_root(buf_id)
+  if root == nil then return end
   local probe = { 'git', 'log', '--oneline', '-1' }
   if buf_id ~= nil then
     vim.list_extend(probe, { '--follow', '--', buf_path(buf_id) })
@@ -606,10 +634,8 @@ end
 -- between "nothing changed" and "nothing happened". It is `--quiet`, so Git
 -- stops at the first difference it finds instead of formatting a patch.
 local show_patch = function(buf_id, diff_args, label)
-  local root = repo_root()
-  if root == nil then
-    return vim.notify('Not inside a Git repository', vim.log.levels.WARN)
-  end
+  local root = Config.git.require_root(buf_id)
+  if root == nil then return end
 
   local cmd, postfix = { 'git', 'diff', '--quiet' }, ''
   vim.list_extend(cmd, diff_args)
@@ -693,7 +719,7 @@ end
 -- tree there, while the range is refused as an unknown revision.
 Config.git.diff_commit_only = function(buf_id, rev)
   local patch_of = function(id, commit)
-    show_patch(id, { commit .. '^!' }, 'in ' .. commit)
+    show_patch(id, { Config.git.only(commit) }, 'in ' .. commit)
   end
   pick_commit_patch(buf_id, rev, patch_of)
 end
