@@ -122,6 +122,20 @@ Config.now_if_args = vim.fn.argc(-1) > 0 and Config.now or Config.later
 Config.on_event = function(ev, f) misc.safely('event:' .. ev, f) end
 Config.on_filetype = function(ft, f) misc.safely('filetype:' .. ft, f) end
 
+-- HACK: a snapshot of the global default of `'path'`, taken before any
+-- buffer can write it. `plugin/41_git.lua` and `after/ftplugin/c.lua` both
+-- prepend project directories to it, and both need the value that was there
+-- BEFORE - but the FIRST write to a never-locally-set global-local string
+-- option like `'path'`, from ANY scope (`vim.bo`, `vim.opt_local`, even
+-- `:setlocal`), overwrites Neovim's own compiled-in GLOBAL default too
+-- (measured: `vim.o.path` reads the written value afterwards, in a buffer
+-- that never touched it). Reading `vim.o.path` a second time then reads
+-- back what the first write already corrupted it to, so the entries grow
+-- without bound across repeated `:setf`/buffer opens. Present in Neovim
+-- 0.12.5; remove if a future release stops promoting a local write into the
+-- global slot.
+Config.pristine_path = vim.o.path
+
 -- Ask a yes/no question and run `on_yes` only on a clear 'y'. Used by any
 -- part of the config that needs permission before acting, so the prompt shape
 -- and the predicate live in one place.

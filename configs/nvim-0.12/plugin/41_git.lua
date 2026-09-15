@@ -432,7 +432,13 @@ local setup_patch_buf = function()
   local root = repo_root()
   if root ~= nil then
     root = vim.fn.escape(vim.fs.normalize(root), ' ,')
-    vim.bo.path = root .. ',' .. vim.bo.path
+    -- `Config.pristine_path`, not `vim.o.path` or `vim.bo.path`: both read
+    -- back whatever a PREVIOUS write already promoted into the global slot
+    -- - see the HACK at `Config.pristine_path`'s definition in 'init.lua'.
+    -- Building from the snapshot instead of the live option is what keeps
+    -- 'path' from growing by one entry on every re-`:edit` or second
+    -- `:setf git`.
+    vim.bo.path = root .. ',' .. Config.pristine_path
   end
 
   -- Fold by file entry (level 1), hunk (2), and hunk body (3). Start at the

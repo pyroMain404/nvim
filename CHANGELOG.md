@@ -113,6 +113,14 @@ a merge from 'minimax' conflict-free.
   (`]q` opening an empty buffer with a plausible name). The chdir pair is now
   shared as `require('config.run').make_root()`.
 
+- Stop `'path'` from growing without bound in a Git patch buffer and across
+  C/C++ projects opened in the same session. Neovim 0.12.5 promotes the
+  FIRST write to a never-locally-set global-local string option, from any
+  buffer, into the global slot too - so reading `'path'` back to prepend to
+  it a second time reads what the first write already corrupted it to. Both
+  sites now build from a snapshot taken once at startup, before any buffer
+  can touch the option.
+
 - Give `.c` files everything `.cpp` already had: `:compiler`, folds by
   function/class, project `'path'` entries and `:Run`. A `.c` buffer is
   Neovim's own fallback filetype for a header-less file, and the ftplugin

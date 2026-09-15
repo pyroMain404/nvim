@@ -89,14 +89,13 @@ if root ~= nil then
       table.insert(dirs, (dir:gsub('[ ,]', '\\%0')))
     end
   end
-  -- NOTE: `vim.o.path` and not `vim.bo.path`. 'path' is global-local, and the
-  -- buffer-local value of a buffer that never set it is the EMPTY STRING, not
-  -- the global one in effect (measured: the probe reported a 'path' starting
-  -- with a comma, so `.` and the working directory - the two entries that
-  -- resolve an include of a sibling header - had just been dropped). Reading
-  -- the global and writing the buffer-local one is what `:setlocal path+=`
-  -- does (`:h vim.bo`, `:h vim.o`).
-  vim.bo.path = vim.o.path .. ',' .. table.concat(dirs, ',')
+  -- `Config.pristine_path`, not `vim.o.path` or `vim.bo.path`: reading
+  -- either live option here reads back whatever a PREVIOUS C/C++ buffer's
+  -- write already promoted into the global slot - see the HACK at
+  -- `Config.pristine_path`'s definition in 'init.lua'. Opening a second
+  -- project's file in the same session, before this was fixed, kept the
+  -- first project's directories and appended the second's on top.
+  vim.bo.path = Config.pristine_path .. ',' .. table.concat(dirs, ',')
 end
 
 -- Running the project, under the contract of 'lua/config/run.lua'. What a C/C++
