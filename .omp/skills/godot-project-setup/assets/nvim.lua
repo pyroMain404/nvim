@@ -1,46 +1,52 @@
 -- ┌──────────────────────────────┐
--- │ Project environment: <gioco> │
+-- │ Project environment: <game>  │
 -- └──────────────────────────────┘
 --
--- Copiare nella root del gioco come '.nvim.lua', tenere solo le righe che
--- servono, poi aprirlo una volta e `:trust`. Senza fiducia il file non viene
--- sorgentato e niente di quanto segue esiste, SENZA un errore (`:h 'exrc'`).
--- Ogni modifica annulla la fiducia: `:trust` va rifatto.
+-- Copy into the game's root as '.nvim.lua', keep only the lines that apply,
+-- then open it once and `:trust`. Without trust the file is not sourced and
+-- nothing below exists, with NO error (`:h 'exrc'`). Every edit voids trust:
+-- `:trust` has to be redone.
 --
--- Questo file è letto all'avvio, prima di qualunque buffer. È la ragione per cui
--- le tre cose qui sotto non possono stare in un ftplugin: arriverebbe tardi.
+-- This file is read at startup, before any buffer. That is why the three
+-- things below cannot live in an ftplugin: they would arrive too late.
+--
+-- This is a diff against 'nvim-project-environment/assets/nvim.lua', the base
+-- '.nvim.lua' skeleton: only what Godot specifically adds is here.
 
--- 1. La porta su cui l'editor Godot apre i file in QUESTA istanza di Neovim.
---    Va insieme agli `Exec Flags` di Godot:
+-- 1. The port the Godot editor opens files on, in THIS Neovim instance. Goes
+--    together with Godot's own `Exec Flags`:
 --      --server 127.0.0.1:55432 --remote-send "<C-\><C-N>:e {file}<CR>:call cursor({line},{col})<CR>"
 --
---    `serverstart()` aggiunge un listener SECONDARIO: `v:servername` resta la
---    named pipe di default, e `serverlist()` mostra entrambi (misurato). Un
---    secondo bind sulla stessa porta SOLLEVA, quindi il `pcall`: due Neovim
---    aperti sullo stesso gioco non sono un errore, e il primo tiene la porta.
+--    `serverstart()` adds a SECONDARY listener: `v:servername` stays the
+--    default named pipe, and `serverlist()` shows both (measured). A second
+--    bind on the same port RAISES, hence the `pcall`: two Neovim instances
+--    open on the same game are not an error, and the first one keeps the
+--    port.
 --
---    NOTE: TCP e non una named pipe. `//./pipe/<nome>` è la forma che vuole
---    Windows e si scrive diversamente altrove; e la ricetta diffusa
---    `--listen {project}/server.pipe` crea un file DENTRO il repository, che poi
---    va escluso dal versionamento e nascosto in ogni picker.
+--    NOTE: TCP, not a named pipe. `//./pipe/<name>` is the form Windows wants
+--    and is written differently elsewhere; and the common recipe
+--    `--listen {project}/server.pipe` creates a file INSIDE the repository,
+--    which then has to be excluded from version control and hidden in every
+--    picker.
 local ok, err = pcall(vim.fn.serverstart, '127.0.0.1:55432')
 if not ok then
   vim.notify('Godot editor port: ' .. tostring(err), vim.log.levels.WARN)
 end
 
--- 2. SOLO se questo non è il primo Godot aperto sulla macchina. La porta è una
---    risorsa della macchina: la seconda istanza dell'editor non ripiega su
---    un'altra, resta senza, e i buffer di questo progetto si attaccherebbero in
---    silenzio al server dell'ALTRO gioco. Va insieme a `godot --lsp-port 6105`.
---    Cancellare queste righe se il caso non esiste.
+-- 2. ONLY if this is not the first Godot instance open on the machine. The
+--    port is a resource of the machine: the second instance of the editor
+--    does not fall back to another one, is left without, and this project's
+--    buffers would silently attach to the OTHER game's server. Goes together
+--    with `godot --lsp-port 6105`. Delete these lines if that case does not
+--    apply.
 -- vim.env.GDScript_Port = '6105'
 
--- 3. SOLO se il gioco non si avvia con `godot --path <root>`, che è il default
---    di `:Run` per un buffer GDScript. Una lista sostituisce il comando intero e
---    gli argomenti della chiamata le si aggiungono in coda.
+-- 3. ONLY if the game does not start with `godot --path <root>`, which is
+--    the default `:Run` a GDScript buffer already uses. A list replaces the
+--    whole command, and the arguments of the call are appended to it.
 -- vim.g.run_command = { 'godot', '--path', vim.fn.getcwd(), 'res://scenes/dev.tscn' }
 
--- 4. SOLO se i '*.gd.uid' accanto a ogni script danno fastidio nei picker e in
---    'mini.files'. Sono file da committare e non da cancellare: qui si nascondono
---    soltanto alla vista, ed è una preferenza di questo progetto. Il campo è
---    `content.filter`, `:h MiniFiles.config`.
+-- 4. ONLY if the '*.gd.uid' files next to every script get in the way in
+--    pickers and in 'mini.files'. They are files to commit, not to delete:
+--    this only hides them from view, and it is a preference of this project.
+--    The field is `content.filter`, `:h MiniFiles.config`.

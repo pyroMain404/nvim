@@ -179,7 +179,7 @@ dell'editor, perché il client non torna da solo.
 
 ## Reference
 
-- `assets/nvim.lua` — template del `.nvim.lua`, da copiare e potare.
+- `assets/nvim.lua` — solo le tre aggiunte specifiche di Godot, come diff contro `assets/nvim.lua` di `nvim-project-environment`, che resta l'unico scheletro completo di un `.nvim.lua`.
 - `assets/gitignore` — le righe minime da aggiungere al `.gitignore` del gioco.
 - `assets/mise-tasks.toml` — i task di test ed esportazione.
 - Il lato Neovim — cosa la config già fa, e cosa il motore risponde davvero da riga di
