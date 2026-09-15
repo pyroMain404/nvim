@@ -191,7 +191,16 @@ Config.git.set_diff_ref = function(buf_id, rev)
   else
     buf_id = buf_id == 0 and vim.api.nvim_get_current_buf() or buf_id
     vim.b[buf_id].diff_ref = rev
-    vim.b[buf_id].minidiff_config = source ~= nil and { source = source } or nil
+    -- A per-buffer restore (`rev == nil`) must write the Git index source
+    -- EXPLICITLY: leaving `minidiff_config` unset falls back to whatever the
+    -- GLOBAL config's source currently is, which is the referenced revision
+    -- when one is active everywhere - so `<Leader>gR` on a buffer while
+    -- `<Leader>gr` references a commit restored nothing, silently kept
+    -- diffing against that commit, while the notification below said "Git
+    -- index". The `rev ~= nil` branch already writes its own source
+    -- correctly; this mirrors it for the index case.
+    diff_source_git = diff_source_git or MiniDiff.gen_source.git()
+    vim.b[buf_id].minidiff_config = { source = source or { diff_source_git } }
     bufs = { buf_id }
   end
 
