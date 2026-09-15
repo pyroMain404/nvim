@@ -113,6 +113,13 @@ a merge from 'minimax' conflict-free.
   (`]q` opening an empty buffer with a plausible name). The chdir pair is now
   shared as `require('config.run').make_root()`.
 
+- Give `.c` files everything `.cpp` already had: `:compiler`, folds by
+  function/class, project `'path'` entries and `:Run`. A `.c` buffer is
+  Neovim's own fallback filetype for a header-less file, and the ftplugin
+  that set all of this existed only for `cpp` - while `clangd`,
+  `clang-format`, the `c` parser and the health check all claim C is
+  supported. The shared body now lives in `after/ftplugin/c.lua`.
+
 ## 2026-09-15
 
 - Resolve the "to be measured" callout on the Godot cursor-line offset in
