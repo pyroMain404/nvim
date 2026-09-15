@@ -88,7 +88,7 @@ configs/nvim-0.12/
 ├── plugin/40_plugins.lua           'gdscript' in languages, in vim.lsp.enable() e in formatters_by_ft
 ├── after/lsp/gdscript.lua          solo root_markers
 ├── after/snippets/gdscript.json    correzione dei cinque prefissi Godot 3
-├── after/ftplugin/gdscript.lua     :make dalla radice, :GodotDoc, :GodotReconnect
+├── after/ftplugin/gdscript.lua     :make dalla radice, :Run, :GodotDoc, :GodotReconnect
 ├── compiler/godot.lua              makeprg ed errorformat
 └── lua/config/health.lua           check_godot()
 ```
@@ -136,17 +136,20 @@ relativi a un manifesto. `--path` da solo non basta: parla al motore, non a Neov
 
 ### 4.3 Il resto del buffer
 
-- **`:Run` non c'è, ed è una misura.** Il comando sarebbe universale —
-  `godot --path <root>` più gli argomenti, con `run/main_scene` come default letto
-  dal motore, che rifiuta da sé con `Can't run project: no main scene defined in
-  the project` (exit 1) — ma il contratto di `lua/config/run.lua` **cattura**, e un
-  gioco è l'altro ramo di `capabilities.md` §19. Verificato invocando il comando
-  vero su un motore con finestra: il `buftype=terminal` si apre, il job è vivo, e il
-  buffer resta **vuoto**, mentre l'output esce sullo stdout del processo Neovim.
-  Attenzione al controllo che sembra equivalente e non lo è: `godot --path . | cat`
-  da una shell **mostra** `print()` nella pipe, e legittimerebbe la forma sbagliata.
-  Perché `:Run` entri serve prima che il contratto condiviso guadagni il ramo
-  staccato — decisione su tutti i linguaggi, non su questo.
+- **`:Run`** è `godot --path <root>` più gli argomenti, quindi
+  `:Run res://main.tscn` avvia una scena. Il default non si legge: lo legge il
+  motore (`run/main_scene`), e un progetto che non ne dichiara rifiuta con
+  `Can't run project: no main scene defined in the project` ed esce 1 — il
+  fallimento rumoroso che il contratto chiede.
+  **Staccato**, che è il ramo di `capabilities.md` §19 per un programma con
+  finestra propria, ed è una misura e non una preferenza: invocato nella forma
+  catturata, il gioco apre un `buftype=terminal` con un job vivo il cui buffer
+  resta **vuoto**, mentre l'output esce sullo stdout del processo Neovim — in
+  sessione, lo schermo su cui l'interfaccia è disegnata. Attenzione al controllo
+  che sembra equivalente e non lo è: `godot --path . | cat` da una shell mostra
+  `print()` nella pipe e legittimerebbe la forma sbagliata. Il prezzo del ramo
+  staccato è che il gioco sopravvive a `:qa`, ed è il verso giusto: chiudere
+  l'editor non è una ragione per uccidere ciò che sta girando.
 - **`:GodotDoc`** apre `docs.godotengine.org/en/stable/search.html?q=<cword>`. La
   forma `classes/class_<nome>.html`, che è quella di ogni ricetta in giro, è un
   colpo diretto per una classe e una 404 per tutto il resto — e la maggior parte
@@ -186,8 +189,7 @@ I body usano `\t`: è ciò che il ftplugin del runtime impone già con `noexpand
    e rename dalle mapping `<Leader>l` già presenti. Senza Godot aperto restano
    editing, tree-sitter, `gdformat` e `:make` — e **nessuna diagnostica affatto**.
 4. `:make` per sapere se il file corrente si parsa, `]q` e `[q` per camminarne gli
-   errori. `:GodotDoc` per leggere la documentazione. Il gioco si avvia da fuori,
-   finché §4.3 resta come sta.
+   errori. `:Run` per avviare il gioco, `:GodotDoc` per leggere la documentazione.
 5. `<Leader>lf` per una modifica mirata, `<Leader>lF` per l'intero script.
 6. Test ed esportazione dipendono dal progetto: la sede sono i task nel `mise.toml`
    del gioco, non questa config. `--export-release` vuole gli export template della
@@ -241,15 +243,18 @@ GDScript, tutti eseguiti e tutti passati:
 - `:make` **da una sottodirectory**, non dalla radice, su uno script rotto: una sola
   voce, riga giusta, e il file della voce deve **esistere su disco** (la sonda
   `quickfix` lo pretende). Subito dopo, la cwd deve essere quella di prima.
-- I due comandi sono `-buffer`: presenti in un `.gd`, assenti in un buffer Lua.
+- I tre comandi sono `-buffer`: presenti in un `.gd`, assenti in un buffer Lua.
   Misurato confrontando `nvim_buf_get_commands()` nei due buffer, che dice in un
   colpo solo entrambe le metà — `:GodotDoc` in un buffer Lua darebbe `E492`, ma una
-  sonda che pretende un errore non distingue le ragioni. La stessa lista è anche la
-  prova che `:Run` **non** è definito qui.
+  sonda che pretende un errore non distingue le ragioni.
 - Un comando che avvia un'applicazione si verifica **sostituendo `vim.fn.jobstart`**
-  con uno stub che ne registra gli argomenti. Serve per sapere *quale* comando
-  partirebbe, e non basta: dove la domanda è *dove finisce l'output*, lo stub non
-  risponde e il comando va invocato davvero, leggendo il terminal buffer (§4.3).
+  (o `vim.system`) con uno stub che ne registra gli argomenti. Serve per sapere
+  *quale* comando partirebbe, e non basta: dove la domanda è *dove finisce
+  l'output* — cioè quale dei due rami del contratto è quello giusto — lo stub non
+  risponde, e il comando va invocato davvero. Per il ramo staccato, dove non c'è
+  nessun buffer da leggere, la prova è **un effetto sul disco**: una scena che
+  scrive un file e chiude, più il controllo che nessuna finestra si sia aperta in
+  Neovim (`buftype` vuoto, una sola window).
 - Gli snippet: contare quelli attivi (24, non 25) e leggere i body dei quattro
   corretti, non fidarsi del fatto che il file esista.
 - `gdformat` attraverso 'conform.nvim' su un file volutamente mal formattato: gli

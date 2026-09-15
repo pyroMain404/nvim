@@ -1021,9 +1021,14 @@ un comando solo, `:Run`, con un significato definito che ogni filetype rispetta:
 
 1. **Esegue il progetto, non il file.** L'unica eccezione è un file che non appartiene
    a nessun progetto, dove le due cose coincidono.
-2. **Cattura**: un terminale in split, così l'output si vede mentre arriva e il
-   processo muore con l'editor invece di restare a tenere una porta. Ciò che ha una
-   finestra propria va staccato, ed è l'altro ramo della tabella qui sopra.
+2. **Mostra l'output dove il programma lo scrive davvero**, ed è una scelta per
+   linguaggio dentro lo stesso contratto, non una per tutti. Il default è
+   **catturato**: un terminale in split, così l'output si vede mentre arriva e il
+   processo muore con l'editor invece di restare a tenere una porta. Un programma
+   con finestra propria passa `{ detach = true }`, l'altro ramo della tabella qui
+   sopra, e paga il fatto di sopravvivere a `:qa`. Quale dei due valga per un
+   linguaggio si **misura**, come dice il blocco qui sopra: non si deduce dal tipo
+   di programma e non si prova da una shell.
 3. **Il default si legge dal progetto, mai si fissa.** Quale script, quale goal, quale
    binario è una proprietà del checkout. Dove non si può leggere, il comando deve
    **fallire rumorosamente** — `cargo run` in una workspace elenca i binari fra cui
