@@ -25,3 +25,7 @@
 -- `:copen`. The second index writes like `:setlocal` and keeps the value on
 -- this buffer inside this window (`:h vim.wo`).
 vim.wo[0][0].list = false
+
+-- Undo what this file sets when the filetype changes away from `qf`
+-- (`:h b:undo_ftplugin`).
+vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '') .. '\n' .. 'setlocal list<'

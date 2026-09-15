@@ -21,3 +21,8 @@
 -- comments are broken automatically. The 85 columns feed 'colorcolumn' and an
 -- explicit `gq`/`gw`, and nothing else.
 vim.bo.textwidth = 85
+
+-- Undo what this file sets when the filetype changes away from `lua`
+-- (`:h b:undo_ftplugin`), appending to what the runtime ftplugin already
+-- registered rather than overwriting it.
+vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '') .. '\n' .. 'setlocal textwidth<'

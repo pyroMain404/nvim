@@ -31,3 +31,13 @@ require('config.run').make_root({ 'package.json' })
 -- explained there.
 local run = require('config.run')
 run.command(run.npm)
+
+-- Undo what this file sets when the filetype changes away from `typescript`
+-- (`:h b:undo_ftplugin`). `:Run` undoes itself, registered inside
+-- 'lua/config/run.lua''s `M.command()`.
+vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
+  .. '\n'
+  .. table.concat(
+    { 'setlocal makeprg< errorformat<', 'unlet! b:current_compiler' },
+    ' | '
+  )

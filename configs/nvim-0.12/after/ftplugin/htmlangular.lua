@@ -35,3 +35,13 @@ vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- explained there.
 local run = require('config.run')
 run.command(run.npm)
+
+-- Undo what this file sets when the filetype changes away from `htmlangular`
+-- (`:h b:undo_ftplugin`). `:Run` undoes itself, registered inside
+-- 'lua/config/run.lua''s `M.command()`.
+vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
+  .. '\n'
+  .. table.concat({
+    'setlocal makeprg< errorformat< foldmethod< foldexpr<',
+    'unlet! b:current_compiler',
+  }, ' | ')

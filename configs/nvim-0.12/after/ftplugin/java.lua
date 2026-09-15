@@ -164,3 +164,14 @@ if found ~= nil then require('config.run').make_root({ 'pom.xml', 'build.xml' })
 -- so it is passed as arguments here or it lives in the project's '.nvim.lua'
 -- (`:h 'exrc'`).
 require('config.run').command(function(args) return build.run(args, found) end)
+
+-- Undo what this file sets when the filetype changes away from `java`
+-- (`:h b:undo_ftplugin`). `:Run` undoes itself, registered inside
+-- 'lua/config/run.lua''s `M.command()`.
+vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
+  .. '\n'
+  .. table.concat({
+    'setlocal shiftwidth< softtabstop< foldmethod< foldexpr<',
+    'setlocal makeprg< errorformat<',
+    'unlet! b:current_compiler',
+  }, ' | ')

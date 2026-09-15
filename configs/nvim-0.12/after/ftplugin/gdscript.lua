@@ -188,3 +188,19 @@ if root ~= nil then
   map('<Leader>og', '<Cmd>GodotDoc<CR>', 'Godot docs (word)')
   map('<Leader>oG', '<Cmd>GodotReconnect<CR>', 'Godot server reattach')
 end
+
+-- Undo what this file sets when the filetype changes away from `gdscript`
+-- (`:h b:undo_ftplugin`). The commands are always defined; the compiler
+-- selection, `'include'` and the two mappings only exist inside a project.
+local undo_parts = { 'delcommand GodotDoc', 'delcommand GodotReconnect' }
+if root ~= nil then
+  vim.list_extend(undo_parts, {
+    'setlocal makeprg< errorformat< include<',
+    'unlet! b:current_compiler',
+    'silent! nunmap <buffer> <Leader>og',
+    'silent! nunmap <buffer> <Leader>oG',
+  })
+end
+vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
+  .. '\n'
+  .. table.concat(undo_parts, ' | ')

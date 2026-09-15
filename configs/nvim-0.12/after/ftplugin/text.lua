@@ -23,3 +23,7 @@
 -- buffer inside this window, so opening a source file in the same window gets
 -- the indicators back and coming back here loses them again (`:h vim.wo`).
 vim.wo[0][0].list = false
+
+-- Undo what this file sets when the filetype changes away from `text`
+-- (`:h b:undo_ftplugin`).
+vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '') .. '\n' .. 'setlocal list<'

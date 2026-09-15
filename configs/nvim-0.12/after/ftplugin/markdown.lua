@@ -43,3 +43,14 @@ vim.b.minisurround_config = {
     },
   },
 }
+
+-- Undo what this file sets when the filetype changes away from `markdown`
+-- (`:h b:undo_ftplugin`). The `gO` deletion above removes a buffer-local
+-- override that only ever existed for this filetype, so there is nothing to
+-- restore for it.
+vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
+  .. '\n'
+  .. table.concat({
+    'setlocal spell< wrap< foldmethod< foldexpr<',
+    'lua vim.b.minisurround_config = nil',
+  }, ' | ')
