@@ -31,17 +31,8 @@ P.run(function()
   if not available then return end
   parser:parse(true)
 
-  local find = P.param('find')
-  if find ~= nil then
-    vim.fn.cursor(1, 1)
-    local line = vim.fn.search(find, 'W')
-    P.check('`' .. find .. '` found in the buffer', line > 0, line)
-    if line == 0 then return end
-  else
-    vim.api.nvim_win_set_cursor(0, { P.param('row', 1), P.param('col', 0) })
-  end
-
-  local cursor = vim.api.nvim_win_get_cursor(0)
+  local cursor = P.locate()
+  if cursor == nil then return end
   local node = vim.treesitter.get_node()
   P.check('a node exists under the cursor', node ~= nil, vim.inspect(cursor))
   if node == nil then return end

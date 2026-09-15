@@ -61,6 +61,40 @@ names for states that must not see each other.
 Stop the named session and exit. Always do this when a series of probes is
 done: the instance survives the shell otherwise.
 
+.PARAMETER Columns
+Terminal width to set before the probe runs (`-cmd 'set columns=...'`).
+Defaults to 200: wide enough that a layout probe does not wrap on its own.
+
+.PARAMETER Lines
+Terminal height, same reasoning as -Columns. Defaults to 60.
+
+.PARAMETER Cwd
+Working directory Neovim is started in (`Start-Process -WorkingDirectory`).
+Matters for anything that resolves relative to the cwd rather than the file
+being edited - a language server's root detection, `setup_auto_root()`,
+a compiler plugin that walks up from the current directory.
+
+.PARAMETER Appname
+`$env:NVIM_APPNAME` for the process, to probe a different config
+(`:h $NVIM_APPNAME`) than the one this session runs. Unset by default, which
+leaves Neovim's own default in effect.
+
+.PARAMETER TimeoutSec
+Seconds before the watchdog kills a hung probe. Defaults to 60; raise it for
+a probe that waits on something genuinely slow (a first-time parser install,
+a cold language server index) rather than a probe that is actually stuck.
+
+.PARAMETER Json
+Ask the probe to report as JSON (`$Params['json'] = $true`) instead of
+whatever plain-text shape it defaults to. Not every probe honours this - read
+the probe's own header.
+
+.PARAMETER Clean
+Start Neovim with `--clean`: no user config, no plugins. Use it to tell apart
+"this config causes it" from "this is Neovim's own behaviour" - a probe that
+disagrees between a plain run and `-Clean` is measuring the config, not
+Neovim.
+
 .PARAMETER Reset
 Wipe every buffer before running the probe in a session. State carries over
 between probes of the same session - a buffer left modified by an `insert`, a

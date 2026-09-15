@@ -84,6 +84,26 @@ function M.expect(text, pattern, actual)
   return M.check(text .. ' matches `' .. pattern .. '`', ok, actual)
 end
 
+--- Position the cursor from a `find` parameter (searched for) or explicit
+--- `row`/`col` parameters - the "locate one spot in the buffer" contract
+--- every probe that inspects a single position needs, written out
+--- identically in 'treesitter.lua' and 'highlight.lua' before this existed.
+--- Returns the cursor position (1-based row, 0-based col), or `nil` when
+--- `find` was given and not found - the `check()` for that failure has
+--- already run, so the caller only has to test for `nil` and return.
+function M.locate()
+  local find = M.param('find')
+  if find ~= nil then
+    vim.fn.cursor(1, 1)
+    local line = vim.fn.search(find, 'W')
+    M.check('`' .. find .. '` found in the buffer', line > 0, line)
+    if line == 0 then return nil end
+  else
+    vim.api.nvim_win_set_cursor(0, { M.param('row', 1), M.param('col', 0) })
+  end
+  return vim.api.nvim_win_get_cursor(0)
+end
+
 --- Check a list of rendered lines against the `expect` and `absent` patterns.
 ---
 --- Both are optional, and both report the line that decided the verdict rather

@@ -20,17 +20,8 @@ local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
 P.run(function()
-  local find = P.param('find')
-  if find ~= nil then
-    vim.fn.cursor(1, 1)
-    local line = vim.fn.search(find, 'W')
-    P.check('`' .. find .. '` found in the buffer', line > 0, line)
-    if line == 0 then return end
-  else
-    vim.api.nvim_win_set_cursor(0, { P.param('row', 1), P.param('col', 0) })
-  end
-
-  local cursor = vim.api.nvim_win_get_cursor(0)
+  local cursor = P.locate()
+  if cursor == nil then return end
   local info = vim.inspect_pos(0, cursor[1] - 1, cursor[2])
 
   -- Both names are kept, `@keyword.lua -> Statement`, because only the first
