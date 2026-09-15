@@ -420,7 +420,11 @@ local show_at_cursor = function()
   -- relative to the repository root, hence the same resolution as above.
   local path = vim.api.nvim_buf_get_name(0):match('^minigit://%d+/edit (.*)$')
   if path == nil then return diff_ref_at_parent(0) end
-  local root = repo_root()
+  -- The buffer's OWN root, not `repo_root()` (cwd-based): the two differ
+  -- whenever Neovim's cwd is not the repository the patch came from, and
+  -- 'mini.git' already resolved and stored this buffer's root when it
+  -- opened it - the same source `blame_show()` reads.
+  local root = (MiniGit.get_buf_data(0) or {}).root or repo_root()
   if root ~= nil then
     path = vim.fn.fnameescape(vim.fs.normalize(root)) .. '/' .. path
   end
@@ -798,8 +802,17 @@ Config.git.lazygit = function()
     vim.cmd('checktime')
   end)
 
-  -- Runs in current directory, which 'mini.misc' keeps at the project root
-  vim.fn.jobstart('lazygit', { term = true, on_exit = on_exit })
+  -- Runs in current directory, which 'mini.misc' keeps at the project root.
+  -- An argv LIST, not a string: `jobstart()` returns 0 or -1 instead of
+  -- raising when the program can not start (`:h jobstart()`), which a
+  -- string command would also do, but the list form is what every other
+  -- process in this file already uses and keeps the two consistent.
+  local job_id = vim.fn.jobstart({ 'lazygit' }, { term = true, on_exit = on_exit })
+  if job_id <= 0 then
+    pcall(vim.api.nvim_win_close, win_id, true)
+    pcall(vim.api.nvim_buf_delete, buf_id, { force = true })
+    return vim.notify('Could not start `lazygit`', vim.log.levels.ERROR)
+  end
   vim.cmd('startinsert')
 end
 
