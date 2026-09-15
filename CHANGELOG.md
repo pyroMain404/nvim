@@ -105,6 +105,18 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-15
 
+- Open the file a `res://` reference points at as a buffer that behaves like
+  one. The `BufReadCmd` resolving the scheme was not `nested`, and an
+  autocommand does not trigger other autocommands by default
+  (`:h autocmd-nested`): the `:edit` it performs ran with them blocked, so the
+  resolved buffer got its text and nothing else. Measured on the same `gf` and
+  the same fixture, against a baseline of the previous configuration:
+  `filetype` empty, cursor at (1, 0), no language server client attached and no
+  `.gd` ftplugin command, against `gdscript` with the highlighting of the
+  parser, the position `MiniMisc.setup_restore_cursor()` remembers, one
+  `gdscript` client, and `:make` / `:Run` / `:GodotDoc` present. The same
+  redirect also stops aborting with `Vim:E325` when another Neovim instance
+  holds the target file open.
 - Let `gf` reach the real file of a `preload('res://...')` or `load(...)`
   reference. `includeexpr` cannot do this: `findfile()` treats anything
   containing `"://"` as URL-like and never reports it missing, so the

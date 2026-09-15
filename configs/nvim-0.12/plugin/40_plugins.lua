@@ -235,10 +235,19 @@ now_if_args(function()
   -- name "can't be found" - is never reached. Any `scheme://` reference in
   -- any language hits this same wall; see 'after/ftplugin/gdscript.lua' for
   -- where 'isfname' and 'include' still pull their own weight around it.
+  -- NOTE: `nested` is what makes the redirect produce an ordinary buffer, and
+  -- without it the failure is silent. Autocommands do not trigger each other
+  -- by default (`:h autocmd-nested`), so the `:edit` below would run with
+  -- autocommands blocked: the resolved buffer gets its text and nothing else.
+  -- Measured in an isolated Neovim: `filetype` stays empty, and neither
+  -- `BufReadPost` nor `FileType` fires - which costs the highlighting, the
+  -- LSP attach and every `.gd` ftplugin command (`:make`, `:Run`, `:GodotDoc`)
+  -- at once, leaving a buffer that looks like a file and acts like a scratch.
   vim.api.nvim_create_autocmd('BufReadCmd', {
     pattern = 'res://*',
     group = vim.api.nvim_create_augroup('config-godot-res', { clear = true }),
     desc = 'Resolve a res:// reference to the real file of its Godot project',
+    nested = true,
     callback = function(args)
       local ghost = args.buf
       local previous = vim.fn.bufname('#')
