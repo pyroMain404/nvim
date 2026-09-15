@@ -39,6 +39,8 @@
 -- `organizeImports`, extract refactorings, decompiled sources. Worth taking
 -- when that is the day's work, not before.
 
+local mise = require('config.mise')
+
 -- The major release of a Java version, in any of the spellings that reach this
 -- file: 'temurin-8.0.504+1' and '1.8' are 8, 'temurin-21.0.12+101.0.LTS' and
 -- '21' are 21, 'graalvm-community-21.0.2' is 21.
@@ -69,7 +71,7 @@ end
 -- this file: the directory is 'temurin-8.0.504+1' today and something else
 -- after the next update, and the set of releases changes whenever a project
 -- arrives on one nobody had met yet. It costs one process while this file is
--- read, once per session.
+-- read, once per session, through `config.mise`.
 --
 -- NOTE: two JDKs of the same release collapse into one entry, and which of the
 -- two wins is decided by comparing the version strings - arbitrary between
@@ -79,39 +81,32 @@ end
 --
 -- NOTE: `mise` absent makes `vim.system()` throw `ENOENT` rather than return a
 -- failing exit code, which at this point would abort the rest of the file and
--- leave the server without its settings - hence the `pcall`, in the shape
--- `first_line()` of 'lua/config/health.lua' uses for the same reason.
-local function installed_jdks()
-  local ok, out = pcall(
-    function() return vim.system({ 'mise', 'ls', 'java', '--json' }):wait() end
-  )
-  if not ok or out.code ~= 0 then return {} end
-
-  local decoded, entries = pcall(vim.json.decode, out.stdout)
-  if not decoded or type(entries) ~= 'table' then return {} end
-
+-- leave the server without its settings - hence the `pcall` inside
+-- `config.mise.installed()`, in the shape `first_line()` of 'lua/config/health.lua'
+-- uses for the same reason.
+local installed_jdks = mise.installed('java')
+local jdks = {}
+if installed_jdks ~= nil then
+  -- `config.mise` returns newest first; iterate backwards to keep the original
+  -- oldest-first order and the duplicate-release tiebreaker this file had.
   local by_release = {}
-  for _, entry in ipairs(entries) do
-    local major = nil
-    if entry.installed and entry.install_path ~= nil then
-      major = major_of(entry.version)
-    end
-    local known = major ~= nil and by_release[major] or nil
-    if major ~= nil and (known == nil or known.version < entry.version) then
-      by_release[major] = {
-        major = major,
-        version = entry.version,
-        path = entry.install_path,
-      }
+  for i = #installed_jdks, 1, -1 do
+    local entry = installed_jdks[i]
+    if entry.path ~= nil then
+      local major = major_of(entry.version)
+      local known = major ~= nil and by_release[major] or nil
+      if major ~= nil and (known == nil or known.version < entry.version) then
+        by_release[major] = {
+          major = major,
+          version = entry.version,
+          path = entry.path,
+        }
+      end
     end
   end
-
-  local jdks = vim.tbl_values(by_release)
+  jdks = vim.tbl_values(by_release)
   table.sort(jdks, function(a, b) return a.major < b.major end)
-  return jdks
 end
-
-local jdks = installed_jdks()
 
 -- The JDK the *server itself* runs on, which is not the one a project is
 -- compiled against. 'bin/jdtls.py' picks it in this order: `--java-executable`,

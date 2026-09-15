@@ -17,6 +17,8 @@
 -- not the Node the project builds with - and, because of the HACK below, the
 -- one line of command that carries it.
 
+local mise = require('config.mise')
+
 -- The Node the *server* runs on, which is not the Node the project builds with.
 --
 -- A `mise` shim resolves its tools from the current directory, so a repository
@@ -41,28 +43,15 @@
 -- shim recomputes its own environment from the tools of its working directory
 -- and overwrites what it inherited, so anything pointing at an interpreter is
 -- read and then discarded - silently, which is the part that costs a day.
-local function newest_node()
-  local ok, out = pcall(
-    function() return vim.system({ 'mise', 'ls', 'node', '--json' }):wait() end
-  )
-  if not ok or out.code ~= 0 then return nil end
-
-  local decoded, entries = pcall(vim.json.decode, out.stdout)
-  if not decoded or type(entries) ~= 'table' then return nil end
-
-  -- Compared by major and not as strings, where '8.17.0' sorts above '20.20.2'
-  local newest = nil
-  for _, entry in ipairs(entries) do
-    local major = tonumber(tostring(entry.version):match('^(%d+)'))
-    if entry.installed and major ~= nil then
-      local known = newest ~= nil and tonumber(newest:match('^(%d+)')) or -1
-      if major > known then newest = entry.version end
-    end
+local node = nil
+for _, entry in ipairs(mise.installed('node') or {}) do
+  local major = tonumber(tostring(entry.version):match('^(%d+)'))
+  if major ~= nil then
+    local known = node ~= nil and tonumber(node:match('^(%d+)')) or -1
+    if major > known then node = entry.version end
   end
-  return newest
 end
 
-local node = newest_node()
 if node == nil then
   vim.notify_once(
     'no Node is installed through `mise`, so `ts_ls` runs on whatever Node the '
