@@ -38,12 +38,24 @@ Config.format = {}
 -- the whole buffer and applies only the diffs falling inside the range, which
 -- is the same result by another road.
 -- The end column has to be a real column of a real line: `math.huge` is not an
--- integer, and 'conform.nvim' silently formats nothing when given one.
+-- integer, and 'conform.nvim' silently formats nothing when given one. A
+-- range whose line is gone by the time this runs (the buffer changed between
+-- reading `data.hunks` and this call) is skipped rather than formatted as an
+-- empty range, which `range = { start = { N, 0 }, ['end'] = { N, 0 } }` would
+-- silently do.
 local format_range = function(from, to)
-  local last = vim.api.nvim_buf_get_lines(0, to - 1, to, false)[1] or ''
-  return require('conform').format({
+  local last = vim.api.nvim_buf_get_lines(0, to - 1, to, false)[1]
+  if last == nil then
+    vim.notify(
+      'Skipped a hunk: the buffer changed while formatting',
+      vim.log.levels.WARN
+    )
+    return nil, false
+  end
+  local err, did_edit = require('conform').format({
     range = { start = { from, 0 }, ['end'] = { to, #last } },
   })
+  return err, did_edit
 end
 
 --- Format the lines that differ from the diff reference.
@@ -54,12 +66,26 @@ end
 Config.format.changed = function()
   local ok, conform = pcall(require, 'conform')
   if not ok then
-    return vim.notify("'conform.nvim' is not loaded yet", vim.log.levels.WARN)
+    return vim.notify("'conform.nvim' is not loaded yet", vim.log.levels.ERROR)
   end
+  -- `list_formatters()` only names AVAILABLE conform formatters (a declared
+  -- one whose binary is missing does not count), and never counts the LSP
+  -- fallback 'plugin/40_plugins.lua' configures (`lsp_format = 'fallback'`).
+  -- Refusing on the first alone left a Java buffer (no CLI formatter
+  -- declared, jdtls formats) and a Lua buffer without `stylua` warned and
+  -- untouched by `<Leader>lf`, while `<Leader>lF` formatted them through the
+  -- server - two entry points of one API disagreeing. Warn only when BOTH
+  -- are absent.
   if #conform.list_formatters(0) == 0 then
-    local ft = vim.bo.filetype == '' and '<no filetype>' or vim.bo.filetype
-    local msg = 'No formatter for ' .. ft .. ', and no language server to format'
-    return vim.notify(msg, vim.log.levels.WARN)
+    local has_lsp_formatter = #vim.lsp.get_clients({
+      bufnr = 0,
+      method = 'textDocument/formatting',
+    }) > 0
+    if not has_lsp_formatter then
+      local ft = vim.bo.filetype == '' and '<no filetype>' or vim.bo.filetype
+      local msg = 'No formatter for ' .. ft .. ', and no language server to format'
+      return vim.notify(msg, vim.log.levels.WARN)
+    end
   end
 
   -- Without a reference text nothing here is "unchanged", so the whole buffer
@@ -79,7 +105,10 @@ Config.format.changed = function()
     data = MiniDiff.get_buf_data(0)
   end
   if data == nil or data.ref_text == nil then
-    vim.notify('No diff reference here: formatted the whole buffer')
+    vim.notify(
+      'No diff reference here: formatted the whole buffer',
+      vim.log.levels.WARN
+    )
     return Config.format.buffer()
   end
 
@@ -94,10 +123,21 @@ Config.format.changed = function()
   if #ranges == 0 then return vim.notify('No changed lines to format') end
 
   table.sort(ranges, function(a, b) return a[1] > b[1] end)
+  local formatted, failed = 0, 0
   for _, range in ipairs(ranges) do
-    format_range(range[1], range[2])
+    local err, did_edit = format_range(range[1], range[2])
+    if err ~= nil then
+      failed = failed + 1
+    elseif did_edit then
+      formatted = formatted + 1
+    end
   end
-  vim.notify(('Formatted %d changed hunk(s)'):format(#ranges))
+  local msg = ('Formatted %d of %d changed hunk(s)'):format(formatted, #ranges)
+  if failed > 0 then
+    vim.notify(msg .. (', %d failed'):format(failed), vim.log.levels.ERROR)
+  else
+    vim.notify(msg)
+  end
 end
 
 --- Format the whole buffer, for the rare time that is the intent: a file being
@@ -105,7 +145,32 @@ end
 Config.format.buffer = function()
   local ok, conform = pcall(require, 'conform')
   if not ok then
-    return vim.notify("'conform.nvim' is not loaded yet", vim.log.levels.WARN)
+    return vim.notify("'conform.nvim' is not loaded yet", vim.log.levels.ERROR)
+  end
+  conform.format()
+end
+
+-- Format a Visual selection, under the same "both absent" guard as
+-- `changed()`. `conform.format()` with no explicit range reads the Visual
+-- marks itself (`:h conform.format()`), which is the documented behavior -
+-- the Visual `<Leader>lf` mapping used to call `require('conform').format()`
+-- directly, bypassing this guard entirely and raising from `require` at
+-- keypress if 'conform.nvim' was not yet loaded.
+Config.format.selection = function()
+  local ok, conform = pcall(require, 'conform')
+  if not ok then
+    return vim.notify("'conform.nvim' is not loaded yet", vim.log.levels.ERROR)
+  end
+  if #conform.list_formatters(0) == 0 then
+    local has_lsp_formatter = #vim.lsp.get_clients({
+      bufnr = 0,
+      method = 'textDocument/formatting',
+    }) > 0
+    if not has_lsp_formatter then
+      local ft = vim.bo.filetype == '' and '<no filetype>' or vim.bo.filetype
+      local msg = 'No formatter for ' .. ft .. ', and no language server to format'
+      return vim.notify(msg, vim.log.levels.WARN)
+    end
   end
   conform.format()
 end
