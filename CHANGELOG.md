@@ -127,6 +127,13 @@ a merge from 'minimax' conflict-free.
   gives `<Leader>lf` something to call at all: the Godot server does not
   implement formatting, so the `lsp_format` fallback reached a server with
   nothing to answer.
+- Correct the GDScript snippets, which were not missing but wrong: 25 of them
+  were already active from 'friendly-snippets', and five expanded to Godot 3.
+  `class`, `export`, `onready` and `var` now produce `RefCounted`, `@export`,
+  `@onready` and a `get:` / `set(value):` block instead of `Reference`,
+  `export(type)`, `onready` and `setget`, and `inpute` - whose `_input_event`
+  signature changed in Godot 4 - is removed rather than left to expand into
+  code the engine rejects.
 - Parse C, C++, CMake and makefiles with tree-sitter: highlighting, structural
   folds and the textobjects of 'nvim-treesitter-textobjects' stop falling back
   to the legacy syntax files. The `cpp` parser requires `c`, which ships with

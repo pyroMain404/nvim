@@ -1,0 +1,25 @@
+{
+  "Inner class": {
+    "prefix": "class",
+    "body": ["class ${1:Name} extends ${2:RefCounted}", "\t$0"]
+  },
+  "Export variable": {
+    "prefix": "export",
+    "body": ["@export var ${1:name}: ${2:Type} = ${3:value}"]
+  },
+  "Onready variable": {
+    "prefix": "onready",
+    "body": ["@onready var ${1:name}: ${2:Type} = \\$${3:NodePath}"]
+  },
+  "Variable with getter and setter": {
+    "prefix": "var",
+    "body": [
+      "var ${1:name}: ${2:Type} = ${3:value}:",
+      "\tget:",
+      "\t\treturn ${1:name}",
+      "\tset(value):",
+      "\t\t${1:name} = value"
+    ]
+  },
+  "Remove Godot 3 prefixes": { "prefix": ["inpute"] }
+}
