@@ -145,13 +145,15 @@ a merge from 'minimax' conflict-free.
   file names the engine prints are relative to it while Neovim resolves
   quickfix names against its own directory: without that, `:make` from
   'scripts/' produced entries pointing at 'scripts/scripts/…' and `]q` opened
-  an empty buffer with a plausible name. `:Run` starts the game, and its
-  default is the main scene the project declares - a project that declares none
-  refuses loudly instead of starting the wrong thing. `:GodotDoc` opens the
-  documentation of the word under the cursor, which the LSP hover also gives
-  but only with the editor open, that is not while reading code. And
-  `:GodotReconnect` reattaches the server after Godot has been restarted, which
-  otherwise leaves every open buffer without a client and nothing to say so.
+  an empty buffer with a plausible name. `:GodotDoc` opens the documentation of
+  the word under the cursor, which the LSP hover also gives but only with the
+  editor open, that is not while reading code. And `:GodotReconnect` reattaches
+  the server after Godot has been restarted, which otherwise leaves every open
+  buffer without a client and nothing to say so. No `:Run`: the command to
+  start a game is universal enough, but the contract of 'lua/config/run.lua'
+  captures in a terminal split, and a windowed Godot leaves that split empty
+  while its output comes out on the stdout of Neovim itself - measured by
+  invoking the real command, which a pipe in a shell does not reproduce.
 - Report the Godot toolchain in `:checkhealth config`, but only inside a Godot
   project, because the whole toolchain is a game's rather than the machine's.
   Presence and version of the engine are two checks and not one: a `mise` shim
