@@ -104,6 +104,16 @@ Le due cose che ci finiscono più spesso:
   argomenti e può rifiutare — `return nil, 'questo progetto avvia solo il
   backend'` — che è come un monorepo dice quali dei suoi filetype si eseguono.
 
+**La tabella dei campi**, per non dover rileggere la prosa sopra ogni volta:
+
+| Cosa il progetto vuole cambiare | Meccanismo nel `.nvim.lua` | Perché il momento della lettura lo impone |
+|---|---|---|
+| Una variabile che un server legge al proprio avvio | `vim.env.<NOME> = ...`, assegnazione diretta | Il file è letto **prima** di ogni server: quello che scrive arriva al `cmd` che lo lancia |
+| Un'opzione che un ftplugin della config imposta anche | `vim.api.nvim_create_autocmd('FileType', { pattern = '<ft>', callback = ... })` | L'ftplugin gira **dopo** il `.nvim.lua`: un'assegnazione diretta verrebbe sovrascritta senza lasciare traccia |
+| Il comando che `:Run` esegue | `vim.g.run_command = { ... }` (lista) o `function(args) ... end` (per rifiutare o dipendere dal buffer) | `:Run` consulta `vim.g.run_command` **al momento della chiamata**, non alla lettura del file: nessun autocomando serve, l'assegnazione diretta basta |
+| Un `makeprg`/`errorformat` diverso da quello che il compiler plugin sceglie | come l'opzione ftplugin: autocomando `FileType`, riscrivendo l'opzione **per intero** | `b:<compiler>_makeprg_params` dei compiler plugin del runtime **appende**, non sostituisce: non serve a mettere un prefisso davanti |
+| Una versione di tool o un task di build | **non qui** — `mise.toml` del progetto | Serve anche alla shell, alla CI, a chi non apre Neovim: un `.nvim.lua` la nasconderebbe a tutti loro |
+
 Il file si scrive con lo stile della config (`AGENTS.md`): intestazione a box che
 dice **perché quel progetto è diverso**, separatori di sezione, e le quattro
 keyword usate per quello che significano. Non è versionato: sta in
