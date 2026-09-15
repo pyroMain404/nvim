@@ -11,6 +11,11 @@
 -- having here as in the TypeScript buffer next to it (see 'compiler/ngc.lua').
 vim.cmd('compiler ngc')
 
+-- `:make` prints paths relative to the Angular project; same remedy the
+-- TypeScript ftplugin needs next to it, through 'lua/config/run.lua''s
+-- `make_root()`.
+require('config.run').make_root({ 'package.json' })
+
 -- Fold by structure. The `angular` parser is in `languages` in
 -- 'plugin/40_plugins.lua', so the tree exists; without a `foldexpr` a template
 -- folds by indentation, which in nested markup groups by depth of nesting

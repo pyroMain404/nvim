@@ -209,4 +209,51 @@ M.npm = function(args)
   return nil, reason:format(vim.fs.basename(manifest))
 end
 
+-- The remedy for `:make` printing paths relative to the project instead of
+-- relative to Neovim's own directory: chdir to the project root for the
+-- duration of `:make`/`:lmake` and back after. Lifted out of the GDScript
+-- ftplugin, which was the only file that had it, once the same fix turned out
+-- to be needed for Angular (`ng`/`npm`) and Maven, both of which print
+-- project-relative paths while `setup_auto_root()` in 'plugin/30_mini.lua'
+-- keeps Neovim's cwd at the repository root - not necessarily the manifest's
+-- directory in a monorepo or a nested checkout.
+--
+-- NOTE: the pair cannot be buffer-local. `QuickFixCmdPre` matches its pattern
+-- against the COMMAND NAME (`:h QuickFixCmdPre`), so `buffer = 0` would ask
+-- for a pattern that never matches. Hence one named group per filetype,
+-- cleared on every load so opening a second buffer of that filetype replaces
+-- the pair instead of adding one, and a filetype test inside the callback.
+--
+-- `vim.fn.chdir()` and not `:lcd`: it changes the directory in whatever scope
+-- the current one has - window, tab or global - and returns the previous one
+-- to restore. `:lcd` would leave the window with a local directory it did not
+-- have, which `MiniMisc.setup_auto_root()` would then never move again.
+M.make_root = function(markers)
+  local ft = vim.bo.filetype
+  local group =
+    vim.api.nvim_create_augroup('config-make-root-' .. ft, { clear = true })
+  local previous = nil
+  vim.api.nvim_create_autocmd('QuickFixCmdPre', {
+    group = group,
+    pattern = { 'make', 'lmake' },
+    desc = 'Run `:make` from the project root (' .. ft .. ')',
+    callback = function()
+      if vim.bo.filetype ~= ft then return end
+      local project = vim.fs.root(0, markers)
+      if project == nil then return end
+      previous = vim.fn.chdir(project)
+    end,
+  })
+  vim.api.nvim_create_autocmd('QuickFixCmdPost', {
+    group = group,
+    pattern = { 'make', 'lmake' },
+    desc = 'Return to the directory `:make` was called from (' .. ft .. ')',
+    callback = function()
+      if previous == nil or previous == '' then return end
+      vim.fn.chdir(previous)
+      previous = nil
+    end,
+  })
+end
+
 return M

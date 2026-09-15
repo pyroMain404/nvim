@@ -103,6 +103,16 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-16
+
+- Run `:make` from the project root for Angular and Maven/Ant checkouts, not
+  only for Godot. `ngc`/`mvn`/`ant` print paths relative to the project while
+  Neovim resolved quickfix `%f` entries against its own directory, which
+  `setup_auto_root()` keeps at the repository root rather than a nested
+  project's own directory - the failure mode already fixed once for GDScript
+  (`]q` opening an empty buffer with a plausible name). The chdir pair is now
+  shared as `require('config.run').make_root()`.
+
 ## 2026-09-15
 
 - Resolve the "to be measured" callout on the Godot cursor-line offset in

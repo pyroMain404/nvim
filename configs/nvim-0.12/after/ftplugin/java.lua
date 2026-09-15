@@ -139,6 +139,15 @@ local build = found and builds[vim.fs.basename(found)] or loose
 -- while sourcing, so it has no Lua API and `vim.cmd()` is the only way here.
 if build.compiler then vim.cmd('compiler ' .. build.compiler) end
 
+-- `mvn`/`ant` print paths relative to the project, while Neovim resolves
+-- quickfix `%f` entries against its own directory - kept at the repository
+-- root by 'setup_auto_root()' in 'plugin/30_mini.lua', not necessarily the
+-- POM's or the build file's own directory in a multi-module checkout. Same
+-- remedy the GDScript ftplugin needed first, shared through
+-- 'lua/config/run.lua''s `make_root()`. A loose file (no build found) has
+-- nothing to root against.
+if found ~= nil then require('config.run').make_root({ 'pom.xml', 'build.xml' }) end
+
 -- Running the application is not what `:make` does, and the two are worth
 -- keeping apart. `:make` asks a question that ends - does it compile, do the
 -- tests pass - fills the quickfix list and returns; running is a process that

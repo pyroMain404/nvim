@@ -35,41 +35,9 @@ if root ~= nil then
   -- entry pointed at '<root>/scripts/scripts/broken.gd', and `]q` opened an
   -- empty buffer with that name - no error, no message, and the natural
   -- reading is that the quickfix list is wrong rather than the directory.
-  --
-  -- NOTE: the pair cannot be buffer-local. `QuickFixCmdPre` matches its
-  -- pattern against the COMMAND NAME (`:h QuickFixCmdPre`), so `buffer = 0`
-  -- would ask for a pattern that never matches. Hence one named group,
-  -- cleared on every load so that opening a second '.gd' file replaces the
-  -- pair instead of adding one, and a filetype test inside the callback.
-  --
-  -- `vim.fn.chdir()` and not `:lcd`: it changes the directory in whatever
-  -- scope the current one has - window, tab or global - and returns the
-  -- previous one to restore. `:lcd` would leave the window with a local
-  -- directory it did not have, which `MiniMisc.setup_auto_root()` would then
-  -- never move again.
-  local group = vim.api.nvim_create_augroup('config-godot-make', { clear = true })
-  local previous = nil
-  vim.api.nvim_create_autocmd('QuickFixCmdPre', {
-    group = group,
-    pattern = { 'make', 'lmake' },
-    desc = 'Run `:make` from the root of the Godot project',
-    callback = function()
-      if vim.bo.filetype ~= 'gdscript' then return end
-      local project = vim.fs.root(0, { 'project.godot' })
-      if project == nil then return end
-      previous = vim.fn.chdir(project)
-    end,
-  })
-  vim.api.nvim_create_autocmd('QuickFixCmdPost', {
-    group = group,
-    pattern = { 'make', 'lmake' },
-    desc = 'Return to the directory `:make` was called from',
-    callback = function()
-      if previous == nil or previous == '' then return end
-      vim.fn.chdir(previous)
-      previous = nil
-    end,
-  })
+  -- The remedy is 'lua/config/run.lua''s `make_root()`, needed here first and
+  -- by Angular and Maven since.
+  require('config.run').make_root({ 'project.godot' })
 
   -- `gf` on a `preload('res://...')` or `load(...)` reference.
   --
