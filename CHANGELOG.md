@@ -105,6 +105,16 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-15
 
+- Let `gf` reach the real file of a `preload('res://...')` or `load(...)`
+  reference. `includeexpr` cannot do this: `findfile()` treats anything
+  containing `"://"` as URL-like and never reports it missing, so the
+  transform `:h 'includeexpr'` promises for `gf` never runs - true of any
+  `scheme://` reference in any language, not only GDScript. The fix is a
+  `BufReadCmd` on `res://*` in 'plugin/40_plugins.lua', the same shape
+  `nvim-jdtls` uses for `jdt://`: it resolves the project root, opens the
+  real path, and drops the placeholder buffer `gf` left behind. `isfname`
+  gains `:` so the whole reference is one word regardless of where the
+  cursor lands inside it.
 - Reach the two Godot commands from a key, inside a Godot project and nowhere
   else: `<Leader>og` opens the documentation of the word under the cursor and
   `<Leader>oG` reattaches the language server after the editor was restarted.

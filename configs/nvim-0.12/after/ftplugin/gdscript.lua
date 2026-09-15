@@ -70,6 +70,35 @@ if root ~= nil then
       previous = nil
     end,
   })
+
+  -- `gf` on a `preload('res://...')` or `load('res://...')` reference.
+  --
+  -- NOTE: `:` is not in the default 'isfname' (measured), so `gf` with the
+  -- cursor on the literal text "res" - left of the colon - would try to open
+  -- a file named exactly `res` and fail. Extending 'isfname' is what makes
+  -- the whole `res://...` token one word, regardless of where inside it the
+  -- cursor sits.
+  vim.opt_local.isfname:append(':')
+
+  -- What `[i`, `[I` and `:checkpath` scan a LINE for. Covers `preload(`,
+  -- `load(` and the `const X = preload(...)` form; `$NodePath` strings are
+  -- deliberately not matched - a node path is not a file, and resolving one
+  -- means reading the '.tscn', which is the scene-tree axis and not this one.
+  vim.bo.include = [[\v^\s*%(const\s+\w+\s*\=\s*)?%(pre)?load\(]]
+
+  -- NOT 'includeexpr' to turn "res://x" into a real path: measured that it
+  -- never runs. `:h 'includeexpr'` promises it is consulted for `gf` "if an
+  -- unmodified file name can't be found" - but `findfile('res://x')` returns
+  -- the string UNCHANGED, as if found, rather than empty (confirmed against
+  -- a name with no possible match, which correctly returns ''). Vim treats
+  -- anything containing "://" as URL-like and never asks the filesystem, so
+  -- 'includeexpr' - which only fires on NOT found - is never reached. This is
+  -- Vim's own path resolution, not a GDScript or Godot quirk: any `scheme://`
+  -- reference in any language hits the same wall.
+  --
+  -- The fix is the same one `capabilities.md` §8 describes for `jdt://`: a
+  -- `BufReadCmd` on the scheme, registered in 'plugin/40_plugins.lua' because
+  -- it has to exist before this buffer is even open to redirect anything.
 end
 
 -- Running the game, under the contract of 'lua/config/run.lua'. Nothing is read

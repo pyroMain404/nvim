@@ -218,6 +218,47 @@ now_if_args(function()
     'gdscript',
   })
 
+  -- `res://` is Godot's own scheme for "relative to this project", and it is
+  -- exactly what `gf` on a `preload('res://...')` leaves as a buffer name: a
+  -- buffer named "res://scripts/x.gd" that was never read from disk. This is
+  -- the same shape as `jdt://` for a Java class without source
+  -- (`capabilities.md` §8), and the fix is the same one: a `BufReadCmd` on
+  -- the scheme, registered here because it has to exist before ANY such
+  -- buffer is opened - a `.gd` ftplugin would always be one file late.
+  --
+  -- NOTE: 'includeexpr' does NOT do this job, and the reason is Vim's own,
+  -- not GDScript's: `findfile('res://x')` returns the string UNCHANGED, as
+  -- if found, instead of empty (measured against a name with no possible
+  -- match, which correctly returns ''). Vim treats anything containing
+  -- "://" as URL-like and never asks the filesystem, so 'includeexpr' -
+  -- which `:h 'includeexpr'` documents as firing for `gf` only when the
+  -- name "can't be found" - is never reached. Any `scheme://` reference in
+  -- any language hits this same wall; see 'after/ftplugin/gdscript.lua' for
+  -- where 'isfname' and 'include' still pull their own weight around it.
+  vim.api.nvim_create_autocmd('BufReadCmd', {
+    pattern = 'res://*',
+    group = vim.api.nvim_create_augroup('config-godot-res', { clear = true }),
+    desc = 'Resolve a res:// reference to the real file of its Godot project',
+    callback = function(args)
+      local ghost = args.buf
+      local previous = vim.fn.bufname('#')
+      local root = (previous ~= '' and vim.fs.root(previous, { 'project.godot' }))
+        or vim.fs.root(vim.fn.getcwd(), { 'project.godot' })
+      if root == nil then
+        return vim.notify(
+          'res:// reference outside a Godot project: ' .. args.match,
+          vim.log.levels.WARN
+        )
+      end
+      vim.cmd.edit(vim.fn.fnameescape(root .. '/' .. args.match:sub(#'res://' + 1)))
+      if
+        ghost ~= vim.api.nvim_get_current_buf() and vim.api.nvim_buf_is_valid(ghost)
+      then
+        vim.api.nvim_buf_delete(ghost, { force = true })
+      end
+    end,
+  })
+
   -- Code lens are actions a server announces at a precise place in the code:
   -- "run this test", "show the implementations of this trait". Neovim does not
   -- ask for them unless told to, which is why `<Leader>ll` had nothing to run.
