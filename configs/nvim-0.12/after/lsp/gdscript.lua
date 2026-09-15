@@ -34,4 +34,14 @@
 --   `--lsp-port` and say so through `GDScript_Port` - in that project's
 --   '.nvim.lua' (`:h 'exrc'`, skill `nvim-project-environment`), because here
 --   it would change for every project at once, which is the same as for none.
+--
+-- NOTE: nothing here handles two Godot editors open at once, and that is a
+-- decision rather than an oversight - one game at a time is how this machine
+-- works. What it costs to be wrong is worth knowing, because it does not look
+-- like a failure: the second editor gets NO port (it does not fall back to
+-- another one, measured), so a buffer of the second project attaches to the
+-- first editor and answers with the completion, the diagnostics and the
+-- definitions of the other game, without a message. The tell is a definition
+-- that jumps somewhere impossible; the fix is the two halves above, and it is
+-- written the day a second game exists.
 return { root_markers = { 'project.godot' } }

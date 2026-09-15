@@ -93,6 +93,49 @@ require('config.run').command(function(args)
   return vim.list_extend({ 'godot', '--path', root }, args)
 end, { detach = true })
 
+-- NOTE: the output of the game is not captured anywhere, by construction of
+-- the branch above. Bringing it into Neovim - a scratch buffer fed by
+-- `vim.system()` with `stdout`, instead of `detach` - is a separate axis
+-- (`capabilities.md` §19), and the order matters: it is worth judging after
+-- the detached form has been used on a real game, not before. Until then the
+-- place to read `print()` is the Output panel of the Godot editor.
+
+-- TODO: a game needs `:make`-like entries for the two things the engine cannot
+-- be asked from here - running the test suite and exporting a build - and they
+-- genuinely depend on the project, so they belong to the `mise.toml` of the
+-- game as tasks (`mise run export:windows`), not to this file. Nothing here
+-- covers them today, and a reader should not conclude that `:make` does.
+-- First step, on the first real game: write `[tasks."export:windows"]` with
+-- `godot --headless --export-release <preset> <output>` in that repository,
+-- having installed the export templates of the exact engine version under
+-- '%APPDATA%\Godot\export_templates\<version>' - `mise` does not install them
+-- with the engine. Then decide whether `:Run mise ...` is worth a wrapper here
+-- or stays a terminal command, which is a question this config cannot answer
+-- before a project exists.
+
+-- NOTE: there is no debugger. Godot speaks DAP on the port next to the LSP
+-- one, but Neovim is not a DAP client by itself: it would take 'nvim-dap' plus
+-- a workflow decision, and the only integration Godot hosts
+-- ('emacs-gdscript-mode') has a debugger for Godot 3 only. What exists without
+-- any of that, and is worth knowing: the `breakpoint` keyword of GDScript
+-- stops the engine's own debugger on the line it is written on, and with
+-- `Debug with External Editor` enabled in the Script view it is Godot that
+-- brings the external editor onto that line.
+
+-- TODO: read a '.tscn' as the tree it is, not as the INI it is written as. The
+-- node hierarchy with the type of each node is the structure one reasons about
+-- in Godot, and a section list is not the same thing. Deferred because half of
+-- what it would be used for - *which* scene do I open - is already a picker,
+-- and the other half costs code to maintain.
+-- First step: a scratch buffer (`:h scratch-buffer`: `buftype=nofile`,
+-- `bufhidden=wipe`, not modifiable) built from the parse of the current
+-- '.tscn' - the `godot_resource` parser is installed, so the sections can be
+-- read from the tree rather than with a regex - one line per node, indented by
+-- the depth of its `parent=` path, with the type after the name, and `<CR>`
+-- jumping to the section of that node in the file. It belongs to a
+-- 'after/ftplugin/gdresource.lua', not here: it is a property of the resource
+-- file, not of GDScript.
+
 -- The documentation of the word under the cursor, in the browser. The LSP hover
 -- gives it too, and better - but only with Godot open on the project, which is
 -- exactly not the case while reading code. `vim.ui.open()` goes through the
