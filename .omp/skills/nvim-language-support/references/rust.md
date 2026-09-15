@@ -54,7 +54,7 @@ progetto a monte, `rust-lang/rust.vim`, è in manutenzione conservativa.
 ### `:Crun` non è uno di quelli: copre l'asse "esecuzione"
 
 **Eseguire** il programma non è ciò che fa `:make`, che chiude una domanda e riempie
-il quickfix (`capabilities.md` §19). `:Crun` non duplica quindi niente, ed è l'unico
+il quickfix (`capabilities.md` "Eseguire il programma, e le viste che non sono file"). `:Crun` non duplica quindi niente, ed è l'unico
 dei comandi `:C*` che tocca un asse che resterebbe scoperto.
 
 Come lo esegue va saputo, perché non è quello che il nome lascia pensare.
@@ -62,13 +62,13 @@ Come lo esegue va saputo, perché non è quello che il nome lascia pensare.
 `has('terminal')` risponde **0** — misurato con `-u NONE`, quindi non è una
 conseguenza di questa config — per cui cade sul ramo `has('nvim')`:
 `noautocmd new | terminal cargo run`, cioè una finestra nuova con dentro un buffer
-terminale. È la forma **catturata** di §19, non un `:!` sincrono, e il processo
+terminale. È la forma **catturata** di `capabilities.md` "Eseguire il programma, e le viste che non sono file", non un `:!` sincrono, e il processo
 muore con Neovim.
 
 Questo però **non chiude l'asse**, ed è l'errore che questa reference ha fatto per un
 giro: il nome. `:Crun` vale solo in Rust, mentre ciò che si ricorda aprendo un
 repository qualunque è un tasto solo — il contratto di `:Run` in `capabilities.md`
-§19. La config lo definisce quindi anche qui (§4), *accanto* a `:Crun`, che resta
+`capabilities.md` "Eseguire il programma, e le viste che non sono file". La config lo definisce quindi anche qui ("Fase 5 — cosa implementare"), *accanto* a `:Crun`, che resta
 dov'è per chi lo digita.
 
 `:RustRun` è invece un'altra cosa e non va confuso: compila con `rustc` il **solo
@@ -89,9 +89,9 @@ il quale non è il consueto `cmd` + `filetypes` + `root_markers`:
 | `root_dir` chiama `cargo metadata --no-deps` | trova la **workspace root** vera, non il primo `Cargo.toml` risalendo: è la differenza nei progetti multi-crate |
 | riconosce i file dentro registry, git checkout, toolchain e sysroot src | il sorgente di una dipendenza si attacca al client già attivo invece di aprirne uno nuovo |
 | dichiara `serverStatusNotification` e implementa `rust-analyzer.runSingle` | **i runnable ci sono già**, senza plugin |
-| accende tutti i lens (`run`, `debug`, `implementations`, `references`, `updateTest`) | vedi §4: accesi non vuol dire visibili |
+| accende tutti i lens (`run`, `debug`, `implementations`, `references`, `updateTest`) | vedi "Fase 5 — cosa implementare": accesi non vuol dire visibili |
 | crea `:LspCargoReload` | ricarica il workspace cargo dopo un cambio di `Cargo.toml` |
-| `before_init` copia `settings['rust-analyzer']` in `initializationOptions` | `rust-analyzer` legge le proprie impostazioni **da lì** all'avvio. Senza quella riga le impostazioni di §4 non arrivano al server |
+| `before_init` copia `settings['rust-analyzer']` in `initializationOptions` | `rust-analyzer` legge le proprie impostazioni **da lì** all'avvio. Senza quella riga le impostazioni di "Fase 5 — cosa implementare" non arrivano al server |
 
 Da leggere prima di scrivere qualsiasi cosa, come chiede `assets/lsp.lua`:
 
@@ -116,17 +116,17 @@ lascia dividere in tre, e solo una parte è nuova. I **metodi fuori dal protocol
 che implementa a mano — `experimental/ssr`, `experimental/moveItem`,
 `experimental/joinLines`, `experimental/parentModule`, `rust-analyzer/expandMacro`,
 `rust-analyzer/relatedTests` — sono la parte che non si ottiene in nessun altro modo
-(`capabilities.md` §4). Le **viste** (`viewCrateGraph`, `viewSyntaxTree`, `viewHir`,
-`viewMir`) sono l'asse di §19 e finiscono in un buffer o in un'immagine. Gli
+(`capabilities.md` "LSP: la semantica"). Le **viste** (`viewCrateGraph`, `viewSyntaxTree`, `viewHir`,
+`viewMir`) sono l'asse di `capabilities.md` "Eseguire il programma, e le viste che non sono file" e finiscono in un buffer o in un'immagine. Gli
 **executor** — una cartella con un modulo per destinazione: terminale, quickfix,
-diagnostiche nel buffer — non sono altro che la scelta di §19 resa configurabile, e
+diagnostiche nel buffer — non sono altro che la scelta di `capabilities.md` "Eseguire il programma, e le viste che non sono file" resa configurabile, e
 un comando scritto a mano la fa una volta e basta.
 
 Il costo non è l'installazione: è che **prende possesso del server**. La sua
 documentazione chiede di non configurare `rust_analyzer` a mano né via
 'nvim-lspconfig'. È quindi il caso esclusivo descritto nella Fase 2: o il plugin, o
 `after/lsp/rust_analyzer.lua`. **Raccomandazione**: partire dalla configurazione
-diretta del server (§4) — che con il livello di 'nvim-lspconfig' sotto copre
+diretta del server ("Fase 5 — cosa implementare") — che con il livello di 'nvim-lspconfig' sotto copre
 completamento, diagnostica, navigazione, rename, runnable e reload del workspace — e
 passare a `rustaceanvim` solo quando emerge un'esigenza che non copre, tipicamente le
 macro o il debug, migrando la configurazione e non affiancandola.
@@ -240,7 +240,7 @@ significa editor fermo finché non finisce, e risultato in un popup invece che n
 quickfix. È lo stesso difetto già analizzato — e già risolto sulla carta — nel
 commento sopra i mapping `<Leader>l` di `plugin/20_keymaps.lua`: eseguire con
 `vim.system()` e passare l'output a `setqflist()` con l'`errorformat` del buffer.
-Finché resta così, `:make test` (§5) è la strada migliore per eseguire i test.
+Finché resta così, `:make test` ("Il ciclo di lavoro") è la strada migliore per eseguire i test.
 
 ### Il resto
 
@@ -295,7 +295,7 @@ sia molto più rapido di `cargo build`. Con `makeprg=cargo $*` già impostato:
 | `:make test` | esegue i test; i panic finiscono nel quickfix | `cargo test`, inclusi i test in `tests/` |
 | `:make clippy` | i lint di clippy nel quickfix | il controllo che il libro mette in CI |
 | `:make fmt -- --check` | segnala i file non formattati | idem |
-| `:Run` | esegue il progetto in un terminale in split (`:Crun` fa lo stesso, §2) | il binario che il libro fa girare |
+| `:Run` | esegue il progetto in un terminale in split (`:Crun` fa lo stesso, "Fase 2 — cosa di questo tenere") | il binario che il libro fa girare |
 
 Con il server attivo e `check.command = 'clippy'` gli stessi errori compaiono già
 come diagnostica: `:make` resta utile per eseguire i test, vedere l'output completo e
@@ -329,7 +329,7 @@ vim.env.SQLX_OFFLINE = 'true'
 Le domande a cui `check_rust()` deve rispondere: `rustup` c'è e quale toolchain è
 attiva in **questa** sessione (`rustup show active-toolchain`); `cargo` e `rustc` con
 quale versione; `rust-analyzer` è raggiungibile, con il comando `rustup component
-add` di §3 come consiglio quando non lo è; il parser `rust` è installato, non solo
+add` di "Fase 4 — installazione" come consiglio quando non lo è; il parser `rust` è installato, non solo
 disponibile.
 
 ## 8. Verifica
@@ -347,7 +347,7 @@ solo qui:
   e deve restare attaccato **un solo** client `rust_analyzer`: due client vogliono
   dire che il `root_dir` di 'nvim-lspconfig' è stato sostituito;
 - `:LspCargoReload` deve esistere in un buffer Rust con server attaccato. È il
-  canarino del merge di §4: se manca, `after/lsp/rust_analyzer.lua` ha sovrascritto
+  canarino del merge di "Fase 5 — cosa implementare": se manca, `after/lsp/rust_analyzer.lua` ha sovrascritto
   una funzione ereditata invece di aggiungere solo `settings`;
 - un lint che segnala solo clippy e non `rustc` deve comparire come diagnostica: è
   l'unica prova che `initializationOptions` è arrivato al server.

@@ -151,12 +151,12 @@ già coperta dal runtime.
 |---|---|---|
 | Indentazione | `'shiftwidth'`, `'tabstop'`, `'softtabstop'`, `'expandtab'` | la config usa 2 spazi globali; molti linguaggi ne vogliono 4 |
 | Larghezza | `'textwidth'`, `'colorcolumn'` | `'colorcolumn'` è `+1` globale, quindi segue `'textwidth'` da solo |
-| Commenti | `'commentstring'`, `'comments'` | 'mini.comment' usa `'commentstring'` e sa personalizzarlo (§10) |
+| Commenti | `'commentstring'`, `'comments'` | 'mini.comment' usa `'commentstring'` e sa personalizzarlo ("Textobject e manipolazione") |
 | Parole | `'iskeyword'` | decide `w`, `*`, il completamento e lo spell camelCase |
-| Fold | `'foldmethod'`, `'foldexpr'` | vedi §3 (tree-sitter) e §4 (LSP) |
+| Fold | `'foldmethod'`, `'foldexpr'` | vedi "Tree-sitter: albero, highlight, query" (tree-sitter) e "LSP: la semantica" (LSP) |
 | Testo | `'spell'`, `'wrap'`, `'linebreak'`, `'formatoptions'` | utile per linguaggi di documentazione |
-| Navigazione | `'path'`, `'include'`, `'includeexpr'`, `'define'`, `'suffixesadd'` | vedi §8 |
-| Esecuzione | `'makeprg'`, `'errorformat'`, `'keywordprg'`, `'formatprg'` | vedi §6, §7, §15 |
+| Navigazione | `'path'`, `'include'`, `'includeexpr'`, `'define'`, `'suffixesadd'` | vedi "Navigazione della codebase" |
+| Esecuzione | `'makeprg'`, `'errorformat'`, `'keywordprg'`, `'formatprg'` | vedi "Build, test e quickfix", "Formattazione", "Documentazione, REPL, terminale" |
 | Coppie | `'matchpairs'`, e `b:match_words` per `%` esteso | vedi la nota su matchit |
 
 > **matchit è un pack opzionale, non un built-in attivo.** Vive in
@@ -196,7 +196,7 @@ Query personalizzate in `after/queries/<lang>/<nome>.scm` (`:h treesitter-query`
 | `injections.scm` | evidenziare un linguaggio dentro l'altro: SQL in una macro, regex in una stringa, markdown nei doc comment (`:h treesitter-language-injections`) |
 | `folds.scm` | fold sui costrutti del linguaggio, con `'foldexpr'` = `v:lua.vim.treesitter.foldexpr()` |
 | `locals.scm` | scope e definizioni |
-| `textobjects.scm` | **solo** per aggiungere capture che 'nvim-treesitter-textobjects' non fornisce — vedi §10 |
+| `textobjects.scm` | **solo** per aggiungere capture che 'nvim-treesitter-textobjects' non fornisce — vedi "Textobject e manipolazione" |
 
 **La riga più importante di una query personalizzata è la prima**: `; extends`
 aggiunge alla query esistente invece di sostituirla
@@ -375,7 +375,7 @@ invece che subite:
   (`client.server_capabilities.documentFormattingProvider = false`).
 - **La diagnostica doppia.** Due strumenti che applicano la stessa regola segnalano
   due volte lo stesso problema. Si spegne la regola nella configurazione dello
-  strumento, non in Neovim: `vim.diagnostic` è globale (§5).
+  strumento, non in Neovim: `vim.diagnostic` è globale ("Diagnostica").
 - **Chi ha risposto.** `:checkhealth vim.lsp` elenca i client attaccati al buffer, ed è
   il modo per sapere quale dei due ha prodotto una risposta strana.
 
@@ -625,7 +625,7 @@ Due strade che convivono: percorsi (funziona sempre, anche senza server) e seman
 > aspettarsi che `[i` e `[d` li usino — la navigazione per import passa da `gf`
 > (`'includeexpr'`), quella per definizione dall'LSP.
 
-**Semantica** — LSP (§4), più i pickers già mappati: `<Leader>fs` / `<Leader>fS`, e
+**Semantica** — LSP ("LSP: la semantica"), più i pickers già mappati: `<Leader>fs` / `<Leader>fS`, e
 gli altri di 'mini.extra' (`:h MiniExtra.pickers.lsp()`). Per i buffer senza server,
 `:h MiniExtra.pickers.treesitter()` naviga i nodi dell'albero ed è il sostituto più
 diretto di un outline.
@@ -692,7 +692,7 @@ prima dello schema e cerca un file con quel nome sbagliato.
 
 - **Completamento**: 'mini.completion' usa l'LSP quando c'è, le parole del buffer
   quando non c'è. Per linguaggio l'unico intervento sensato è ridurre i
-  `triggerCharacters` in `on_attach` — o su `LspAttach`, vedi §4 — quando il popup
+  `triggerCharacters` in `on_attach` — o su `LspAttach`, vedi "LSP: la semantica" — quando il popup
   diventa rumoroso.
 - **Snippet**: `after/snippets/<lang>.json`
   (`:h MiniSnippets.gen_loader.from_lang()`). 'friendly-snippets' è già installato e
@@ -732,7 +732,7 @@ fanno qui e non richiedono nessun file `.scm`:**
 | `vim.b.minihipatterns_config` | evidenziare pattern che contano in quel linguaggio (`:h MiniHipatterns.config`) |
 | `vim.b.minisplitjoin_config` | hook per rispettare virgole finali o parentesi del linguaggio (`:h MiniSplitjoin.config`) |
 | `vim.b.minicomment_config` | `options.custom_commentstring` e gli hook `pre`/`post`, per i linguaggi in cui il commento dipende dal contesto |
-| `vim.b.minisnippets_config` | snippet aggiuntivi solo per quel buffer (§9) |
+| `vim.b.minisnippets_config` | snippet aggiuntivi solo per quel buffer ("Completamento e snippet") |
 | `vim.b.minixxx_disable` | disabilitare un modulo dove dà fastidio, invece di rimuoverlo |
 
 **Quando serve davvero un `.scm`**: solo se il textobject dipende dalla *struttura
@@ -757,7 +757,7 @@ capire quali feature esistono. Fuori dall'editor significa aprire un browser.
 - **Neovim non offre niente di specifico** per questo: il manifesto è un file di dati
   come un altro, al più con il suo parser tree-sitter.
 - **L'LSP a volte c'è**: alcuni ecosistemi hanno un server per il proprio manifesto,
-  e in quel caso l'asse si risolve in §4 senza aggiungere niente.
+  e in quel caso l'asse si risolve in "LSP: la semantica" senza aggiungere niente.
 - **Altrimenti è terreno da plugin dedicato**, attivato sul filetype del manifesto e
   non su tutto il linguaggio. Il riferimento per Rust è
   ['crates.nvim'](https://github.com/saecki/crates.nvim): completamento delle versioni,
@@ -844,7 +844,7 @@ Qui l'unica cosa che riguarda i linguaggi: **Neovim eredita l'ambiente della she
 che lo ha avviato**, quindi la versione "attiva" di una toolchain può non essere
 quella che l'utente vede in un terminale nuovo. È la prima cosa da sospettare quando
 un server si comporta diversamente dalla riga di comando, ed è il motivo per cui il
-health check deve dirla (§16).
+health check deve dirla ("Health check").
 
 **Configurazione per progetto**: `'exrc'` è già abilitato in fondo a 'init.lua'. Un
 `.nvim.lua` nella radice del progetto viene caricato dopo conferma (`:h 'exrc'`), ed è
@@ -883,7 +883,7 @@ conviene controllare, per un linguaggio:
 - **La versione, non solo la presenza**: una toolchain vecchia fallisce in modi più
   confusi di una assente. `vim.fn.executable()` per esserci, `vim.system(...):wait()`
   per la versione.
-- **Quale toolchain è attiva in questa sessione** (§14).
+- **Quale toolchain è attiva in questa sessione** ("Toolchain, versioni e ambiente di progetto").
 - **Il parser installato**, con
   `vim.api.nvim_get_runtime_file('parser/<lang>.*', false)` — lo stesso controllo che
   'plugin/40_plugins.lua' usa già.
@@ -932,7 +932,7 @@ questa config **tre hanno `cmd` funzione e nessuno si collega a niente**, mentre
 3. **`root_markers` va stretto.** Un server che appartiene a *quel* progetto non deve
    accettare un file qualunque: lasciare `.git` fra i marker significa che un file
    isolato in un repository qualsiasi si attacca all'applicazione aperta su tutt'altro.
-   Come la lista si sostituisce invece di fondersi è in §4.
+   Come la lista si sostituisce invece di fondersi è in "LSP: la semantica".
 4. **Il client non si riattacca da solo** quando l'applicazione viene chiusa e
    riaperta: i buffer già aperti restano senza server, e non esiste un "riprova" da
    chiamare. Ciò che rifà scattare l'attach è `:edit` sul buffer, perché ripassa da
@@ -947,7 +947,7 @@ questa config **tre hanno `cmd` funzione e nessuno si collega a niente**, mentre
 
 ## 18. Neovim come editor esterno di un'applicazione
 
-Il verso opposto del §17: non Neovim che interroga l'applicazione, ma l'applicazione
+Il verso opposto del "Un runtime esterno che possiede il server": non Neovim che interroga l'applicazione, ma l'applicazione
 che chiede a Neovim di aprire un file a una riga. È l'*external editor* dei motori di
 gioco e degli strumenti grafici, l'inverse search di un visualizzatore di documenti,
 `$EDITOR` di qualunque programma.
@@ -1052,7 +1052,7 @@ progetto, e vive nel suo manifesto o nel suo `.nvim.lua`.
 copre già, e in una forma che il nome del comando non lascia indovinare. Il ftplugin
 Rust definisce `:Crun`, e `cargo#cmd()` in Neovim finisce su
 `noautocmd new | terminal cargo run` — cioè esattamente la riga "catturato" di questa
-tabella, scritta da qualcun altro (`references/rust.md` §2).
+tabella, scritta da qualcun altro (`references/rust.md` "Fase 2 — cosa di questo tenere").
 
 ### Un nome solo: il contratto di `:Run`
 
@@ -1161,7 +1161,7 @@ dell'eseguibile va preso sul serio su Windows: `npm` si risolve dal `PATH` attra
 `PATHEXT` mentre `npm.cmd` qui **non esiste** (`E475`), e al contrario un wrapper che
 sta nel progetto va nominato per intero (`gradlew.bat`, perché lo `gradlew` senza
 estensione accanto non è eseguibile). I casi completi, con i controlli che li
-falsificano, sono in `references/java.md` §5 e `references/angular.md` §5.
+falsificano, sono in `references/java.md` "Il ciclo di lavoro" e `references/angular.md` "Il ciclo di lavoro".
 
 ### Una vista che non è un file
 
@@ -1181,13 +1181,13 @@ si pesca.
 Sapere dove finisce il built-in evita di cercare a lungo una funzione che non esiste.
 
 - **Debug con adapter propri**: non c'è DAP nel core. C'è `Termdebug` per tutto ciò
-  che gdb copre (§12).
+  che gdb copre ("Debug").
 - **Esecuzione asincrona di build e test**: `:make` è sincrono, e non esiste un task
-  runner né nel core né in MINI (§6).
+  runner né nel core né in MINI ("Build, test e quickfix").
 - **Linter non-LSP**: o il linter parla LSP, o finisce dentro `:make` con un compiler
   plugin, o serve un plugin esterno.
 - **Gestione dei pacchetti dei server**: coperta da `mise`.
-- **Gestione delle dipendenze del progetto**: niente per i manifesti (§11).
+- **Gestione delle dipendenze del progetto**: niente per i manifesti ("Gestione delle dipendenze del linguaggio").
 - **Breadcrumb nella `'winbar'`.** La `'winbar'` è una riga di testo che Neovim
   disegna in cima a una finestra, e si riempie esattamente come la `'statusline'`:
   una stringa di formato, eventualmente prodotta da una funzione Lua, valutata a ogni

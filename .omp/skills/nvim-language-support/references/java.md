@@ -82,7 +82,7 @@ vede dal README. La prima è **quanto** sia la lista: `lua/jdtls.lua` implementa
 lo spostamento di un file, di un metodo di istanza, di un membro statico e di un
 tipo, i generatori di `toString`, dei costruttori, dei delegati e di
 `hashCode`/`equals`, più `javap`, `jshell` e `jol` dentro l'editor — ognuno con il
-proprio dialogo, perché il server chiede cosa generare (`capabilities.md` §4). È la
+proprio dialogo, perché il server chiede cosa generare (`capabilities.md` "LSP: la semantica"). È la
 metà del refactoring che un IDE Java offre, e nessuna riga di `settings` la avvicina.
 
 La seconda è che **un pezzo si può prendere senza adottare il plugin**. Il go to
@@ -90,7 +90,7 @@ definition verso una libreria senza sorgenti allegati risponde con un URI `jdt:/
 e oggi qui apre un buffer vuoto dal nome bizzarro: `plugin/jdtls.lua` risolve il caso
 con un `BufReadCmd` su `jdt://*` e `*.class` che chiede `java/classFileContents` al
 client già attaccato — una dozzina di righe in `plugin/`, indipendenti da tutto il
-resto (`capabilities.md` §8). È il primo lavoro da fare qui se la navigazione nelle
+resto (`capabilities.md` "Navigazione della codebase"). È il primo lavoro da fare qui se la navigazione nelle
 dipendenze diventa quotidiana, e non richiede di migrare niente.
 
 **Un formatter dedicato: no.** Java non ha un formatter ufficiale. `jdtls`
@@ -189,22 +189,22 @@ Con il compiler scelto dal ftplugin:
 | `:make %` | senza build file: `javac` su un solo file |
 
 `:make` è sincrono, e per Maven l'attesa si sente più che per `cargo check`; vale
-la nota della Fase 6 di `capabilities.md` §6 e il TODO già scritto sopra le
+la nota della Fase 6 di `capabilities.md` "Build, test e quickfix" e il TODO già scritto sopra le
 mapping `<Leader>l` di 'plugin/20_keymaps.lua'.
 
 ### Eseguire l'applicazione non passa da `:make`
 
 Ognuna delle righe qui sopra chiude una domanda e riempie il quickfix. Far **girare**
 l'applicazione — `mvn spring-boot:run`, `mvn exec:java`, un `java -jar` sul package
-appena costruito — è l'asse separato di `capabilities.md` §19: un processo che vive,
+appena costruito — è l'asse separato di `capabilities.md` "Eseguire il programma, e le viste che non sono file": un processo che vive,
 che scrive finché non lo si chiude, e che non produce niente di navigabile. Dato a
 `:make`, che è sincrono, tiene l'editor fermo finché l'applicazione non esce, cioè
 per tutto il tempo in cui la si vorrebbe usare.
 
-Quale delle due forme di §19 serva qui lo decide il programma, e per un servizio non
+Quale delle due forme di `capabilities.md` "Eseguire il programma, e le viste che non sono file" serva qui lo decide il programma, e per un servizio non
 c'è scelta: il suo output **è** il log, quindi va catturato e non staccato, e il
 processo deve morire con l'editor invece di restare a tenere la porta occupata. È
-quello che fa `:Run`, il contratto di §19 (`lua/config/run.lua`); di Java è soltanto
+quello che fa `:Run`, il contratto di `capabilities.md` "Eseguire il programma, e le viste che non sono file" (`lua/config/run.lua`); di Java è soltanto
 il resolver, in `after/ftplugin/java.lua`:
 
 | Cosa si apre | Cosa parte con `:Run` |
@@ -218,7 +218,7 @@ Gli argomenti, se ci sono, sostituiscono il goal indovinato (`:Run test -DskipTe
 Nessun goal è universale in Maven, ed è il motivo per cui va letto dal POM: scegliere
 `exec:java` sempre farebbe fallire ogni progetto Spring Boot, e viceversa. Quello che
 va oltre — il profilo Spring, la classe `main`, gli argomenti della JVM — non è del
-linguaggio: si passa a mano o vive nel `.nvim.lua` del checkout (§6).
+linguaggio: si passa a mano o vive nel `.nvim.lua` del checkout ("Ambiente di progetto").
 
 **Gradle non c'è, e non è dimenticanza.** Nella tabella `builds` una voce porta due
 risposte diverse, il compiler plugin di `:make` e il comando di esecuzione, e per
@@ -301,7 +301,7 @@ intera:
 Il secondo non è una versione di progetto e non va cercata lì: è un requisito del
 server, vero in ogni progetto Java. Un checkout su Java 8 o 11 — e sono la norma
 nei gestionali — lascerebbe il server senza JVM valida. Per questo
-`after/lsp/jdtls.lua` la impone da sé con `MISE_JAVA_VERSION` in `cmd_env` (§4).
+`after/lsp/jdtls.lua` la impone da sé con `MISE_JAVA_VERSION` in `cmd_env` ("Fase 5 — cosa implementare").
 
 Nessuno dei numeri in gioco è scritto da qualche parte, ed è il punto: si
 chiedono tutti.
@@ -378,7 +378,7 @@ Tre cose che non sono ovvie, tutte verificate qui:
 Le domande a cui `check_java()` deve rispondere: quale JDK vede **questa**
 sessione e da quale percorso (lo shim di `mise` o altro), e se è almeno il 21 che
 `jdtls` pretende; `javac` e `mvn` con la loro versione; `jdtls` raggiungibile —
-**solo presenza**, per il `pause` della §3 — con la riga `mise use -g "http:..."`
+**solo presenza**, per il `pause` della "Fase 4 — installazione" — con la riga `mise use -g "http:..."`
 come consiglio; `python`, perché il launcher è uno script Python; i parser `java`
 e `xml` installati, non solo disponibili.
 
@@ -396,7 +396,7 @@ solo qui:
   banner `[ERROR] COMPILATION ERROR :` e non ha file: è normale, e va richiesto
   che *qualche* voce sia navigabile, non la prima;
 - `:make test` con un test rotto deve mettere in lista il messaggio
-  dell'asserzione, con il limite descritto in §5;
+  dell'asserzione, con il limite descritto in "Il ciclo di lavoro";
 - **le capability di `jdtls` vanno lette a caricamento finito.** Il server
   registra `definition`, `rename`, `formatting` e `codeAction` in modo
   **dinamico**, dopo l'import del progetto: subito dopo l'attach
@@ -409,7 +409,7 @@ solo qui:
   che distingue un `root_dir` giusto dalla modalità a file singolo, in cui
   `jdtls` risponde comunque ma solo sul file aperto;
 - `:Run` deve esistere **solo** in un buffer Java e scegliere il comando dal build,
-  nei quattro casi della tabella di §5. Si verifica senza avviare niente, stubando
+  nei quattro casi della tabella di "Il ciclo di lavoro". Si verifica senza avviare niente, stubando
   `vim.fn.jobstart` nello `before` della sonda `command` (la skill
   `nvim-config-testing` lo documenta). Due dei quattro casi valgono più degli altri:
   quello **negativo** — `:Run` assente in un buffer di altro filetype e assente fra

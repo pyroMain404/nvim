@@ -6,7 +6,7 @@ nessuna duplicazione del runtime o dei plugin già installati.
 
 L'ambito deliberato è **GDScript per progetti Godot 4**. Il C++ per GDExtension non è
 escluso per principio: ha il suo documento, `analisi_funzionale_cpp.md`, ed è da fare
-**prima** di questo (§7). Il debug DAP resta fuori.
+**prima** di questo ("GDExtension, `ftdetect` e il C++"). Il debug DAP resta fuori.
 
 ## Come leggere questo documento
 
@@ -16,8 +16,8 @@ aprendo un `player.gd` dentro una directory con `project.godot`. **"Misurato" si
 un comando che ha risposto, non una deduzione**, e non va rifatto: va usato.
 
 Dove il documento dice **"da misurare"** c'è un riquadro: sono i punti che non vanno
-scritti a memoria. **Ne resta uno**, §9.2, che decide se il cursore arriva sulla riga
-giusta e che richiede una sessione grafica. Quello di §6, che decide `:make`, è stato
+scritti a memoria. **Ne resta uno**, "Il riuso di un'unica istanza Neovim", che decide se il cursore arriva sulla riga
+giusta e che richiede una sessione grafica. Quello di "Build e quickfix: misurato, e meno di quanto si sperava", che decide `:make`, è stato
 eseguito lo stesso giorno, subito dopo l'installazione di Godot: il suo esito è nel
 testo, e il riquadro è sparito perché la risposta c'è.
 
@@ -26,19 +26,19 @@ testo, e il riquadro è sparito perché la risposta c'è.
 > affermazioni false: il parser `gdshader` dichiarato inutilizzabile, gli snippet
 > GDScript dichiarati inesistenti, una versione stantia di `gdtoolkit`, e lo stato
 > della macchina mai verificato. Sono corrette qui, e le misure che le smentiscono sono
-> nelle tabelle di §2. Le stesure precedenti e la loro valutazione sono state rimosse:
+> nelle tabelle di "Inventario". Le stesure precedenti e la loro valutazione sono state rimosse:
 > conservavano solo l'errore.
 >
 > Una seconda revisione, dello stesso giorno, ha installato Godot con `mise` ed
-> eseguito le misure che la sua assenza bloccava. Cambiano §1 (il canale di
-> installazione non è più WinGet), §4.3 (due editor aperti non ottengono due server),
-> §4.4, §6 (il comando di `:make`, il suo `errorformat` e i suoi limiti veri), §8, §11
-> e §13, che perde un rinvio. Anche qui la stesura precedente è sostituita.
+> eseguito le misure che la sua assenza bloccava. Cambiano "Passo zero: Godot si installa con `mise`" (il canale di
+> installazione non è più WinGet), "LSP" (due editor aperti non ottengono due server),
+> "Formattazione e toolchain", "Build e quickfix: misurato, e meno di quanto si sperava" (il comando di `:make`, il suo `errorformat` e i suoi limiti veri), "Health check", "Ordine di implementazione"
+> e "Decisioni rinviate", che perde un rinvio. Anche qui la stesura precedente è sostituita.
 >
 > Una terza revisione ha letto il sorgente di `godotdev.nvim` per decidere se adottarlo
-> (§14). Il verdetto non è cambiato, ma quattro assi che nessuna stesura aveva — e che
-> la skill `nvim-language-support` non elencava — sono entrati da lì: §4.5, la
-> riconnessione in §4.3, e due rinvii nuovi in §13.
+> ("`godotdev.nvim`: perché non entra, e cosa gli è stato preso"). Il verdetto non è cambiato, ma quattro assi che nessuna stesura aveva — e che
+> la skill `nvim-language-support` non elencava — sono entrati da lì: "La documentazione, quando Godot non è aperto", la
+> riconnessione in "LSP", e due rinvii nuovi in "Decisioni rinviate".
 
 ## Risultato atteso
 
@@ -51,7 +51,7 @@ offrire:
 - formattazione esplicita con `gdformat` tramite le mapping già presenti;
 - snippet che producano **Godot 4**, non Godot 3;
 - `:make` che dica se lo script aperto si parsa, con gli errori nel quickfix — non se il
-  progetto intero compila, che il motore non sa rispondere (§6.2);
+  progetto intero compila, che il motore non sa rispondere ("Cosa `:make` può promettere, e cosa no");
 - un health check che dica se Godot, formatter e parser sono disponibili.
 
 Godot deve essere aperto sullo stesso progetto: è Godot a possedere il server LSP.
@@ -61,7 +61,7 @@ modificare un file.
 ## 1. Passo zero: Godot si installa con `mise`
 
 Era il passo bloccante di tutto il documento — senza motore non c'è LSP, non c'è `:make`
-e tre controlli di §12 non si possono eseguire. **È stato eseguito.** Misurato prima e
+e tre controlli di "Verifica" non si possono eseguire. **È stato eseguito.** Misurato prima e
 dopo:
 
 ```text
@@ -120,7 +120,7 @@ cwd dentro un progetto che dichiara godot     godot --version → 4.7.2.stable�
 cwd fuori da qualunque dichiarazione          mise ERROR No version is set for shim: godot
 ```
 
-Il secondo caso è stato misurato **prima** di aggiungere il default globale di §1.1, che
+Il secondo caso è stato misurato **prima** di aggiungere il default globale di "I due comandi, e cosa non serve", che
 è precisamente ciò che oggi lo evita: chi rifà questa prova su questa macchina deve
 partire da una directory dove nessun `mise.toml`, globale incluso, nomini `godot`.
 
@@ -129,10 +129,10 @@ la versione la sceglie `mise` prima che il motore parta, guardando da dove è st
 invocato. Tre conseguenze, tutte in questo documento:
 
 - `:make` eredita la directory corrente di Neovim, quindi eredita anche la *versione*
-  del motore: §6.4;
+  del motore: "`--path` non basta: conta la directory da cui `:make` parte";
 - l'health check deve distinguere "Godot non è installato" da "lo shim non sa quale
-  versione": §8;
-- il default globale (§1.1) è ciò che tiene lo shim funzionante fuori da un progetto,
+  versione": "Health check";
+- il default globale ("I due comandi, e cosa non serve") è ciò che tiene lo shim funzionante fuori da un progetto,
   per il project manager e per un `godot --version` a mano.
 
 ## 2. Inventario
@@ -144,7 +144,7 @@ invocato. Tre conseguenze, tutte in questo documento:
 | Filetype | `*.gd` è riconosciuto come `gdscript`. | Nessun `ftdetect` per `.gd`. |
 | Editing | `$VIMRUNTIME/ftplugin/gdscript.vim` imposta `commentstring=# %s`, `expandtab=false`, `tabstop=4`, `shiftwidth=0`, `suffixesadd=.gd`. | Nessun `after/ftplugin/gdscript.lua` per queste. |
 | Indentazione e fold | `$VIMRUNTIME/indent/gdscript.vim` imposta `indentexpr=<SNR>_GDScriptIndent()`; il ftplugin imposta `foldexpr=<SNR>_GDScriptFoldLevel()` con `foldmethod=indent`. | Niente da aggiungere. Rafforza la riga precedente. |
-| Build/test | Il runtime non seleziona un compiler; `makeprg` è vuoto. | Vedi §6. |
+| Build/test | Il runtime non seleziona un compiler; `makeprg` è vuoto. | Vedi "Build e quickfix: misurato, e meno di quanto si sperava". |
 | Syntax legacy | Il runtime ha `syntax/gdscript.vim`. | Resta il fallback, e conta più del solito: vedi il tier del parser. |
 
 `shiftwidth=0` non è un'omissione: fa seguire l'indentazione a `tabstop`. Godot
@@ -176,7 +176,7 @@ a.gdshaderinc   → nessun match
 a.gdextension   → nessun match
 ```
 
-Gli ultimi due sono l'unico buco di riconoscimento, e si chiudono in un file solo (§7).
+Gli ultimi due sono l'unico buco di riconoscimento, e si chiudono in un file solo ("GDExtension, `ftdetect` e il C++").
 
 ## 3. Assi scelti
 
@@ -185,22 +185,22 @@ Gli ultimi due sono l'unico buco di riconoscimento, e si chiudono in un file sol
 | Riconoscimento `.gd` | Già gratis | Nessun file nuovo. |
 | Editing, indentazione, fold | Già gratis | Conservare il ftplugin e l'indent del runtime. |
 | Tree-sitter `gdscript` | **Da aggiungere** | `gdscript` nella lista `languages` di `plugin/40_plugins.lua`. |
-| Tree-sitter `gdshader`, `godot_resource` | **Scelta d'ambito, non ostacolo tecnico** | Entrambi funzionano oggi. Si aggiungono quando si scrivono shader o si modificano scene a mano. Vedi §4.2. |
+| Tree-sitter `gdshader`, `godot_resource` | **Scelta d'ambito, non ostacolo tecnico** | Entrambi funzionano oggi. Si aggiungono quando si scrivono shader o si modificano scene a mano. Vedi "Shader e risorse: una scelta, non un ostacolo". |
 | Query Tree-sitter | Non serve ora | Nessuna query personalizzata finché `:Inspect` non mostra un difetto concreto. |
 | LSP | **Da aggiungere** | `gdscript` in `vim.lsp.enable()`, più `after/lsp/gdscript.lua` per la root stretta. |
 | Diagnostica, completion, navigazione | Già gratis con LSP | Restano le impostazioni e le mapping LSP globali. |
 | Formattazione | **Da aggiungere** | `gdformat` nel `formatters_by_ft`. Nessun format-on-save. |
-| Snippet | **Da correggere** | Non mancano: sono attivi e producono Godot 3. Sede: `after/snippets/gdscript.json`. Vedi §5. |
-| Build / quickfix | **Da aggiungere**, comando e formato ora misurati | `compiler/godot.lua`: controlla **un file per volta**, non il progetto, e va eseguito dalla root. Vedi §6. |
+| Snippet | **Da correggere** | Non mancano: sono attivi e producono Godot 3. Sede: `after/snippets/gdscript.json`. Vedi "Snippet: correggere, non inventare". |
+| Build / quickfix | **Da aggiungere**, comando e formato ora misurati | `compiler/godot.lua`: controlla **un file per volta**, non il progetto, e va eseguito dalla root. Vedi "Build e quickfix: misurato, e meno di quanto si sperava". |
 | Lint esterno | Non serve ora | `gdlint` è **già sulla macchina** — arriva con gdtoolkit, misurato `executable('gdlint') → 1` — ma cambia le regole diagnostiche e non serve al formatter. Si adotta solo se la CI del gioco lo usa. |
-| `ftdetect` | **Da aggiungere se entra GDExtension o uno shader** | `.gdextension` e `.gdshaderinc` non sono riconosciuti. Vedi §7. |
+| `ftdetect` | **Da aggiungere se entra GDExtension o uno shader** | `.gdextension` e `.gdshaderinc` non sono riconosciuti. Vedi "GDExtension, `ftdetect` e il C++". |
 | Navigazione per path `res://` | Da rinviare | LSP e `suffixesadd=.gd` coprono la navigazione. Un `includeexpr` per `preload()` va progettato su esempi reali. |
 | Debug | Da proporre separatamente | Godot espone DAP, ma Neovim core non ne è client: richiede `nvim-dap` e una scelta di workflow. |
-| Server di un'applicazione esterna | **Vincolo, non asse opzionale** | Il server è dentro l'editor Godot: porta unica per macchina, ciclo di vita non nostro, assenza legittima. Vedi §4.3 e `capabilities.md` §17. |
-| Documentazione della classe | **Da aggiungere**, costa cinque righe | L'hover LSP la dà solo con Godot aperto, cioè non mentre si legge. Vedi §4.5. |
-| Esecuzione del progetto | **Da proporre** | `godot --path <root>` come comando buffer-local, non come `:make`. Vedi §6.6 e `capabilities.md` §19. |
-| Neovim come editor esterno di Godot | Fuori da questo repository | Vive nell'avvio di Neovim e nelle impostazioni di Godot. Vedi §9 e `capabilities.md` §18. |
-| Vista sull'albero delle scene | Rinviata | Un `.tscn` si legge come testo; una vista strutturata è un asse vero ma non urgente. Vedi §13. |
+| Server di un'applicazione esterna | **Vincolo, non asse opzionale** | Il server è dentro l'editor Godot: porta unica per macchina, ciclo di vita non nostro, assenza legittima. Vedi "LSP" e `capabilities.md` "Un runtime esterno che possiede il server". |
+| Documentazione della classe | **Da aggiungere**, costa cinque righe | L'hover LSP la dà solo con Godot aperto, cioè non mentre si legge. Vedi "La documentazione, quando Godot non è aperto". |
+| Esecuzione del progetto | **Da proporre** | `godot --path <root>` come comando buffer-local, non come `:make`. Vedi "Eseguire il gioco non è compilarlo" e `capabilities.md` "Eseguire il programma, e le viste che non sono file". |
+| Neovim come editor esterno di Godot | Fuori da questo repository | Vive nell'avvio di Neovim e nelle impostazioni di Godot. Vedi "Godot come editor esterno" e `capabilities.md` "Neovim come editor esterno di un'applicazione". |
+| Vista sull'albero delle scene | Rinviata | Un `.tscn` si legge come testo; una vista strutturata è un asse vero ma non urgente. Vedi "Decisioni rinviate". |
 | Health check | **Da aggiungere** | Sezione Godot in `lua/config/health.lua`. |
 
 ## 4. Architettura e implementazione
@@ -211,7 +211,7 @@ configs/nvim-0.12/
 ├── after/lsp/gdscript.lua          solo la differenza dal default LSP
 ├── after/snippets/gdscript.json    correzione dei prefissi Godot 3
 ├── after/ftplugin/gdscript.lua     solo `:compiler godot`
-├── compiler/godot.lua              `:make` su un file, più la root (§6)
+├── compiler/godot.lua              `:make` su un file, più la root ("Build e quickfix: misurato, e meno di quanto si sperava")
 ├── ftdetect/godot.lua              solo se entrano GDExtension o gli shader
 └── lua/config/health.lua           sezione Godot
 ```
@@ -221,9 +221,9 @@ Non sono parte di questa modifica:
 - `plugin/42_format.lua`: stabilisce il *range* da formattare, non il formatter;
 - `ftdetect/gdscript.lua`: il filetype `.gd` è già corretto;
 - un `mise.toml` dentro questo repository: il formatter è uno strumento globale, e la
-  versione del motore appartiene al repository del **gioco** (§1.1), non a quello della
+  versione del motore appartiene al repository del **gioco** ("I due comandi, e cosa non serve"), non a quello della
   config;
-- una pipe o un server RPC creato al caricamento di un buffer (§9).
+- una pipe o un server RPC creato al caricamento di un buffer ("Godot come editor esterno").
 
 ### 4.1 Tree-sitter
 
@@ -281,7 +281,7 @@ un problema tecnico inventato:
 
 Il solo difetto reale in quest'area è l'opposto di quello descritto prima:
 `*.gdshaderinc` **non è riconosciuto da Neovim**, mentre il parser lo coprirebbe. Si
-risolve in §7.
+risolve in "GDExtension, `ftdetect` e il C++".
 
 ### 4.3 LSP
 
@@ -350,7 +350,7 @@ Due fatti, ed entrambi pesano adesso che le versioni possono essere più di una:
 
 - **`--headless --editor` apre comunque LSP e DAP**: 6005 e 6006 rispondono con l'editor
   avviato senza finestra. Non è un dettaglio di questa prova, è ciò che rende reale
-  l'ultimo rinvio di §13;
+  l'ultimo rinvio di "Decisioni rinviate";
 - **la seconda istanza non ripiega su un'altra porta.** Resta viva e semplicemente senza
   server. Un Neovim con la configurazione di default si attacca allora a 6005, cioè
   **all'altro progetto**, e risponde con completion, definizioni e diagnostica di un
@@ -372,11 +372,11 @@ già aperti restano senza server: non c'è un "riprova" da chiamare, e nessun me
 avvisa che da quel momento completion e diagnostica sono mute. Ciò che rifà scattare
 l'attach è `:edit` sul buffer, perché ripassa da `FileType`. Vale come comando
 buffer-local in `after/ftplugin/gdscript.lua` accanto agli altri, ed è la forma che
-usa anche il plugin di §14.
+usa anche il plugin di "`godotdev.nvim`: perché non entra, e cosa gli è stato preso".
 
 Tutto questo capitolo — assenza legittima, porta condivisa, marker stretti,
 riconnessione manuale, nessun ponte esterno — è ora un asse a sé della skill
-(`capabilities.md` §17): due di quelle cinque righe nascono dalle misure fatte qui.
+(`capabilities.md` "Un runtime esterno che possiede il server"): due di quelle cinque righe nascono dalle misure fatte qui.
 
 #### Tre cose che i tutorial ripetono, e che qui sono sbagliate
 
@@ -391,7 +391,7 @@ sono. Nessuno dei tre dà un errore: danno un risultato peggiore, in silenzio.
   Riscriverlo come lista aggiunge una dipendenza esterna per ottenere meno. Vale anche
   per i plugin che la incapsulano: `godotdev.nvim` chiede `ncat` nel `PATH` su Windows.
 - **`filetypes = { 'gd', 'gdscript', 'gdscript3' }`.** Solo `gdscript` esiste in Neovim
-  (§2.3). Gli altri due non corrispondono a niente e si copiano proprio perché non fanno
+  ("Filetype dell'ecosistema Godot"). Gli altri due non corrispondono a niente e si copiano proprio perché non fanno
   danno visibile.
 - **`root_dir = require('lspconfig.util').root_pattern(…)`.** È l'API di
   'nvim-lspconfig' precedente a `root_markers`, e in `after/lsp/` sarebbe per di più una
@@ -430,7 +430,7 @@ vim.fn.exepath('gdformat')    → %LOCALAPPDATA%\mise\shims\gdformat.EXE
 ```
 
 Il pacchetto porta con sé anche `gdlint`, `gdparse`, `gdradon` e `gd2py`: sono sulla
-macchina per conseguenza, non per scelta, e §3 dice perché `gdlint` resti fuori.
+macchina per conseguenza, non per scelta, e "Assi scelti" dice perché `gdlint` resti fuori.
 
 Gli shim di `mise` devono essere nel `PATH` di **sistema**, altrimenti un Neovim avviato
 dal collegamento Windows non vedrà `gdformat`. Su Windows `mise` non ce li mette da
@@ -444,10 +444,10 @@ esteso.
 ### 4.5 La documentazione, quando Godot non è aperto
 
 Asse che le stesure precedenti non avevano, e non per distrazione: non era nella
-tabella degli assi della skill, che l'ha guadagnata proprio leggendo il plugin di §14.
+tabella degli assi della skill, che l'ha guadagnata proprio leggendo il plugin di "`godotdev.nvim`: perché non entra, e cosa gli è stato preso".
 
 Il punto è che l'hover dell'LSP dà la documentazione di una classe **solo con l'editor
-aperto sul progetto**: è la stessa dipendenza di §4.3 e cade insieme a lei. Quando
+aperto sul progetto**: è la stessa dipendenza di "LSP" e cade insieme a lei. Quando
 Godot è chiuso — cioè mentre si legge codice, che è metà del tempo — `K` non ha niente
 da dire. La documentazione del motore, però, sta a un URL prevedibile e versionato:
 
@@ -456,7 +456,7 @@ https://docs.godotengine.org/en/stable/classes/class_<nome tutto minuscolo>.html
 ```
 
 Cinque righe in `after/ftplugin/gdscript.lua`, file che esiste già per il `:compiler`
-di §6.5:
+di "Dove va":
 
 ```lua
 -- La classe sotto il cursore, nel browser. L'hover LSP la dà già, ma solo con
@@ -475,7 +475,7 @@ Tre cose da decidere in implementazione, non qui:
   `search.html?q=<parola>`, al prezzo di una pagina in mezzo: si sceglie dopo averle
   provate entrambe su un `Vector2` e su un nome di variabile;
 - se `stable` nell'URL debba seguire la versione che il progetto pinna in `mise.toml`
-  (§1.1). Sono la stessa informazione scritta in due posti, e divergono in silenzio:
+  ("I due comandi, e cosa non serve"). Sono la stessa informazione scritta in due posti, e divergono in silenzio:
   leggere una pagina della 4.5 lavorando sulla 4.7 non dà nessun sintomo;
 - se valga una mapping. Per la Fase 3 della skill è una decisione da proporre.
 
@@ -557,7 +557,7 @@ progetto, ed è quello che `:make` deve eseguire.
 
 La misura ha però corretto anche la correzione. La domanda che una stesura successiva
 dava per risolta — **"questo progetto compila?"** — dalla riga di comando di Godot **non
-ha risposta**, e §6.2 lo mostra: il ruolo che `cargo check` ha per Rust e `ngc --noEmit`
+ha risposta**, e "Cosa `:make` può promettere, e cosa no" lo mostra: il ruolo che `cargo check` ha per Rust e `ngc --noEmit`
 per Angular in questa config, qui non lo copre nessuno. Quello che resta è più stretto,
 e vale comunque la pena di averlo.
 
@@ -630,7 +630,7 @@ troncato al primo, in silenzio e con il quickfix vuoto. `compiler/ngc.lua` ha gi
 commento che spiega quante volte va ripetuto un backslash.
 
 `res://` è consumato come testo letterale del pattern, quindi `%f` riceve
-`scripts/broken.gd`, **relativo alla root del progetto** — vedi §6.4, che è la parte che
+`scripts/broken.gd`, **relativo alla root del progetto** — vedi "`--path` non basta: conta la directory da cui `:make` parte", che è la parte che
 questo formato da solo non risolve. Il `%-G` finale scarta il banner di versione e le due
 righe `ERROR: Failed to load script`, che ripetono lo stesso errore indicando un file
 sorgente del motore; arriva **dopo** che `%Z` ha chiuso la voce, quindi non ricade nel
@@ -653,7 +653,7 @@ Nel secondo caso `]q` apre un buffer vuoto con quel nome: nessun errore, nessun
 messaggio, e la lettura naturale è che il quickfix sia sbagliato piuttosto che la
 directory. Il motivo è che `%f` è relativo alla root del progetto mentre Neovim risolve i
 nomi del quickfix rispetto alla **propria** cwd, e `--path` parla solo a Godot. A questo
-si somma §1.3: da fuori il progetto, `mise` non sa nemmeno quale versione del motore
+si somma "Lo shim risolve la versione dalla directory corrente": da fuori il progetto, `mise` non sa nemmeno quale versione del motore
 lanciare.
 
 Misurato anche il rimedio, con la stessa sonda: eseguendo il `:make` con `lcd` sulla root
@@ -711,17 +711,17 @@ quindi non passa da `compiler/`. La forma giusta è quella **staccata**
 (`vim.system({ … }, { detach = true })`): il gioco ha una finestra propria, il suo
 output non serve nel quickfix, e non deve morire quando si chiude Neovim. La variante
 catturata — output dentro un buffer — è l'altra scelta possibile, e `capabilities.md`
-§19 dice cosa cambia. Se entra, entra come comando buffer-local in
+`capabilities.md` "Eseguire il programma, e le viste che non sono file" dice cosa cambia. Se entra, entra come comando buffer-local in
 `after/ftplugin/gdscript.lua`, e le mapping che lo richiamerebbero sono una decisione da
 proporre, non da prendere — la Fase 3 della skill le mette fra quelle che cambiano le
-abitudini dell'utente. A differenza di §6, **questa forma non è stata misurata**: il
+abitudini dell'utente. A differenza di "Build e quickfix: misurato, e meno di quanto si sperava", **questa forma non è stata misurata**: il
 progetto di prova non ha una scena principale, quindi non c'è niente da far partire. Gli
 argomenti vanno confermati sul primo gioco vero, non copiati da qui.
 
 Restano fuori, e correttamente: i test e l'esportazione. Quelli dipendono davvero dal
 progetto — ma ora che il motore arriva da `mise`, hanno una sede migliore di "un
 terminale": i **task** nel `mise.toml` del gioco, accanto alla versione che quel gioco
-pinna. La guida da cui nasce §1 li usa così, e la forma è
+pinna. La guida da cui nasce "Passo zero: Godot si installa con `mise`" li usa così, e la forma è
 
 ```toml
 [tasks."export:windows"]
@@ -770,7 +770,7 @@ vim.filetype.add({
 ```
 
 La seconda è la sorgente del `compile_commands.json`, che per `godot-cpp` nasce da SCons
-e non da CMake. È trattata in `analisi_funzionale_cpp.md` §9, riquadro incluso.
+e non da CMake. È trattata in `analisi_funzionale_cpp.md` "Il ponte con Godot: GDExtension", riquadro incluso.
 
 ## 8. Health check
 
@@ -790,7 +790,7 @@ Quando applicabile, la sezione deve riportare:
    progetto) e `mise use -g godot@4` (sulla macchina) nell'advice. È il primo controllo
    perché è il prerequisito di tutto il resto. Entrambi ora **passano**: il controllo
    che conta è il successivo;
-2. **quale versione risolve lo shim**, che con `mise` è un guasto a sé (§1.3). Se
+2. **quale versione risolve lo shim**, che con `mise` è un guasto a sé ("Lo shim risolve la versione dalla directory corrente"). Se
    `godot --version` risponde `mise ERROR No version is set for shim: godot`,
    `executable('godot')` vale comunque 1 e il binario esiste: quello che manca è la
    dichiarazione nel progetto. Un check che si ferma a `executable()` dice che va tutto
@@ -801,7 +801,7 @@ Quando applicabile, la sezione deve riportare:
    `plugin/40_plugins.lua`;
 5. la **configurazione LSP risolta** (`vim.lsp.config['gdscript']`), come informazione
    diagnostica — e, se `GDScript_Port` è impostata, il suo valore, perché è l'unico modo
-   di accorgersi che questo progetto parla con un altro editor (§4.3).
+   di accorgersi che questo progetto parla con un altro editor ("LSP").
 
 Non deve testare `vim.v.servername` né tentare una connessione al server Godot. Due
 ragioni distinte, entrambe misurate:
@@ -819,12 +819,12 @@ ragioni distinte, entrambe misurate:
 Questo ponte non è una proprietà del filetype e non va inizializzato da un ftplugin.
 La forma generale — perché un ftplugin arriva sempre tardi, TCP contro named pipe, il
 socket da non creare dentro il repository, la base della riga da verificare — è ora un
-asse della skill (`capabilities.md` §18), scritto a partire da questa sezione. Qui
+asse della skill (`capabilities.md` "Neovim come editor esterno di un'applicazione"), scritto a partire da questa sezione. Qui
 resta ciò che è proprio di Godot. Sono due direzioni indipendenti:
 
 | Direzione | Soluzione | Confine |
 | --- | --- | --- |
-| Neovim → Godot | Il client LSP TCP di §4.3. | Parte quando Godot è aperto sul progetto. |
+| Neovim → Godot | Il client LSP TCP di "LSP". | Parte quando Godot è aperto sul progetto. |
 | Godot → Neovim | Godot invoca un editor esterno con `{project}`, `{file}`, `{line}`, `{col}`. | È una scelta di avvio dell'editor e vive nelle impostazioni Godot. |
 
 ### 9.1 Impostazioni dentro l'editor Godot
@@ -848,13 +848,13 @@ E sull'altro verso — quello che apre l'editor — `mise` aggiunge una condizio
 WinGet non esisteva. Un collegamento sul desktop o una voce del menu Start lancia
 l'eseguibile di *una* installazione e non sa niente del `mise.toml` del gioco: la
 versione che quel gioco dichiara si ottiene solo avviando il motore **dalla sua
-directory** (§1.3), con `godot --editor` da lì. Un collegamento che punta dritto a
+directory** ("Lo shim risolve la versione dalla directory corrente"), con `godot --editor` da lì. Un collegamento che punta dritto a
 `%LOCALAPPDATA%\mise\installs\godot\<versione>\godot.exe` funziona, ma inchioda il gioco
 a quella versione e scade al primo aggiornamento — cioè rinuncia proprio a ciò per cui
 si è passati a `mise`.
 
 Dalla 4.5 Godot compila da sé gli `Exec Flags` per gli editor che documenta — VS Code,
-Emacs, Vim, Rider. **Neovim non è in quell'elenco**: i flag di §9.2 vanno scritti a
+Emacs, Vim, Rider. **Neovim non è in quell'elenco**: i flag di "Il riuso di un'unica istanza Neovim" vanno scritti a
 mano, e un campo lasciato vuoto resta vuoto.
 
 ### 9.2 Il riuso di un'unica istanza Neovim
@@ -899,7 +899,7 @@ del progetto ne contengono, o se va deciso *quale* istanza debba ricevere il fil
 fallback semplice — aprire una nuova istanza con il file richiesto — resta possibile
 dalle impostazioni di Godot, ma non soddisfa il requisito di riuso.
 
-> **Risolto in `nvim-language-support/references/godot.md` §8.** Il motore invia la
+> **Risolto in `nvim-language-support/references/godot.md` "Verifica".** Il motore invia la
 > riga 1-based (`p_line` reale, confermato da `godotengine/godot#118228`), quindi
 > `cursor({line},{col})` — la forma già configurata — è corretta. Non serve `+1`.
 > Resta un bug distinto di Godot per cui un secondo click su uno script già caricato
@@ -923,17 +923,17 @@ file condiviso, che è precisamente ciò che i "Non-goals" di `AGENTS.md` esclud
 ## 10. Ciclo di lavoro risultante
 
 1. Il gioco dichiara la sua versione del motore: `mise use godot@4.5.1-stable` nella sua
-   root, una volta sola, e da quel momento `godot` significa quella (§1).
+   root, una volta sola, e da quel momento `godot` significa quella ("Passo zero: Godot si installa con `mise`").
 2. Aprire il progetto con Godot **dalla directory del gioco**; il suo LSP ascolta su
-   `127.0.0.1:6005`. Se un secondo progetto è già aperto, quella porta è sua: §4.3.
+   `127.0.0.1:6005`. Se un secondo progetto è già aperto, quella porta è sua: "LSP".
 3. Aprire un `.gd` dello stesso progetto in Neovim.
 4. Completion, diagnostica, hover, definizioni, riferimenti e rinomina dalle mapping LSP
    già presenti. Senza Godot aperto restano editing, Tree-sitter e il fallback syntax —
-   e nessuna diagnostica affatto, perché `:make` non ne dà (§6.2).
+   e nessuna diagnostica affatto, perché `:make` non ne dà ("Cosa `:make` può promettere, e cosa no").
 5. `:make` per sapere se **il file corrente** si parsa, `]q` e `[q` per camminare gli
    errori.
 6. `<Leader>lf` per una modifica mirata, `<Leader>lF` per riformattare l'intero script.
-7. Per eseguire, testare ed esportare, i task nel `mise.toml` del gioco (§6.6).
+7. Per eseguire, testare ed esportare, i task nel `mise.toml` del gioco ("Eseguire il gioco non è compilarlo").
 
 ## 11. Ordine di implementazione
 
@@ -945,14 +945,14 @@ file condiviso, che è precisamente ciò che i "Non-goals" di `AGENTS.md` esclud
 3. `after/lsp/gdscript.lua`.
 4. `after/snippets/gdscript.json` — l'asse con il rapporto costo/beneficio migliore,
    perché è già attivo e già sbagliato.
-5. `compiler/godot.lua` con il comando e l'`errorformat` di §6, **più** ciò che porta
-   `:make` a partire dalla root (§6.4), e `after/ftplugin/gdscript.lua`. La misura che
+5. `compiler/godot.lua` con il comando e l'`errorformat` di "Build e quickfix: misurato, e meno di quanto si sperava", **più** ciò che porta
+   `:make` a partire dalla root ("`--path` non basta: conta la directory da cui `:make` parte"), e `after/ftplugin/gdscript.lua`. La misura che
    questo passo aspettava è stata fatta.
 6. Nello stesso `after/ftplugin/gdscript.lua`, i comandi buffer-local: la
-   documentazione della classe (§4.5) e la riconnessione dell'LSP (§4.3). Sono cinque
+   documentazione della classe ("La documentazione, quando Godot non è aperto") e la riconnessione dell'LSP ("LSP"). Sono cinque
    righe ciascuno e non dipendono da niente del resto.
-7. `check_godot()` nell'health check, con la voce separata per lo shim (§8).
-8. Configurare l'editor Godot (§9.1), che non è un passo di questo repository.
+7. `check_godot()` nell'health check, con la voce separata per lo shim ("Health check").
+8. Configurare l'editor Godot ("Impostazioni dentro l'editor Godot"), che non è un passo di questo repository.
 
 Parser, server, snippet, quickfix e health check risolvono problemi diversi: sono commit
 distinti, con la forma del soggetto che `AGENTS.md` prescrive — il problema, non la
@@ -979,14 +979,14 @@ si verifica. Gli esiti specifici a GDScript sono:
   ha vinto su friendly-snippets;
 - `:make` su uno script con un errore di sintassi riempie il quickfix e `]q` salta alla
   riga giusta. Va provato con un progetto che **non** compila, non con uno che compila —
-  e **da una sottodirectory**, non dalla root, perché è lì che §6.4 si rompe: il
+  e **da una sottodirectory**, non dalla root, perché è lì che "`--path` non basta: conta la directory da cui `:make` parte" si rompe: il
   controllo che conta è che il buffer aperto da `]q` sia il file vero e non un buffer
   vuoto con il nome giusto;
 - `:checkhealth config` segnala correttamente Godot, formatter e parser quando il
   progetto Godot è aperto, e distingue il motore mancante dallo shim che non risolve
-  (§8): il secondo caso si riproduce aprendo un `.gd` che non sta sotto nessun
+  ("Health check"): il secondo caso si riproduce aprendo un `.gd` che non sta sotto nessun
   `mise.toml`;
-- i comandi buffer-local di §4.5 e §4.3 **esistono nel buffer `.gd` e non altrove**:
+- i comandi buffer-local di "La documentazione, quando Godot non è aperto" e "LSP" **esistono nel buffer `.gd` e non altrove**:
   `:GodotDoc` deve rispondere `E492` in un buffer Lua. È l'unico modo di provare che
   sono `-buffer` e non mapping globali travestite;
 - la direzione Godot → Neovim si verifica in una sessione grafica reale, inclusi
@@ -999,8 +999,8 @@ Queste non sono omissioni: richiedono un caso d'uso o una scelta dell'utente.
 - parser per shader e risorse — **disponibili e funzionanti**, in attesa del bisogno;
 - `gdlint` come linter separato;
 - test ed esportazione del gioco: dipendono dal progetto, e la loro sede è il `mise.toml`
-  del gioco (§6.6), non questa config. **Eseguirlo non è più fra i rinvii**: ha una forma
-  universale, ed è in §6.6;
+  del gioco ("Eseguire il gioco non è compilarlo"), non questa config. **Eseguirlo non è più fra i rinvii**: ha una forma
+  universale, ed è in "Eseguire il gioco non è compilarlo";
 - conversione dei path `res://` per `gf`;
 - debug DAP con `nvim-dap` — sapendo che sotto c'è un gradino che non costa niente: la
   parola chiave `breakpoint` di GDScript ferma il debugger di Godot sulla riga in cui è
@@ -1008,26 +1008,26 @@ Queste non sono omissioni: richiedono un caso d'uso o una scelta dell'utente.
   l'editor esterno su quella riga. È anche la ragione per non avere fretta: l'unica
   integrazione che Godot ospita, `emacs-gdscript-mode`, ha un debugger **solo per Godot
   3**;
-- wrapper e politica per il riuso dell'istanza Neovim da Godot (§9.2);
-- **avvio headless di Godot solo per LSP — non è più un'ipotesi.** Misurato in §4.3:
+- wrapper e politica per il riuso dell'istanza Neovim da Godot ("Il riuso di un'unica istanza Neovim");
+- **avvio headless di Godot solo per LSP — non è più un'ipotesi.** Misurato in "LSP":
   `godot --headless --editor` apre 6005 e 6006 senza finestra, quindi la completion e la
   diagnostica si possono avere senza aprire l'editor grafico. Resta rinviato perché
   quello che manca non è la fattibilità ma la **politica**: chi lo avvia, quando muore,
   e cosa succede quando poi si apre l'editor vero sullo stesso progetto — che, come dice
   la stessa misura, non otterrebbe la porta. Un processo dimenticato è peggio di un
   server assente, perché risponde;
-- più progetti Godot aperti insieme: `--lsp-port` e `GDScript_Port` per progetto (§4.3)
+- più progetti Godot aperti insieme: `--lsp-port` e `GDScript_Port` per progetto ("LSP")
   sono la forma del rimedio, ma dove vivano — un `.nvim.lua` per gioco, una convenzione
   sulle porte — è una decisione da prendere quando il secondo gioco esiste davvero;
 - **vista sull'albero delle scene.** Un `.tscn` è testo e si legge, ma la gerarchia dei
   nodi con i loro tipi è la struttura su cui si ragiona in Godot, e leggerla a mano da
-  un file INI non è la stessa cosa. È un asse legittimo (`capabilities.md` §19) e la
+  un file INI non è la stessa cosa. È un asse legittimo (`capabilities.md` "Eseguire il programma, e le viste che non sono file") e la
   forma sarebbe un buffer scratch generato dal file, non un file da aprire. Rinviato
   perché costa codice da mantenere e perché la sua metà utile — *quale scena apro?* —
   la copre già un picker;
 - **console dell'esecuzione.** Catturare l'output del gioco dentro Neovim invece di
   lasciarlo alla finestra di Godot: si valuta dopo aver usato la forma staccata di
-  §6.6, non prima.
+  "Eseguire il gioco non è compilarlo", non prima.
 
 ## 14. `godotdev.nvim`: perché non entra, e cosa gli è stato preso
 
@@ -1040,22 +1040,22 @@ questo documento vengono da lì.
 
 | Misurato | Dove | Conseguenza |
 | --- | --- | --- |
-| `cmd = { "ncat", host, port }` su Windows, `vim.lsp.rpc.connect` altrove | `lua/godotdev/lsp.lua` | Su questa macchina `ncat` è **assente**: nessun LSP. È §4.3 al contrario — il trasporto che oggi funziona nativo, sostituito da una dipendenza esterna. Il README lo mette fra i requisiti |
+| `cmd = { "ncat", host, port }` su Windows, `vim.lsp.rpc.connect` altrove | `lua/godotdev/lsp.lua` | Su questa macchina `ncat` è **assente**: nessun LSP. È "LSP" al contrario — il trasporto che oggi funziona nativo, sostituito da una dipendenza esterna. Il README lo mette fra i requisiti |
 | `require("nvim-treesitter.configs").setup{…}` dentro un `pcall` | `lua/godotdev/tree-sitter.lua` | È l'API del branch `master`; questa config usa `main`, dove `configs.lua` **non esiste** — verificato nell'installazione reale. Il `pcall` fallisce in silenzio: nessun parser, nessun errore, nessun sintomo |
-| `BufWritePost *.gd` → `gdscript-formatter --reorder-code`, sul file su disco | `lua/godotdev/formatting.lua` | Contraddice §4.4 su tre punti insieme: format-on-save, un formatter diverso da `gdformat`, e un riordino del codice a ogni `:w`. E scavalca 'conform.nvim', che governa ogni altro linguaggio |
-| `filetypes = { "gd", "gdscript", "gdshader", "gdscript3" }`, `root_markers` con `.git`, `capabilities` ricostruite da zero | `lua/godotdev/lsp.lua` | Due filetype che in Neovim non esistono (§2.3), il server GDScript attaccato anche agli shader, e `.git` fra i marker: **esattamente** il difetto che `after/lsp/gdscript.lua` esiste per togliere |
-| `makeprg`, `errorformat`, `setqflist`: nessuna occorrenza. Nessuna directory `compiler/`, `snippets/`, `ftdetect/` | tutto il repository | §5, §6 e §7 — snippet che producono Godot 3, quickfix, riconoscimento di `.gdextension` — restano interamente scoperti. Sono il lavoro vero di questo documento |
+| `BufWritePost *.gd` → `gdscript-formatter --reorder-code`, sul file su disco | `lua/godotdev/formatting.lua` | Contraddice "Formattazione e toolchain" su tre punti insieme: format-on-save, un formatter diverso da `gdformat`, e un riordino del codice a ogni `:w`. E scavalca 'conform.nvim', che governa ogni altro linguaggio |
+| `filetypes = { "gd", "gdscript", "gdshader", "gdscript3" }`, `root_markers` con `.git`, `capabilities` ricostruite da zero | `lua/godotdev/lsp.lua` | Due filetype che in Neovim non esistono ("Filetype dell'ecosistema Godot"), il server GDScript attaccato anche agli shader, e `.git` fra i marker: **esattamente** il difetto che `after/lsp/gdscript.lua` esiste per togliere |
+| `makeprg`, `errorformat`, `setqflist`: nessuna occorrenza. Nessuna directory `compiler/`, `snippets/`, `ftdetect/` | tutto il repository | "Snippet: correggere, non inventare", "Build e quickfix: misurato, e meno di quanto si sperava" e "GDExtension, `ftdetect` e il C++" — snippet che producono Godot 3, quickfix, riconoscimento di `.gdextension` — restano interamente scoperti. Sono il lavoro vero di questo documento |
 | `require("godotdev.lsp").setup(…)` è chiamata incondizionatamente da `M.setup()` | `lua/godotdev/setup.lua` | Non c'è un'opzione per tenere il plugin **senza** la sua configurazione LSP: o si installa `ncat`, o la si sovrascrive dopo. Non è un plugin additivo su quell'asse |
-| Dipendenze dichiarate: `nvim-dap`, `nvim-dap-ui`, `nvim-treesitter` | README | Il DAP è fuori ambito per scelta (§13), e qui arriva come requisito |
+| Dipendenze dichiarate: `nvim-dap`, `nvim-dap-ui`, `nvim-treesitter` | README | Il DAP è fuori ambito per scelta ("Decisioni rinviate"), e qui arriva come requisito |
 
 ### Cosa gli è stato preso
 
 Quattro assi che questo documento non aveva **e che la skill non elencava**: il server
-posseduto da un'applicazione esterna (§4.3), Neovim come editor esterno (§9),
-l'esecuzione del programma (§6.6), la vista sullo stato del progetto (§13). Sono
-diventati `capabilities.md` §17, §18 e §19, dove valgono per qualunque piattaforma con
+posseduto da un'applicazione esterna ("LSP"), Neovim come editor esterno ("Godot come editor esterno"),
+l'esecuzione del programma ("Eseguire il gioco non è compilarlo"), la vista sullo stato del progetto ("Decisioni rinviate"). Sono
+diventati `capabilities.md` "Un runtime esterno che possiede il server", `capabilities.md` "Neovim come editor esterno di un'applicazione" e `capabilities.md` "Eseguire il programma, e le viste che non sono file", dove valgono per qualunque piattaforma con
 la stessa forma — un motore, un IDE che espone un endpoint, un servizio già acceso. Più
-la riconnessione con `:edit` (§4.3), che è la sua soluzione e funziona senza il suo
+la riconnessione con `:edit` ("LSP"), che è la sua soluzione e funziona senza il suo
 codice.
 
 Il verso della lezione conta quanto la lezione: un plugin che fa cose fuori dalla
@@ -1075,10 +1075,10 @@ non come il drop-in che promette di essere.
 ## Fonti
 
 - Inventario: misurato su questa macchina, Neovim 0.12.5, config `configs/nvim-0.12`,
-  2026-09-13. Le misure di §1, §4.3 e §6 sono della stessa data, con Godot 4.7.2-stable
+  2026-09-13. Le misure di "Passo zero: Godot si installa con `mise`", "LSP" e "Build e quickfix: misurato, e meno di quanto si sperava" sono della stessa data, con Godot 4.7.2-stable
   installato da `mise` e un progetto di prova costruito apposta per rompersi.
 - [Rose, *Managing Godot with mise*](https://cosmicrose.dev/blog/godot-mise/) — origine
-  di §1 e dei task di §6.6. Il suo `[alias] godot = "asdf:mkungla/asdf-godot"` **non**
+  di "Passo zero: Godot si installa con `mise`" e dei task di "Eseguire il gioco non è compilarlo". Il suo `[alias] godot = "asdf:mkungla/asdf-godot"` **non**
   è stato adottato: il registry di `mise` ha già `aqua:godotengine/godot` (misurato con
   `mise registry godot`), e il suo script per gli export template è scritto per i
   percorsi Linux
@@ -1091,11 +1091,11 @@ non come il drop-in che promette di essere.
 - [`emacs-gdscript-mode`, l'integrazione ospitata da Godot](https://github.com/godotengine/emacs-gdscript-mode)
   — riferimento d'ambito: conferma `gdformat`, e il suo debugger è solo per Godot 3
 - [Simon Dalvai, *Godot with Neovim*](https://simondalvai.org/blog/godot-neovim/) —
-  origine degli `Exec Flags` di §9.2, del gradino `breakpoint` e dei file `.uid`
+  origine degli `Exec Flags` di "Il riuso di un'unica istanza Neovim", del gradino `breakpoint` e dei file `.uid`
 - [`godotdev.nvim`](https://github.com/Mathijs-Bakker/godotdev.nvim) e
   [la ricetta con `ncat`](https://mb-izzo.github.io/nvim-godot-solution/) — valutati e
   **non adottati**. La valutazione, fatta sul sorgente del plugin (branch `master`,
-  2026-08-31) e non sul suo README, è in §14: è anche la fonte dei quattro assi nuovi
+  2026-08-31) e non sul suo README, è in "`godotdev.nvim`: perché non entra, e cosa gli è stato preso": è anche la fonte dei quattro assi nuovi
 - [`shiena/godot-neovim`](https://github.com/shiena/godot-neovim) — Neovim *dentro*
   l'editor Godot, cioè il problema opposto a quello di questo documento
 - `:h vim.lsp.config()`, `:h lsp-root_markers`, `:h write-compiler-plugin`,

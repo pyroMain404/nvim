@@ -7,7 +7,7 @@ linguaggio.
 
 Lua ha una particolarità che nessun altro linguaggio di questa config ha: **è la
 lingua in cui la config stessa è scritta**. Il linguaggio da supportare e lo
-strumento di lavoro coincidono, e questo decide quasi tutte le scelte di §4 — la
+strumento di lavoro coincidono, e questo decide quasi tutte le scelte di "Fase 5 — cosa implementare" — la
 `library` del server, i globali dichiarati, il formatter.
 
 ## 1. Fase 1 — cosa il runtime dà già
@@ -110,7 +110,7 @@ Neovim, tutte dentro `settings.Lua`:
   Senza l'ultima, ogni `MiniPick.builtin.files` è un globale sconosciuto e `<Leader>ls`
   su un `MiniXxx` non arriva da nessuna parte. Con essa, la definizione apre
   `mini.nvim/lua/mini/pick.lua`. **Non** si passa tutto il `runtimepath`: il costo si
-  paga a ogni avvio del server (vedi §5).
+  paga a ogni avvio del server (vedi "Il ciclo di lavoro").
 - **`diagnostics.globals = { 'Config' }`** — `Config` è definito in `init.lua` ed è
   usato da ogni file di `plugin/`. Senza questa riga ogni suo uso è un
   `undefined-global`, cioè decine di avvisi falsi nei file che si modificano più
@@ -136,7 +136,7 @@ Non c'è `:make`: il ciclo è il server per gli errori, `<Leader>lf` per la form
 `:checkhealth config` per l'ambiente, e `:source %` o un riavvio per provare la
 modifica.
 
-Questo è anche tutto ciò che resta dell'asse "esecuzione" (`capabilities.md` §19):
+Questo è anche tutto ciò che resta dell'asse "esecuzione" (`capabilities.md` "Eseguire il programma, e le viste che non sono file"):
 il programma è l'editor che lo sta leggendo, quindi non c'è un processo da avviare né
 da staccare, e `:source %` lo esegue nello stesso Neovim. **È l'unico linguaggio di
 questa config che non definisce `:Run`**, e la ragione va detta perché il contratto è
@@ -187,7 +187,7 @@ riusa il client giusto. `vim.fn.resolve()` risolve la junction anche su Windows
 ## 7. Health check
 
 Le domande a cui `check_lua()` risponde: `lua-language-server` è raggiungibile e con
-quale versione (con il comando `mise` di §3 come consiglio quando non lo è), e il
+quale versione (con il comando `mise` di "Fase 4 — installazione" come consiglio quando non lo è), e il
 parser `lua` è installato — che per un parser spedito con Neovim significa
 un'installazione rotta, non un linguaggio da aggiungere, e il consiglio lo dice.
 `stylua` resta in `check_external_tools()`, dove era già: la sua assenza rompe prima
@@ -210,7 +210,7 @@ qui:
   lo dice;
 - `<Leader>ll` deve trovare code lens in un file della config (quattro in
   `plugin/40_plugins.lua`), e risolte devono avere `command = ""`: se un giorno ne
-  arriva una con un comando vero, il messaggio descritto in §5 non è più atteso;
+  arriva una con un comando vero, il messaggio descritto in "Il ciclo di lavoro" non è più atteso;
 - `:verbose setlocal commentstring? includeexpr?` deve nominare
   `$VIMRUNTIME/ftplugin/lua.vim`: la config non ha un `after/ftplugin/lua.lua` e non
   deve averne uno per sbaglio.

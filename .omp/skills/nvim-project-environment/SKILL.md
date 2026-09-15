@@ -89,7 +89,7 @@ Le due cose che ci finiscono più spesso:
 
 - **una variabile d'ambiente per un server** — `JDTLS_JVM_ARGS` è il caso vero di
   questa macchina (il perché sta in `references/java.md` di
-  `nvim-language-support`, §6);
+  `nvim-language-support`, `capabilities.md` "Build, test e quickfix");
 - **un'opzione che l'ftplugin della config imposta e qui va cambiata** — allora
   serve un autocomando `FileType`, non un'assegnazione: l'ftplugin gira **dopo**
   il `.nvim.lua`, e un valore assegnato al momento della lettura viene

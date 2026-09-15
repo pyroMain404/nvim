@@ -27,7 +27,7 @@ responsabile:
 
 **`gcc` imposta solo `errorformat`, nessun `makeprg`** — ed è la riga che conta:
 il formato di GCC è anche quello di clang, drive letter compresa, quindi è
-riusabile invece di essere riscritto (§4.3).
+riusabile invece di essere riscritto ("Build e quickfix").
 
 Il livello dei plugin già installati, che per il C++ ha fatto molto:
 
@@ -106,7 +106,7 @@ e quella tabella è anche ciò che legge l'health check.
 
 `'clangd'` in `vim.lsp.enable()`, e in `after/lsp/clangd.lua` **solo `cmd`**:
 `--background-index`, `--clang-tidy`, `--header-insertion=never`. Le tre funzioni
-ereditate non si toccano (§1), e `cmd` si può scrivere perché il default è una
+ereditate non si toccano ("Fase 1 — cosa il runtime dà già"), e `cmd` si può scrivere perché il default è una
 tabella, sostituita per intero.
 
 **Lo standard C++ non si scrive qui**, ed è il punto che rende il supporto
@@ -210,7 +210,7 @@ Quattro casi che appartengono al `.nvim.lua` del progetto (`:h 'exrc'`, skill
 - **build fuori da `build/`**, o guidata da un preset: lì cambia `makeprg`, non il
   compiler plugin condiviso;
 - **standard fuori dal database** (file sciolti, progetto non configurato):
-  `.clangd` del progetto, o `fallbackFlags` (§4.2);
+  `.clangd` del progetto, o `fallbackFlags` ("Server");
 - **avvio non ovvio**: `vim.g.run_command`, che ha l'ultima parola su `:Run`.
 
 ## 7. Cosa deve dire l'health check

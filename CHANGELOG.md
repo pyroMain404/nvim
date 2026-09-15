@@ -125,7 +125,7 @@ a merge from 'minimax' conflict-free.
 - Resolve the "to be measured" callout on the Godot cursor-line offset in
   `godot-project-setup`'s SKILL.md and in `docs/analisi_funzionale_godot.md`:
   both pointed at an open question that `nvim-language-support/references/godot.md`
-  §8 had already closed (godotengine/godot#118228 — `p_line` is already
+  `capabilities.md` "Navigazione della codebase" had already closed (godotengine/godot#118228 — `p_line` is already
   1-based, `cursor({line},{col})` without `+1` is correct). Replaced the open
   callout with a link to that conclusion instead of duplicating it. Also added
   the missing Godot entry to `nvim-project-environment/references/projects.md`

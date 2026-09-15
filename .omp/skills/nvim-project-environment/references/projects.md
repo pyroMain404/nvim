@@ -36,7 +36,7 @@ traccia in questo checkout.
 | Dove | Cosa | Perché |
 |---|---|---|
 | `mise.toml` (non versionato) | `java = "temurin-8"`, `maven = "3.9"` | una JDK sola, quella del build. `[tasks]` senza pin: con la 8 dichiarata per tutto il checkout, un `tools = { java = "temurin-8" }` per task ripeterebbe la stessa decisione in cinque punti |
-| `.nvim.lua` | `vim.env.JDTLS_JVM_ARGS = '-javaagent:…/lombok-1.18.36.jar'` | senza, `jdtls` non espande Lombok e riporta **ogni** membro generato come inesistente. Misurato su `AnswerService.java`: 87 errori senza, 0 con. Il perché completo è in `references/java.md` §6 di `nvim-language-support` |
+| `.nvim.lua` | `vim.env.JDTLS_JVM_ARGS = '-javaagent:…/lombok-1.18.36.jar'` | senza, `jdtls` non espande Lombok e riporta **ogni** membro generato come inesistente. Misurato su `AnswerService.java`: 87 errori senza, 0 con. Il perché completo è in `references/java.md` "Ambiente di progetto" di `nvim-language-support` |
 | `.nvim.lua` | autocomando `FileType java` che imposta `makeprg = 'mvn --batch-mode'` | solo per togliere spinner e ANSI dall'output, che l'`errorformat` di `compiler maven` non sa leggere. Deve essere un autocomando perché `after/ftplugin/java.lua` esegue `compiler maven`, che scrive `makeprg` **dopo** la lettura del `.nvim.lua` |
 
 NOTE: fino al 2026-09-09 entrambi i file portavano un rimedio a `jdtls` — il
@@ -264,7 +264,7 @@ riga in `.git/info/exclude`.
 
 Progetto Godot 4 di sandbox, usato per verificare il supporto GDScript in
 Neovim (parser, LSP, `:make`, `:Run`, formattazione). Non è un prodotto: è il
-progetto reale su cui `nvim-language-support/references/godot.md` §8 e la skill
+progetto reale su cui `nvim-language-support/references/godot.md` "Verifica" e la skill
 `godot-project-setup` sono state validate.
 
 **Cosa ha di diverso**: è un gioco, quindi la versione del motore è una proprietà

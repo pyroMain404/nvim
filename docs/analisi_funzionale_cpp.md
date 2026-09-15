@@ -4,7 +4,7 @@ Segue il metodo di `nvim-language-support`: inventario prima, scelta esplicita d
 assi, niente che duplichi il runtime o i plugin già installati.
 
 L'ambito è **C++ generalizzato** — qualunque progetto, non solo Godot. GDExtension è un
-modo di *usare* questo supporto, non una sua variante, e vive in §9.
+modo di *usare* questo supporto, non una sua variante, e vive in "Il ponte con Godot: GDExtension".
 
 ## Come usare questo documento
 
@@ -44,7 +44,7 @@ Il documento parte da zero.
 Objective-C; poi, se `g:c_syntax_for_h` non è impostata, ritorna `cpp` come fallback.
 Verificato anche con un header di C puro: resta `cpp`. Per un progetto C++ è il
 comportamento voluto; per un progetto C puro la leva è `g:c_syntax_for_h`, che è
-globale e quindi appartiene a un `.nvim.lua` di progetto, non a questa config (§6).
+globale e quindi appartiene a un `.nvim.lua` di progetto, non a questa config ("Ambiente di progetto").
 
 ### Editing — il runtime copre quasi tutto
 
@@ -129,7 +129,7 @@ C++:
 Scriverne una in `after/lsp/clangd.lua` li cancella entrambi, in silenzio.
 
 `cmd` invece è una **tabella**, quindi sovrascriverlo è legittimo. La fusione sostituisce
-la lista intera — verificato sul caso gemello in `analisi_funzionale_godot.md` §4.3: Neovim
+la lista intera — verificato sul caso gemello in `analisi_funzionale_godot.md` "LSP": Neovim
 tratta una tabella-lista come un valore, non fonde per indice.
 
 Esistono anche `ccls` (alternativa storica) e, per i file CMake, `neocmake` e `cmake`.
@@ -253,7 +253,7 @@ quello da cui nasce il `compile_commands.json`.
 | `gf` su `#include` | Da rinviare | `path` è vuoto; riempirlo con path di sistema in una config condivisa è sbagliato. `gd` di LSP copre il bisogno reale |
 | Textobject | Già gratis dopo il parser | `mini.ai` usa i capture di `nvim-treesitter-textobjects` |
 | Debug | Da rinviare | `Termdebug` c'è ma vuole gdb, che LLVM non dà |
-| Toolchain | **Da installare** | §2 |
+| Toolchain | **Da installare** | "Toolchain — deciso: LLVM" |
 | Health check | **Da aggiungere** | `check_cpp()` in `lua/config/health.lua` |
 
 ## 4. Cosa implementare
@@ -540,7 +540,7 @@ del C++:
   `cmake` dà già l'highlighting; il server si adotta solo se i file CMake diventano un
   posto in cui si lavora, non uno che si legge.
 - **`.clang-tidy` condiviso.** Le regole appartengono al progetto, non alla config.
-- **MSVC come secondo compilatore** per le build di release (§2).
+- **MSVC come secondo compilatore** per le build di release ("Toolchain — deciso: LLVM").
 
 ## 9. Il ponte con Godot: GDExtension
 
@@ -553,7 +553,7 @@ Tre cose in più, e una sola richiede una riga di config:
 
 1. **`.gdextension` non è riconosciuto** (misurato: nessun match). Ha la forma di un
    INI. Si risolve nell'`ftdetect/godot.lua` descritto in
-   `analisi_funzionale_godot.md` §7, insieme a `.gdshaderinc`. È l'unico file
+   `analisi_funzionale_godot.md` "GDExtension, `ftdetect` e il C++", insieme a `.gdshaderinc`. È l'unico file
    che GDExtension aggiunge.
 2. **Il compilation database**, che è l'unica vera differenza operativa. `godot-cpp` si
    costruisce con **SCons**, non con CMake, e clangd senza `compile_commands.json` su un
@@ -562,7 +562,7 @@ Tre cose in più, e una sola richiede una riga di config:
    > **Da verificare sul checkout reale**, prima di scriverlo nell'health check: quale
    > dei due percorsi il progetto usa. SCons può emettere il database
    > (`scons compiledb=yes`), e le versioni recenti di `godot-cpp` espongono anche un
-   > `CMakeLists.txt`. Se il percorso è CMake, GDExtension non aggiunge nulla a §4.5;
+   > `CMakeLists.txt`. Se il percorso è CMake, GDExtension non aggiunge nulla a "Health check";
    > se è SCons, l'advice dell'health check deve nominare il comando di SCons e non
    > quello di CMake. **Non scrivere l'advice senza aver guardato quale dei due c'è.**
 
@@ -580,10 +580,10 @@ una riga nell'health check.
    Verificare che `%LOCALAPPDATA%\mise\shims` sia nel `PATH` di sistema.
 2. Parser, `clangd` abilitato, `clang-format`: tre modifiche a `plugin/40_plugins.lua`.
 3. `after/lsp/clangd.lua`, con il solo `cmd`.
-4. **Misurare** l'output di una build CMake fallita (§4.3), poi scrivere
+4. **Misurare** l'output di una build CMake fallita ("Build e quickfix"), poi scrivere
    `compiler/cmake.lua` e `after/ftplugin/cpp.lua`.
-5. **Misurare** dove finisce `compile_commands.json` (§4.5), poi `check_cpp()`.
-6. Verifica (§7).
+5. **Misurare** dove finisce `compile_commands.json` ("Health check"), poi `check_cpp()`.
+6. Verifica ("Verifica").
 7. Solo dopo, Godot come integrazione separata.
 
 Parser, server, quickfix e health check risolvono problemi diversi: sono commit

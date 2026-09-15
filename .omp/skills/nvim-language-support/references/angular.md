@@ -24,7 +24,7 @@ quella inline.
 | Compiler plugin | ci sono `tsc` e `eslint`; nessuno per Angular |
 | Parser tree-sitter | `angular`, `typescript`, `html`, `css`, `scss`, `json` tutti disponibili, nessuno installato |
 | 'nvim-lspconfig' | ha `angularls`, `ts_ls`, `vtsls`, `html`, `cssls`, `eslint` |
-| 'friendly-snippets' | `typescript.json` e `html.json` arrivano; quelli Angular **no**, vedi `capabilities.md` §9 |
+| 'friendly-snippets' | `typescript.json` e `html.json` arrivano; quelli Angular **no**, vedi `capabilities.md` "Completamento e snippet" |
 
 ### Il rilevamento del template è il primo guasto, ed è a monte di tutto
 
@@ -47,8 +47,8 @@ quello del `syntax/` legacy. Da qui la Fase 5 comincia con `ftdetect/`.
 'mini.comment', `gf` e gli operatori di rientro. Non c'è niente da correggere.
 
 **Non basta.** Il `syntax/` di TypeScript e di HTML, sostituito dal parser appena lo
-si installa; il compiler plugin `tsc`, per il motivo del §4; e il rilevamento del
-filetype, per il motivo del §1.
+si installa; il compiler plugin `tsc`, per il motivo del "Fase 5 — cosa implementare"; e il rilevamento del
+filetype, per il motivo del "Fase 1 — cosa il runtime dà già".
 
 ### I server: due, non uno
 
@@ -62,7 +62,7 @@ filetype, per il motivo del §1.
   gestisce interrogando tutti i client e unendo le risposte.
 
 Chi formatta non va lasciato al caso: lo decide `prettier` dichiarato in
-`formatters_by_ft` (§4), che toglie di mezzo il fallback `lsp_format`.
+`formatters_by_ft` ("Fase 5 — cosa implementare"), che toglie di mezzo il fallback `lsp_format`.
 
 `vtsls` è la terza opzione ed è più veloce su codebase grandi, ma è un cambio di
 server, non un'aggiunta: si valuta solo se `ts_ls` diventa lento.
@@ -105,7 +105,7 @@ mise use -g npm:prettier@latest
 ```
 
 I due posti non sono in alternativa, e non sono ridondanza. `ngserver` è un guscio che
-carica `@angular/language-service` **dal progetto** (`capabilities.md` §4), quindi la
+carica `@angular/language-service` **dal progetto** (`capabilities.md` "LSP: la semantica"), quindi la
 major giusta cambia da checkout a checkout: solo il `mise.toml` del progetto può
 essere giusto per tutti insieme, perché lo shim risolve in base alla directory
 corrente e Neovim avvia `ngserver` proprio attraverso lo shim. Quello globale è giusto
@@ -133,7 +133,7 @@ l'unico allineato ai suoi sorgenti.
 **`ftdetect/htmlangular.lua`** — la regola per nome che il runtime ha scartato,
 ristretta a un progetto che davvero è Angular. Il valore di `pattern` è una funzione
 che ritorna `nil` fuori da uno, così altrove il rilevamento resta identico
-(`capabilities.md` §1).
+(`capabilities.md` "Riconoscimento del filetype").
 
 **Tree-sitter**: `angular`, `typescript`, `html`, `css`, `scss`, `json` nella tabella
 `languages`. `angular` dipende da `html` e `html_tags`, e 'nvim-treesitter' li
@@ -147,7 +147,7 @@ sbagliato: un template con un `${}` ha **più** fragment, e un tag aperto prima 
 sostituzione e chiuso dopo non verrebbe mai chiuso.
 
 **I server**: `angularls` e `ts_ls` dentro `vim.lsp.enable()`, e nessun file in
-`after/lsp/` (§2).
+`after/lsp/` ("Fase 2 — cosa di questo tenere").
 
 **Build e quickfix**: `compiler/ngc.lua`, più `:compiler ngc` nei due ftplugin.
 `:compiler tsc` non è la risposta, e la prova è misurabile: su un componente il cui
@@ -165,7 +165,7 @@ Due cose del compiler plugin, entrambe verificate e nessuna deducibile:
   arriva a quella chiamata (`--pretty=false` viene proprio rifiutato come opzione
   sconosciuta), e sotto `:make` le sequenze ci sono anche con `NO_COLOR=1` già
   presente nell'ambiente del figlio. L'`errorformat` deve quindi vederci attraverso;
-  la forma e i suoi escaping sono in `capabilities.md` §6 e in `assets/compiler.lua`.
+  la forma e i suoi escaping sono in `capabilities.md` "Build, test e quickfix" e in `assets/compiler.lua`.
 
 La riga da riconoscere, senza colore:
 
@@ -200,9 +200,9 @@ quello che dà la lista completa del progetto in un colpo solo, invece dei soli 
 aperti.
 
 **Ciò che gira invece di finire** — `ng serve`, `ng test` in watch, una `ng build`
-intera — è l'asse separato di `capabilities.md` §19, e non va dato a `:make`, che è
+intera — è l'asse separato di `capabilities.md` "Eseguire il programma, e le viste che non sono file", e non va dato a `:make`, che è
 sincrono e terrebbe l'editor fermo per tutta la vita del dev server. È `:Run`, il
-contratto di §19, definito sia in `after/ftplugin/typescript.lua` sia in
+contratto di `capabilities.md` "Eseguire il programma, e le viste che non sono file", definito sia in `after/ftplugin/typescript.lua` sia in
 `htmlangular.lua` perché un componente è due file e un progetto solo:
 
 | Comando | Cosa esegue |
@@ -221,12 +221,12 @@ comando no.
 
 Resta vero che il caso davvero particolare — quale `configuration`, quale progetto di
 un workspace Nx — appartiene al checkout: la via è `:Run <task>`, o lo script che quel
-progetto si scrive (§6).
+progetto si scrive ("Ambiente di progetto").
 
 ## 6. Ambiente di progetto
 
 Un progetto la cui Angular non è quella dichiarata globalmente vuole il proprio
-`mise.toml` con `npm:@angular/language-server` alla major giusta (§3). Non è un
+`mise.toml` con `npm:@angular/language-server` alla major giusta ("Fase 4 — installazione"). Non è un
 `.nvim.lua`: qui non serve una variabile d'ambiente, serve che lo shim risolva un
 altro eseguibile, e per quello la directory corrente basta.
 
@@ -257,7 +257,7 @@ il progetto ha davvero un `node_modules` — senza, `angularls` non trova nessun
 servizio di linguaggio da caricare e `npx` nessun compilatore, e il sintomo somiglia
 a una config rotta; e **quale major di Angular usa il progetto**, accanto alla riga
 `mise` che installa il server corrispondente. Quest'ultima è la voce che vale di
-più, perché è l'unico posto da cui si può vedere il guasto del §3.
+più, perché è l'unico posto da cui si può vedere il guasto del "Fase 4 — installazione".
 
 `ngserver --version` non è un modo di chiedere: il binario si rifiuta di partire
 senza le `--tsProbeLocations` che 'nvim-lspconfig' calcola dal progetto, quindi la
@@ -280,7 +280,7 @@ solo qui:
   `MiniMisc.setup_auto_root()` mette sulla radice del **repository**. Con un progetto
   Angular annidato — in un monorepo, o sotto il `.git` di un repo che contiene
   dell'altro — le due directory non coincidono, la voce si forma lo stesso e `]q` apre
-  un buffer vuoto dal nome plausibile (`capabilities.md` §6). La sonda `quickfix` lo
+  un buffer vuoto dal nome plausibile (`capabilities.md` "Build, test e quickfix"). La sonda `quickfix` lo
   controlla da sé;
 - su un template devono essere attaccati **uno** e un solo client, `angularls`; su
   un `.ts` **due**, `angularls` e `ts_ls`. La sonda `lsp` aspetta il primo client e
@@ -288,7 +288,7 @@ solo qui:
   arrivato per primo;
 - una diagnostica del server deve comparire **nel buffer del template**, con
   `ngtsc` come sorgente: è l'unica prova che il servizio di linguaggio caricato dal
-  progetto sia compatibile con l'eseguibile, e quindi che il §3 sia stato rispettato;
+  progetto sia compatibile con l'eseguibile, e quindi che il "Fase 4 — installazione" sia stato rispettato;
 - il cursore dentro un `template:` inline deve dare `angular` come linguaggio
   iniettato, non `typescript`;
 - `:Run` deve esistere **in entrambi** i buffer di un componente, il `.ts` e il

@@ -63,7 +63,7 @@ if root ~= nil then
   -- Vim's own path resolution, not a GDScript or Godot quirk: any `scheme://`
   -- reference in any language hits the same wall.
   --
-  -- The fix is the same one `capabilities.md` §8 describes for `jdt://`: a
+  -- The fix is the same one `capabilities.md` "Navigazione della codebase" describes for `jdt://`: a
   -- `BufReadCmd` on the scheme, registered in 'plugin/40_plugins.lua' because
   -- it has to exist before this buffer is even open to redirect anything.
 end
@@ -97,7 +97,7 @@ end, { detach = true })
 -- when the game dies, which is how a project that cannot start says so.
 -- Bringing the whole output into Neovim - a scratch buffer fed by
 -- `vim.system()` with `stdout`, instead of `detach` - is a separate axis
--- (`capabilities.md` §19), and the order matters: it is worth judging after
+-- (`capabilities.md` "Eseguire il programma, e le viste che non sono file"), and the order matters: it is worth judging after
 -- the detached form has been used on a real game, not before.
 
 -- TODO: a game needs `:make`-like entries for the two things the engine cannot

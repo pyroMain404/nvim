@@ -33,7 +33,7 @@ assi su tredici:
 
 | Livello | Cosa dà |
 |---|---|
-| 'nvim-lspconfig' | `lsp/gdscript.lua`: `cmd` **funzione** costruita con `vim.lsp.rpc.connect('127.0.0.1', GDScript_Port or 6005)`, `filetypes = { 'gdscript' }`, `root_markers = { 'project.godot', '.git' }`. È l'**unico** file di tutto il plugin che usa `rpc.connect` invece di `rpc.start` (`capabilities.md` §17) |
+| 'nvim-lspconfig' | `lsp/gdscript.lua`: `cmd` **funzione** costruita con `vim.lsp.rpc.connect('127.0.0.1', GDScript_Port or 6005)`, `filetypes = { 'gdscript' }`, `root_markers = { 'project.godot', '.git' }`. È l'**unico** file di tutto il plugin che usa `rpc.connect` invece di `rpc.start` (`capabilities.md` "Un runtime esterno che possiede il server") |
 | 'nvim-treesitter' | parser `gdscript` disponibile e non installato, **tier 3** (nessun `maintainers` in 'parsers.lua'). `gdshader` dichiara i filetype `gdshader` **e** `gdshaderinc`, `godot_resource` dichiara `godot_resource` e `gdresource`: la tabella di 'plugin/filetypes.lua' è additiva rispetto al nome del parser, non sostitutiva |
 | 'friendly-snippets' | **25 snippet già attivi** da `snippets/gdscript.json`, cinque dei quali espandono sintassi Godot 3 |
 | 'conform.nvim' | conosce già `gdformat` ed esegue su stdin: `available=false` solo perché il binario mancava |
@@ -54,7 +54,7 @@ fare ciò che libuv fa da sé — usa l'API `master` di 'nvim-treesitter' dentro
 `pcall` (questa config è su `main`, dove `configs.lua` non esiste: fallisce in
 silenzio), formatta a ogni `:w` con un formatter diverso, e mette `.git` fra i
 `root_markers`. Non copre snippet, quickfix né `ftdetect`. Ma quattro assi che la
-skill non aveva vengono da lì: `capabilities.md` §17, §18 e §19.
+skill non aveva vengono da lì: `capabilities.md` "Un runtime esterno che possiede il server", `capabilities.md` "Neovim come editor esterno di un'applicazione" e `capabilities.md` "Eseguire il programma, e le viste che non sono file".
 
 ## 3. Fase 4 — toolchain
 
@@ -79,7 +79,7 @@ Tre conseguenze misurate:
 - **lo shim risolve la versione dalla directory corrente.** Fuori da qualunque
   dichiarazione risponde `mise ERROR No version is set for shim: godot` ed esce 1,
   mentre `vim.fn.executable('godot')` vale comunque 1. È il motivo per cui l'health
-  check separa la presenza dalla versione (§7).
+  check separa la presenza dalla versione ("Cosa deve dire l'health check").
 
 ## 4. Fase 5 — cosa implementare
 
@@ -95,7 +95,7 @@ configs/nvim-0.12/
 
 ### 4.1 Il server appartiene all'editor Godot
 
-È il caso completo di `capabilities.md` §17, e l'unico di questa config. Quello che
+È il caso completo di `capabilities.md` "Un runtime esterno che possiede il server", e l'unico di questa config. Quello che
 va scritto è **solo** `root_markers = { 'project.godot' }`: una lista è un valore e
 viene sostituita intera, quindi il `.git` ereditato sparisce — ed è ciò che conta,
 perché con lui un `.gd` qualunque dentro un repository qualunque si attacca al Godot
@@ -131,7 +131,7 @@ Quattro cose che la misura ha deciso, e nessuna è deducibile:
 
 **`:make` deve partire dalla radice del progetto**, e il perché, la forma e le due
 trappole (gli eventi quickfix non sono buffer-local; `vim.fn.chdir()` e non `:lcd`)
-stanno in `capabilities.md` §6, dove valgono per qualunque strumento con percorsi
+stanno in `capabilities.md` "Build, test e quickfix", dove valgono per qualunque strumento con percorsi
 relativi a un manifesto. `--path` da solo non basta: parla al motore, non a Neovim.
 
 ### 4.3 Il resto del buffer
@@ -146,7 +146,7 @@ relativi a un manifesto. `--path` da solo non basta: parla al motore, non a Neov
   0 su stderr, sullo stesso comando che da shell lo stampa a schermo), e il
   motore, eseguendo un progetto su Windows, gira in **due** processi — contarli
   per sapere se il gioco è vivo risponde 2.
-  **Staccato**, che è il ramo di `capabilities.md` §19 per un programma con
+  **Staccato**, che è il ramo di `capabilities.md` "Eseguire il programma, e le viste che non sono file" per un programma con
   finestra propria, ed è una misura e non una preferenza: invocato nella forma
   catturata, il gioco apre un `buftype=terminal` con un job vivo il cui buffer
   resta **vuoto**, mentre l'output esce sullo stdout del processo Neovim — in
@@ -164,7 +164,7 @@ relativi a un manifesto. `--path` da solo non basta: parla al motore, non a Neov
   gioco pinna: la divergenza non ha sintomi.
 - **`:GodotReconnect`** fa `:edit`, che ripassa da `FileType` e rifà scattare
   l'attach. È l'unica "riprova" che esiste dopo aver riavviato l'editor
-  (`capabilities.md` §17, punto 4). Rifiuta su un buffer modificato invece di
+  (`capabilities.md` "Un runtime esterno che possiede il server", punto 4). Rifiuta su un buffer modificato invece di
   perderne il contenuto.
 
 ### 4.4 `gf` su `res://`
@@ -185,9 +185,9 @@ un nome senza alcuna corrispondenza possibile, che risponde correttamente `''`. 
 tratta qualunque cosa contenga `"://"` come uno schema di rete e non la verifica sul
 filesystem, quindi la condizione "non trovato" da cui dipende `includeexpr` non
 scatta mai. Vale per qualunque `schema://` in qualunque linguaggio, non solo per
-Godot: registrato in `capabilities.md` §8.
+Godot: registrato in `capabilities.md` "Navigazione della codebase".
 
-La correzione è la stessa di `jdt://` (`capabilities.md` §8): un `BufReadCmd` sullo
+La correzione è la stessa di `jdt://` (`capabilities.md` "Navigazione della codebase"): un `BufReadCmd` sullo
 schema, in `plugin/40_plugins.lua` — non nel ftplugin, perché deve esistere **prima**
 che un `gf` apra quel buffer, non dopo. Intercetta il nome fittizio, risolve la radice
 dal buffer alternato o dalla cwd, apre il file vero e cancella il buffer fantasma.
@@ -334,7 +334,7 @@ GDScript, tutti eseguiti e tutti passati:
   processi: sono due, quindi "ne resta uno" non è la prova che il gioco è vivo.
 - **`gf` sul caso limite**, cursore esattamente su "res" e non dentro il percorso:
   senza l'estensione di `isfname` catturerebbe solo `res` e fallirebbe. Con la
-  correzione, e con il `BufReadCmd` di `capabilities.md` §8, atterra sul file reale
+  correzione, e con il `BufReadCmd` di `capabilities.md` "Navigazione della codebase", atterra sul file reale
   (`is real file on disk = true`), e il buffer fittizio `res://…` non resta in giro
   (conteggio buffer verificato prima e dopo). Fuori da un progetto Godot, degrada con
   un `vim.notify` invece di aprire qualcosa.

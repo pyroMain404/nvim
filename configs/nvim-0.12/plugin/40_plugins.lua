@@ -222,7 +222,7 @@ now_if_args(function()
   -- exactly what `gf` on a `preload('res://...')` leaves as a buffer name: a
   -- buffer named "res://scripts/x.gd" that was never read from disk. This is
   -- the same shape as `jdt://` for a Java class without source
-  -- (`capabilities.md` §8), and the fix is the same one: a `BufReadCmd` on
+  -- (`capabilities.md` "Navigazione della codebase"), and the fix is the same one: a `BufReadCmd` on
   -- the scheme, registered here because it has to exist before ANY such
   -- buffer is opened - a `.gd` ftplugin would always be one file late.
   --

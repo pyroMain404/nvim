@@ -64,7 +64,7 @@ vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- Running the project is a different axis from `:make`, which answers a question that
 -- ends and fills the quickfix list: a process that lives and writes goes to a
 -- terminal instead. The command, its name and the window it opens are the contract of
--- 'lua/config/run.lua' (`references/capabilities.md` §19) — what belongs here is only
+-- 'lua/config/run.lua' (`references/capabilities.md` "Eseguire il programma, e le viste che non sono file") — what belongs here is only
 -- the resolver, which says which command answers for this language and reads its
 -- default from the project rather than fixing one.
 -- require('config.run').command(function(args)

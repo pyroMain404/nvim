@@ -45,6 +45,10 @@ configs/nvim-0.12         The config this machine runs — the only one to modif
 configs/nvim-0.10 … 0.13  Other reference configs, inherited from upstream
 CHANGELOG.md              User visible changes, newest first, dated;
                           this fork's entries go in its bottom section
+.omp/                     Skills and project-environment reference docs
+docs/                     Frozen pre-implementation records
+.stylua.toml              StyLua formatter configuration
+.styluaignore             Files excluded from formatting
 ```
 
 Inside `configs/nvim-0.12` (see `configs/README.md` for the full explanation):
@@ -61,16 +65,24 @@ plugin/41_git.lua        Git workflow built on 'mini.diff' and 'mini.git',
 plugin/42_format.lua     What gets formatted, behind the `Config.format` API
 plugin/43_review.lua     Files opened to be read as a set, behind the
                          `Config.review` API
-lua/config/health.lua    `:checkhealth config` — the only file under `lua/`
+lua/config/health.lua    `:checkhealth config`; found by path, not required
+lua/config/run.lua       `:Run` resolver, required by name from ftplugins
+lua/config/mise.lua      shared `mise` query, required by name from
+                         `after/lsp/` files and the health check
 snippets/                User defined snippets
+compiler/                `:compiler` plugins for `:make`
+ftdetect/                Filetype detection rules
 after/ftplugin/          Per filetype behavior
 after/lsp/               Language server configurations
+after/queries/           Tree-sitter query overrides
 after/snippets/          Snippet files that override plugin provided ones
 colors/purplehue.lua     Color scheme — generated, never edited by hand
+.omp/                    Skills and project-environment reference docs
+docs/                    Frozen pre-implementation records
 ```
 
 - **Only `configs/nvim-0.12` is in use and only it gets modified.** It is what `%LOCALAPPDATA%\nvim` points at, so editing it changes the running config immediately. `nvim-0.10`, `nvim-0.11` and `nvim-0.13` are upstream leftovers: leave them alone, and do not try to keep a change in sync across them.
-- Files in `plugin/` are sourced automatically in alphabetical order. This is deliberate: it avoids occupying the shared `lua/` namespace and needs no `require()` calls in `init.lua`. **Do not introduce a `lua/` directory** to modularize this config (one exception: [health checks](#reporting-problems)).
+- Files in `plugin/` are sourced automatically in alphabetical order. This is deliberate: it avoids occupying the shared `lua/` namespace and needs no `require()` calls in `init.lua`. Code required **by name** at an arbitrary later moment — from an ftplugin, an `after/lsp/` file, a health check, or another late-loaded site — lives in `lua/config/<area>.lua`. Behaviour that must exist from startup and is reached through `Config.<area>` lives in `plugin/NN_<area>.lua`. The file's own header says which mechanism it uses; do not move one to the other.
 - The number prefixes reserve room for insertion. A genuinely new area of config gets its own `NN_name.lua` file with a number that places it correctly in the load order; it does not get appended to an unrelated file.
 
 ### Generated files
@@ -85,9 +97,15 @@ Two files in the config are output, not source. They are read to know the curren
 - **An option of Neovim itself** → `plugin/10_options.lua`.
 - **A mapping** → `plugin/20_keymaps.lua`, under the existing `<Leader>` group that matches its meaning, with a `mini.clue` description.
 - **A MINI module or its config** → `plugin/30_mini.lua`, in the same step as comparable modules (see below). This holds for every module without exception, 'mini.diff' and 'mini.git' included: a `setup()` call belongs there and nowhere else, and no module moves out of that file for being long.
-- **Behavior built on top of MINI modules, which is not a setting of any of them** → its own `plugin/NN_name.lua`. There are three today: `plugin/41_git.lua`, the Git workflow — the revision used as diff reference, the navigation inside the output of `:Git`, the blame of the current line, the Git client; `plugin/42_format.lua`, which decides what a format pass touches; and `plugin/43_review.lua`, which opens the files a change touched as the argument list of a tabpage, whatever named them. Each reads as a plugin: state, behavior, and a single `Config.xxx` API through which mappings and the rest of the config talk to it. Adding a file like this is justified only when the code is an area of its own rather than the configuration of something that already exists; the test is whether it would still make sense if it were a plugin installed from elsewhere.
+- **Behavior built on top of MINI modules, or shared helpers, lives in one of two shapes.** Use the test that matches the access pattern:
+    - It must exist from startup and is reached through `Config.<area>` → its own `plugin/NN_<area>.lua`. There are three today: `plugin/41_git.lua`, the Git workflow; `plugin/42_format.lua`, which decides what a format pass touches; and `plugin/43_review.lua`, which opens the files a change touched as the argument list of a tabpage. Each reads as a plugin: state, behavior, and a single `Config.xxx` API through which mappings and the rest of the config talk to it. Adding a file like this is justified only when the code is an area of its own rather than the configuration of something that already exists; the test is whether it would still make sense if it were a plugin installed from elsewhere.
+    - It is required **by name** from an ftplugin, an `after/lsp/` file, a health check, or another late-loaded site → `lua/config/<area>.lua`. Examples today: `lua/config/run.lua`, the `:Run` resolver; and `lua/config/mise.lua`, the shared `mise` query. The file's own header says which mechanism it uses; do not move one to the other.
 - **A non-MINI plugin** → `plugin/40_plugins.lua`, added through `vim.pack.add()`.
 - **Behavior for one filetype or one language server** → `after/ftplugin/` or `after/lsp/`, never the shared files.
+- **A tree-sitter query override** → `after/queries/<lang>/<name>.scm`, starting with `; extends` unless you mean to replace everything.
+- **A `:compiler` plugin** → `compiler/<tool>.lua`, picked by `:compiler <tool>` in an ftplugin.
+- **A new filetype detection rule** → `ftdetect/<name>.lua`, only when Neovim does not already recognize the extension.
+- **Shared code required by name from an ftplugin, an `after/lsp/` file, or a health check** → `lua/config/<area>.lua`.
 - **A new external program the config depends on** → installed through `mise`, and reported by the health check. See below.
 
 ## External dependencies
@@ -106,17 +124,6 @@ Language servers, formatters, linters and language runtimes are installed with [
 ## Code style
 
 - **Formatting follows `.stylua.toml`.** [StyLua](https://github.com/JohnnyMorganz/StyLua) is installed, so formatting is applied with `stylua <path>` — not by eye. How to run the check so that its output means anything belongs to verification, and is therefore in the `nvim-config-testing` skill.
-
-  Two settings exist so that a whole-config run is quiet and its output means something. `line_endings = "Windows"` matches the CRLF that `core.autocrlf` puts in the working tree — with the upstream `"Unix"` value StyLua rewrote every line of every file and the report was pure noise. `.styluaignore` excludes the generated color scheme, which is output and must not be reformatted.
-
-  One known diff remains, in `plugin/30_mini.lua`, where StyLua wants to move a comment placed inside a string concatenation. That code comes from upstream and the change is cosmetic, so it is left alone: reformatting inherited code to silence the formatter buys nothing and costs a conflict.
-
-  What the file mandates:
-    - 2 space indent, spaces only.
-    - Single quotes preferred (`quote_style = "AutoPreferSingle"`).
-    - Maximum line width 85 — narrower than upstream 'mini.nvim' (120), because these files are read side by side.
-    - Parentheses always on calls, even single-argument ones (`require('mini.ai')`, never `require 'mini.ai'`).
-    - Simple statements collapsed onto one line (`if cond then return end`).
 - Startup order is expressed with the `Config` helpers defined in `init.lua`, not with ad-hoc timers:
     - `now(f)` — needed for the first screen draw.
     - `now_if_args(f)` — needed for the first draw only when Neovim is started with a file argument.
@@ -182,7 +189,7 @@ When config code detects something wrong — a missing executable, a buffer that
 
 Neovim in fact went the other way once. The `bad_files` list in `$VIMRUNTIME/lua/vim/health/health.lua` — files whose presence makes `:checkhealth` report a leftover installation — includes `lua/provider/node/health.lua`, `lua/provider/perl/health.lua`, `lua/provider/python/health.lua` and `lua/provider/ruby/health.lua`. The per-provider split existed and was merged back into the single `vim/provider/health.lua`.
 
-The dividing line those files draw is **"is this a subsystem worth interrogating on its own?"**, not "is this a separate directory". `:checkhealth vim.lsp` is worth asking alone; `:checkhealth config.keymaps` answers a question nobody has. This config is one subsystem, so it gets one file, and size is not a reason to split it — 953 lines were not.
+The dividing line those files draw is **"is this a subsystem worth interrogating on its own?"**, not "is this a separate directory". `:checkhealth vim.lsp` is worth asking alone; `:checkhealth config.keymaps` answers a question nobody has. This config is one subsystem, so it gets one file, and size is not a reason to split it — `lua/config/health.lua` is 757 lines and is not split.
 
 Follow the shape those files share (`vim/health/health.lua` is the clearest example):
 
@@ -216,7 +223,25 @@ The goal is **not zero warnings**. Fix the warnings that are, or may become, rea
 - Do not silence missing provider warnings (`vim.g.loaded_perl_provider = 0` and friends). Seeing that a provider is missing is the point.
 - Prefer solutions that *report* over solutions that *hide*. A health check may degrade to a warning; it must never become a fatal error and must never drop the information.
 
-## Commit messages
+## The documentation system
+
+Each document owns one kind of rule; cite the file and the heading, never a `§N` section number, because section numbers break silently when a document is reordered.
+
+| Document | What it owns |
+|---|---|
+| `AGENTS.md` | Repository rules, where changes go, commit style, external dependencies, and this citation rule. |
+| `configs/README.md` | The upstream layout of the reference configs and which one is live. |
+| `.omp/skills/nvim-config-testing/SKILL.md` | How to verify a change and the known traps of headless checks. |
+| `.omp/skills/nvim-project-environment/SKILL.md` | Project-level overrides through `.nvim.lua` and the project registry. |
+| `.omp/skills/nvim-language-support/SKILL.md` | The procedure for adding, extending or fixing support for a language. |
+| `.omp/skills/nvim-language-support/references/capabilities.md` | The catalogue of axes a language can cover and the mechanisms behind each. |
+| `.omp/skills/nvim-language-support/references/<lang>.md` | The per-language outcome of phases 1, 2 and 4-5, the daily cycle, and language-specific verification. |
+| `.omp/skills/nvim-language-support/references/language-declaration.md` | The anatomy shared by every language declaration: what file declares what, the contract, what breaks when it is missing, and the skeleton in `assets/`. |
+| `.omp/skills/nvim-language-support/assets/` | Skeletons for the files a new language repeats. |
+| `.omp/skills/godot-project-setup/SKILL.md` | Godot-specific setup and the Neovim-Godot integration. |
+| `docs/analisi_funzionale_<lang>.md` | Frozen pre-implementation records: the analysis that led to the implementation. They are never edited after the implementation commit; when they disagree with a reference, the reference wins. |
+
+`docs/ENGINE_AUDIT.md` is appended during an audit and is not a rule owner: it records which findings were fixed, left or rejected, with the evidence that decided them.
 
 Header follows the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) style used by 'mini.nvim'; the body follows the Problem/Solution style used by Vim. Both are mandatory here.
 
@@ -276,16 +301,16 @@ This config targets the Neovim installed on this machine (currently 0.12), which
 ## Non-goals
 
 - Becoming a distribution: no auto-update mechanism, no plugin abstraction layer, no config of the config.
-- A `lua/` module tree for this config, except the single `lua/config/health.lua` for [health checks](#writing-the-health-check).
+- A `lua/` module tree used to modularize startup behaviour. `lua/config/` is allowed only for code that is required by name at a later moment; see the load-order rule above.
 - Editing generated files by hand: `nvim-pack-lock.json`, `colors/purplehue.lua`.
 - Keeping `configs/nvim-0.10`, `nvim-0.11` and `nvim-0.13` in sync with the config actually in use.
 - Silencing warnings to make output look clean.
-- **Filetype or language specific logic in the shared `plugin/` files.** Concretely, none of these belong in `plugin/`:
+- **Filetype or language specific logic in the shared `plugin/` files, except one case.** Concretely, none of these belong in `plugin/`:
     - a branch on the current filetype (`if vim.bo.filetype == 'python' then ...`) to set options, mappings or autocommands — that is `after/ftplugin/python.lua`;
     - settings for one language server — that is `after/lsp/<server>.lua`, picked up by `vim.lsp.enable()`;
     - snippets for one language — that is `after/snippets/<lang>.json`.
 
-  What *does* belong in `plugin/40_plugins.lua` is the language-agnostic machinery those files rely on: installing and configuring `nvim-treesitter`, `conform.nvim`, the list of servers passed to `vim.lsp.enable()`. The rule is about per-language *behavior*, not about tools that happen to be aware of languages.
+  What *does* belong in `plugin/40_plugins.lua` is the language-agnostic machinery those files rely on: installing and configuring `nvim-treesitter`, `conform.nvim`, the list of servers passed to `vim.lsp.enable()`. The rule is about per-language *behaviour*, not about tools that happen to be aware of languages. The single admitted exception is a `BufReadCmd` for a URI scheme (`res://`, `jdt://`) that `gf` or an LSP response may create a buffer for: it must be registered before that buffer's `FileType` event, so it lives in a shared `plugin/` file, with `plugin/40_plugins.lua:232-245` as the worked example.
 
 ## Checklist before finishing
 

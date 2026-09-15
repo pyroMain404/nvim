@@ -237,7 +237,7 @@ La regola vale anche **all'indietro**, sui plugin scartati prima che esistesse. 
 sola documentazione — ne è uscita la riga sulle sorgenti che non stanno su disco
 (`plugin/jdtls.lua` registra un `BufReadCmd` su `jdt://*` e `*.class`) e una sezione
 su ciò che un server offre fuori dal protocollo, che è poi la sostanza di quei plugin:
-`capabilities.md` §4 e §8. `crates.nvim` è l'esito opposto e vale quanto gli altri: i
+`capabilities.md` "LSP: la semantica" e `capabilities.md` "Navigazione della codebase". `crates.nvim` è l'esito opposto e vale quanto gli altri: i
 suoi trenta moduli stanno tutti dentro una riga che c'era già, la gestione delle
 dipendenze, e non hanno aggiunto niente.
 
@@ -268,7 +268,7 @@ senza toglierlo.
 | `<C-x><C-o>` | completa con ciò che il linguaggio sa | `'omnifunc'`, di solito quello del server | Vim |
 | `<Leader>lf` | formatta come farebbe la CI | `formatters_by_ft` di 'conform.nvim' | questa config |
 | `<Leader>l*` | semantica: definizione, riferimenti, rename | un server in `after/lsp/` più `vim.lsp.enable()` | Neovim |
-| `:Run` | esegui **questo progetto**, in un terminale | un resolver in `after/ftplugin/<ft>.lua` (`capabilities.md` §19) | questa config |
+| `:Run` | esegui **questo progetto**, in un terminale | un resolver in `after/ftplugin/<ft>.lua` (`capabilities.md` "Eseguire il programma, e le viste che non sono file") | questa config |
 | `:checkhealth config` | dimmi se l'ambiente di questo linguaggio regge | un `check_<lang>()` in `lua/config/health.lua` | questa config |
 
 Due cose che la colonna centrale rende visibili, e che contano quando se ne definisce
@@ -315,7 +315,7 @@ Le opzioni con cui Vim chiede a un linguaggio come si fa una cosa sono cinque �
 `'makeprg'`, `'grepprg'`, `'keywordprg'`, `'formatprg'`, `'equalprg'` — e di
 `'runprg'` non c'è traccia in tutta la documentazione (verificato sui tag). Dopo
 l'esecuzione resta poco: un REPL del linguaggio dentro l'editor
-(`capabilities.md` §15) è il solo candidato con la stessa forma, e vale meno perché
+(`capabilities.md` "Documentazione, REPL, terminale") è il solo candidato con la stessa forma, e vale meno perché
 non ogni linguaggio ne ha uno. "Eseguire i test" **non** è un candidato per quanto lo
 sembri: lì il contratto c'è già ed è `:make`, e dove manca qualcosa manca un compiler
 plugin.
@@ -486,7 +486,7 @@ Gli assi da interrogare per un linguaggio, con la sonda che risponde:
 | `:checkhealth config` dice il vero sulla toolchain | `health` |
 
 I controlli che valgono **solo** per quel linguaggio si scrivono nella sua
-reference, non qui: `rust.md` §8 è l'esempio da imitare.
+reference, non qui: `rust.md` "Verifica" è l'esempio da imitare.
 
 ## Fase 6 — Quello che hai imparato resta qui
 
@@ -550,9 +550,9 @@ un'impressione.
 | Un parser non si installa e **nessun messaggio lo dice**: `install()` riporta successo senza scaricare niente | 'nvim-treesitter' lo crede già presente | `get_installed()` conta anche i nomi in `site/queries/`, e lì un symlink **rotto** vale come installato, così `install_lang()` esce con `return true` prima di provarci. Confronta quella cartella con `site/parser/`, togli le voci morte, poi reinstalla con `{ force = true }` |
 | Highlight che *era* completo e ora è parziale | query che ha sostituito quella del plugin | la **prima riga** dei file in `after/queries/`: manca `; extends` |
 | Il server non si attacca | eseguibile assente, o `root_dir` che non trova la radice | `:checkhealth vim.lsp`, `:=vim.lsp.config['<server>']` |
-| Il server si attaccava, e dopo aver riaperto l'applicazione che lo ospita non più | il client è morto con il processo esterno, e nessuno lo richiama | `:edit` sul buffer rifà passare `FileType`, quindi l'attach — `capabilities.md` §17 |
-| Il server risponde, ma con simboli che in questo progetto non esistono | due istanze dell'applicazione esterna, **una porta sola**: sei attaccato all'altro progetto | la porta in `:=vim.lsp.config['<server>']` e chi la sta ascoltando — `capabilities.md` §17 |
-| Go to definition apre un **buffer vuoto** il cui nome non è un percorso (`jdt://…`) | la risposta del server è un URI, e nessuno sa leggerlo | serve un `BufReadCmd` sullo schema — `capabilities.md` §8 |
+| Il server si attaccava, e dopo aver riaperto l'applicazione che lo ospita non più | il client è morto con il processo esterno, e nessuno lo richiama | `:edit` sul buffer rifà passare `FileType`, quindi l'attach — `capabilities.md` "Un runtime esterno che possiede il server" |
+| Il server risponde, ma con simboli che in questo progetto non esistono | due istanze dell'applicazione esterna, **una porta sola**: sei attaccato all'altro progetto | la porta in `:=vim.lsp.config['<server>']` e chi la sta ascoltando — `capabilities.md` "Un runtime esterno che possiede il server" |
+| Go to definition apre un **buffer vuoto** il cui nome non è un percorso (`jdt://…`) | la risposta del server è un URI, e nessuno sa leggerlo | serve un `BufReadCmd` sullo schema — `capabilities.md` "Navigazione della codebase" |
 | `method "..." is not supported by any server activated for this buffer` | non è il metodo a mancare: **nessun client è attaccato**, e quasi sempre il server non è nella lista abilitata | `:=vim.lsp.enable` in `plugin/40_plugins.lua`, poi `:checkhealth vim.lsp` |
 | Due client dello stesso server sullo stesso progetto | `root_dir` sovrascritto da `after/lsp/` | `:checkhealth vim.lsp` |
 | Un'impostazione di `settings` non ha effetto | nome sbagliato, **o una funzione ereditata sovrascritta** | il manuale del server, e `:=vim.lsp.config['<server>']` |

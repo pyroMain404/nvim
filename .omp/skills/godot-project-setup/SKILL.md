@@ -111,7 +111,7 @@ Dalla 4.5 Godot compila da sé gli `Exec Flags` per gli editor che documenta —
 Emacs, Vim, Rider — e **Neovim non è in quell'elenco**: quel campo va scritto a mano, e
 lasciato vuoto resta vuoto.
 
-> **Risolto in `nvim-language-support/references/godot.md` §8.** Il motore invia la
+> **Risolto in `nvim-language-support/references/godot.md` "Verifica".** Il motore invia la
 > riga 1-based (`p_line` reale, confermato da `godotengine/godot#118228`), quindi
 > `cursor({line},{col})` — la forma già configurata — è corretta. Non serve `+1`.
 > Resta un bug distinto di Godot per cui un secondo click su uno script già caricato
