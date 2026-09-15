@@ -111,6 +111,18 @@ a merge from 'minimax' conflict-free.
   the rest of the ecosystem stay out until they are needed: `gdshader` (which
   covers both '.gdshader' and '.gdshaderinc') and `godot_resource` (the
   `gdresource` of '.tscn' and '.tres') both work today and are one line each.
+- Attach the Godot language server to GDScript buffers. It is the one server
+  here that Neovim does not start: it lives inside the Godot editor, which has
+  to be open on the project, and 'nvim-lspconfig' connects to it over TCP on
+  the port of `GDScript_Port` or 6005. No client at all is a legitimate state
+  and not a failure - with the editor closed, editing, tree-sitter, `gdformat`
+  and `:make` all keep working and only the semantics are gone.
+  'after/lsp/gdscript.lua' sets `root_markers` and nothing else, to drop the
+  '.git' the default carries: with it, any loose '.gd' file in any repository
+  attaches to whatever Godot happens to be running and answers with the
+  completion, diagnostics and definitions of a DIFFERENT game, silently.
+  Nothing else is written there because the inherited `cmd` is a function - the
+  TCP connection itself - and a function is replaced rather than merged.
 - Parse C, C++, CMake and makefiles with tree-sitter: highlighting, structural
   folds and the textobjects of 'nvim-treesitter-textobjects' stop falling back
   to the legacy syntax files. The `cpp` parser requires `c`, which ships with

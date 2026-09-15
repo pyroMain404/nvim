@@ -193,6 +193,21 @@ now_if_args(function()
     -- Covers C, C++, Objective-C and CUDA: the `filetypes` of
     -- 'nvim-lspconfig' are already the right ones and are not copied over.
     'clangd',
+    -- The one server here that Neovim does not start: it lives inside the
+    -- Godot editor, which has to be open on the project. 'nvim-lspconfig'
+    -- connects to it over TCP, so its `cmd` is a FUNCTION built on
+    -- `vim.lsp.rpc.connect` and writing one anywhere would replace the
+    -- connection with a process (`:=vim.lsp.config['gdscript']`). The port is
+    -- `GDScript_Port`, or 6005.
+    --
+    -- No client at all is a legitimate state and not a failure: with the
+    -- editor closed what remains is editing, tree-sitter, `gdformat` and
+    -- `:make`, and only the semantics are gone. NOTE: that port belongs to
+    -- the machine, not to the project - a second Godot opened elsewhere gets
+    -- no port at all, and a '.gd' buffer then answers with the symbols of the
+    -- OTHER game, silently. 'after/lsp/gdscript.lua' narrows the root markers
+    -- so at least an unrelated file cannot attach.
+    'gdscript',
   })
 
   -- Code lens are actions a server announces at a precise place in the code:
