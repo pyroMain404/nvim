@@ -259,3 +259,33 @@ un `node.exe` in più subito dopo l'apertura di un `.ts`.
 
 **Non versionato** e da rifare su una macchina nuova: `mise.toml`, con la sua
 riga in `.git/info/exclude`.
+
+## `W:\repos\godot-sandbox`
+
+Progetto Godot 4 di sandbox, usato per verificare il supporto GDScript in
+Neovim (parser, LSP, `:make`, `:Run`, formattazione). Non è un prodotto: è il
+progetto reale su cui `nvim-language-support/references/godot.md` §8 e la skill
+`godot-project-setup` sono state validate.
+
+**Cosa ha di diverso**: è un gioco, quindi la versione del motore è una proprietà
+del progetto, e la direzione Godot → Neovim richiede un `.nvim.lua` che apra un
+listener secondario prima che Godot possa chiedere di aprire un file.
+
+| Dove | Cosa | Perché |
+|---|---|---|
+| `mise.toml` (non versionato) | `godot = "4.7.2-stable"` | pinnare la versione del motore con cui il progetto è stato creato; `mise` scarica i binari ufficiali via `aqua` |
+| `.nvim.lua` | `pcall(vim.fn.serverstart, '127.0.0.1:55432')` | apre il listener su cui Godot spedisce le richieste "open file"; `pcall` perché un secondo bind sulla stessa porta solleva, e due istanze Neovim sullo stesso gioco non sono un errore — la prima tiene la porta |
+| `.gitignore` | `.godot/`, `export_credentials.cfg`, `/build/` | `.godot/` è cache di import; `*.gd.uid` e `export_presets.cfg` **non** vanno ignorati |
+| `project.godot` | `run/main_scene="res://main.tscn"` | scena principale per `:Run` senza argomenti |
+
+**Verificato**: il server LSP si attacca con `root` sul `project.godot`; completion,
+hover e `documentSymbol` rispondono con Godot aperto (sia headless che GUI reale);
+`:make` su `scripts/broken.gd` produce una voce quickfix con file e riga giusti;
+`:Run` avvia il gioco in un processo staccato che sopravvive a `:qa`; `<Leader>lf`
+applica `gdformat`.
+
+**Fuori dal repository**: niente da installare a mano oltre a `mise install`.
+
+**Non versionato** e da rifare su una macchina nuova: `.nvim.lua` e `mise.toml`.
+Nota: il `.git/info/exclude` di questo checkout è ancora il template di default;
+se il repository fosse condiviso andrebbero aggiunte le righe per entrambi.

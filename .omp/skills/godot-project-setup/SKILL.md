@@ -111,12 +111,11 @@ Dalla 4.5 Godot compila da sé gli `Exec Flags` per gli editor che documenta —
 Emacs, Vim, Rider — e **Neovim non è in quell'elenco**: quel campo va scritto a mano, e
 lasciato vuoto resta vuoto.
 
-> **Da misurare alla prima apertura, una volta sola: se la riga va corretta di uno.**
-> La documentazione Godot per Vim scrive `cursor({line},{col})`, una ricetta diffusa per
-> Neovim scrive `{line}+1`, cioè assume base zero. Sono incompatibili e **sbagliare non
-> produce nessun sintomo**: il file si apre e il cursore è semplicemente sulla riga
-> sbagliata. Aprire da Godot un errore su una riga nota; se si atterra una riga sopra,
-> mettere `{line}+1` e annotarlo nel `.nvim.lua` del gioco.
+> **Risolto in `nvim-language-support/references/godot.md` §8.** Il motore invia la
+> riga 1-based (`p_line` reale, confermato da `godotengine/godot#118228`), quindi
+> `cursor({line},{col})` — la forma già configurata — è corretta. Non serve `+1`.
+> Resta un bug distinto di Godot per cui un secondo click su uno script già caricato
+> può inviare `p_line=-1`: per quello il riferimento ha la misura e il workaround.
 
 `--remote-send` non tratta in modo affidabile i percorsi con caratteri speciali: se la
 root del gioco ha spazi o accenti e l'apertura fallisce, la causa è quella.
