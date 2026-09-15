@@ -167,28 +167,40 @@ end
 Config.review.close = function()
   local bufs, diff_ref = vim.t.review_bufs, vim.t.review_diff_ref
   if bufs == nil then
-    return vim.notify('Not in a review tabpage', vim.log.levels.WARN)
+    return vim.notify('Not in a review tabpage', vim.log.levels.ERROR)
   end
   if #vim.api.nvim_list_tabpages() == 1 then
     local msg = 'Review is the only tabpage: nothing left to return to'
     return vim.notify(msg, vim.log.levels.WARN)
   end
 
-  vim.cmd('tabclose')
-  local kept = 0
-  for _, buf_id in ipairs(bufs) do
-    if vim.api.nvim_buf_is_valid(buf_id) then
-      if not pcall(vim.api.nvim_buf_delete, buf_id, {}) then kept = kept + 1 end
-    end
-  end
-  if diff_ref ~= nil and Config.git.diff_ref == diff_ref.set then
-    Config.git.set_diff_ref(nil, diff_ref.prev)
+  -- `:h :tabclose` refuses on a modified buffer with `'hidden'` unset - not
+  -- the case here (`plugin/10_options.lua` sets it), but reported rather
+  -- than left to raise if that ever changes.
+  if not pcall(vim.cmd, 'tabclose') then
+    return vim.notify('Could not close the review tabpage', vim.log.levels.ERROR)
   end
 
-  local msg = 'Review closed: ' .. (#bufs - kept) .. ' buffer(s) dropped'
-  if kept == 0 then return vim.notify(msg) end
-  msg = msg .. ', ' .. kept .. ' kept (unsaved changes)'
-  vim.notify(msg, vim.log.levels.WARN)
+  -- Scheduled: 'mini.git' updates its own status asynchronously
+  -- (`vim.schedule_wrap`), and deleting a buffer synchronously right after
+  -- `:tabclose` can run ahead of that update and raise on an id it still
+  -- expects to be valid. Scheduling this loop lets that update land first.
+  vim.schedule(function()
+    local kept = 0
+    for _, buf_id in ipairs(bufs) do
+      if vim.api.nvim_buf_is_valid(buf_id) then
+        if not pcall(vim.api.nvim_buf_delete, buf_id, {}) then kept = kept + 1 end
+      end
+    end
+    if diff_ref ~= nil and Config.git.diff_ref == diff_ref.set then
+      Config.git.set_diff_ref(nil, diff_ref.prev)
+    end
+
+    local msg = 'Review closed: ' .. (#bufs - kept) .. ' buffer(s) dropped'
+    if kept == 0 then return vim.notify(msg) end
+    msg = msg .. ', ' .. kept .. ' kept (unsaved changes)'
+    vim.notify(msg, vim.log.levels.WARN)
+  end)
 end
 
 -- Git ========================================================================
@@ -268,7 +280,9 @@ local git_changed = function(diff_args, root, pathspec, label, on_open)
       return vim.notify(run .. ': ' .. msg, vim.log.levels.ERROR)
     end
     local dir, paths = vim.fs.normalize(root), {}
-    for _, line in ipairs(vim.split(out.stdout, '\n')) do
+    for _, line in
+      ipairs(vim.split(out.stdout, '\n', { plain = true, trimempty = true }))
+    do
       table.insert(paths, dir .. '/' .. vim.trim(line))
     end
     Config.review.open(paths, label, on_open)
