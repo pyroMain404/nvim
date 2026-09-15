@@ -151,11 +151,22 @@ Config.format.buffer = function()
 end
 
 -- Format a Visual selection, under the same "both absent" guard as
--- `changed()`. `conform.format()` with no explicit range reads the Visual
--- marks itself (`:h conform.format()`), which is the documented behavior -
--- the Visual `<Leader>lf` mapping used to call `require('conform').format()`
--- directly, bypassing this guard entirely and raising from `require` at
--- keypress if 'conform.nvim' was not yet loaded.
+-- `changed()`. `conform.format()` with no explicit range reads the CURRENT
+-- Visual selection itself (`:h conform.format()`), which sounds like it should
+-- just work through the mapping's `<Cmd>` (`:h <Cmd>` keeps Visual mode active
+-- while its body runs) - and `vim.fn.mode()` here does read 'V', confirming
+-- that. It still formats nothing: 'conform.nvim's own detection computes the
+-- selection's last column as `#line - 1` on top of an already end-exclusive
+-- `#line`, one column short of the real line end - measured directly, a range
+-- ending at that computed column edits nothing while the same range one column
+-- wider edits correctly. The line's own marks ('</'>) are no workaround
+-- either: they are only written when Visual mode is *left*, and `<Cmd>` never
+-- leaves it, so they still hold whatever a previous selection set them to (or
+-- nothing, the first time).
+-- The fix reads the live selection instead, the same way 'conform.nvim' itself
+-- does (`getpos('v')` for the anchor, `getpos('.')` for the cursor), and hands
+-- the line span to `format_range()` - already used by `changed()`, and already
+-- correct about the end column (`#last`, not `#last - 1`).
 Config.format.selection = function()
   local ok, conform = pcall(require, 'conform')
   if not ok then
@@ -172,5 +183,9 @@ Config.format.selection = function()
       return vim.notify(msg, vim.log.levels.WARN)
     end
   end
-  conform.format()
+  local from, to = vim.fn.getpos('v')[2], vim.fn.getpos('.')[2]
+  if from > to then
+    from, to = to, from
+  end
+  format_range(from, to)
 end
