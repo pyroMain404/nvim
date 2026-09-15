@@ -15,6 +15,18 @@ Differences between selected configs:
 - [Between `nvim-0.11` and `nvim-0.12`](https://nvim-mini.org/MiniMax/configs/diffs/nvim-0.11_nvim-0.12)
 - [Between `nvim-0.12` and `nvim-0.13`](https://nvim-mini.org/MiniMax/configs/diffs/nvim-0.12_nvim-0.13)
 
+> [!NOTE]
+> The config actually in use on this machine is `nvim-0.12` (it is what
+> `%LOCALAPPDATA%\nvim` points at). It has grown well past this upstream
+> layout - a Git workflow, a format pass, a review workflow, a `:Run` engine,
+> per-language `after/ftplugin/`/`after/lsp/` files, `compiler/` plugins,
+> `ftdetect/` rules, `after/queries/` overrides, and a `lua/config/` module
+> tree for code required by name at a later moment. **`AGENTS.md` at the root
+> of this repository is what describes `nvim-0.12` as it actually is; this
+> file only carries what upstream's other three reference configs still look
+> like.** `nvim-0.10`, `nvim-0.11` and `nvim-0.13` are left exactly as
+> MiniMax generates them and are never kept in sync with `nvim-0.12`.
+
 ### Structure
 
 #### `init.lua`
