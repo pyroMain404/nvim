@@ -100,12 +100,20 @@ now_if_args(function()
     -- GDScript, the language of the Godot engine. Tier 3 in 'parsers.lua' of
     -- 'nvim-treesitter' - no declared maintainer - which is what makes the
     -- '$VIMRUNTIME/syntax/gdscript.vim' left underneath a fallback worth
-    -- having rather than a leftover. The rest of the ecosystem stays out
-    -- until it is written: `gdshader` (which declares both `gdshader` and
-    -- `gdshaderinc`) and `godot_resource` (which declares the `gdresource` of
-    -- '.tscn' and '.tres') both work today and are one line each, the day
-    -- shaders are written or a scene is edited by hand instead of in Godot.
+    -- having rather than a leftover.
     'gdscript',
+    -- The rest of what a Godot project is made of, and the two are not
+    -- optional extras of the language: a shader is written by hand, and a
+    -- '.tscn' is read by hand every time a scene has to be understood outside
+    -- the editor. `gdshader` declares the filetypes `gdshader` AND
+    -- `gdshaderinc` - the table in 'plugin/filetypes.lua' of
+    -- 'nvim-treesitter' adds to the parser name, it does not replace it - and
+    -- is tier 2, with a maintainer, unlike `gdscript`. `godot_resource`
+    -- declares `gdresource`, which is what Neovim calls both '.tscn' and
+    -- '.tres'. 'ftdetect/godot.lua' is what gives '.gdshaderinc' a filetype
+    -- at all, without which this parser would never reach it.
+    'gdshader',
+    'godot_resource',
   }
   local isnt_installed = function(lang)
     return #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0

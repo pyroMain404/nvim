@@ -715,14 +715,18 @@ local function check_godot()
   end
 
   -- The parser has to be installed, not merely available. This is the same
-  -- check 'plugin/40_plugins.lua' uses to decide what to install
-  if #vim.api.nvim_get_runtime_file('parser/gdscript.*', false) == 0 then
-    health.warn('tree-sitter parser for `gdscript` is not installed', {
-      "Restart Neovim once with 'gdscript' in `languages`, and wait",
-      'Highlighting falls back to the legacy syntax file',
-    })
-  else
-    health.ok('tree-sitter parser `gdscript`: installed')
+  -- check 'plugin/40_plugins.lua' uses to decide what to install. `gdshader`
+  -- also carries the `gdshaderinc` filetype that 'ftdetect/godot.lua' assigns,
+  -- and `godot_resource` is what reads a '.tscn' or a '.tres'
+  for _, lang in ipairs({ 'gdscript', 'gdshader', 'godot_resource' }) do
+    if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
+      health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
+        "Restart Neovim once with '" .. lang .. "' in `languages`, and wait",
+        'Highlighting falls back to the legacy syntax file',
+      })
+    else
+      health.ok('tree-sitter parser `' .. lang .. '`: installed')
+    end
   end
 end
 

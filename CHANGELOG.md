@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-15
 
+- Read the rest of a Godot project, not only its scripts. The `gdshader` and
+  `godot_resource` parsers join `gdscript`, so a shader and a '.tscn' are
+  parsed rather than left to a syntax file, and 'ftdetect/godot.lua' gives a
+  filetype to the two extensions Neovim does not know: '.gdshaderinc', which
+  the `gdshader` parser already declared and could never reach, and
+  '.gdextension', which is an INI and now reads as `dosini`.
 - Give `:Run` a detached branch, and with it a `:Run` for Godot. The contract
   captured in a terminal split and nothing else, which is right for a program
   that writes to stdout and wrong for one that draws its own window: a game
