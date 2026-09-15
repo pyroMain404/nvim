@@ -484,10 +484,29 @@ local show_at_cursor = function()
   local win_init = vim.api.nvim_get_current_win()
   local is_commit = is_commit_at_cursor()
   local split = is_commit and 'horizontal' or 'vertical'
+
+  -- The first call asks for the "after" state on purpose, so that a commit
+  -- goes below and a file goes to the right (`is_commit and 'horizontal' or
+  -- 'vertical'` above), and the second one is a retry for the one case that
+  -- first call can legitimately miss: a deleted file has no "after" state.
+  -- Every OTHER way `MiniGit.show_at_cursor()` can fail - nothing recognizable
+  -- at cursor, an unreadable commit - fails the same way again on identical
+  -- input, so retrying it warns twice about the exact same thing. Silencing
+  -- the first attempt and replaying its message only when the retry is not
+  -- going to happen is what keeps `:messages` to one line either way.
+  local warning = nil
+  local notify = vim.notify
+  vim.notify = function(msg, level) warning = { msg, level } end
   at_repo_root(MiniGit.show_at_cursor, { target = 'after', split = split })
+  vim.notify = notify
+
+  local no_after = '(mini.git) No "after" as file was deleted'
   if vim.api.nvim_get_current_win() == win_init then
-    -- There is no "after" state if the file was deleted: show "before" one
-    at_repo_root(MiniGit.show_at_cursor, { split = split })
+    if warning ~= nil and warning[1] ~= no_after then
+      vim.notify(warning[1], warning[2])
+    else
+      at_repo_root(MiniGit.show_at_cursor, { split = split })
+    end
   end
   if vim.api.nvim_get_current_win() == win_init then return end
   place_win(win_init, is_commit and 'J' or 'L')
