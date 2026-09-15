@@ -43,31 +43,16 @@
 -- and it is defined from 'after/ftplugin/<ft>.lua' - which is where the
 -- knowledge of a language belongs. What lives here is the shape they share.
 
--- TODO: exercise the CAPTURED branch against a real project, which is the half
--- a headless check cannot reach. What the probes prove is *which* command would
--- start: they run with `vim.fn.jobstart` replaced by a stub, so no process is
--- ever spawned, no terminal buffer is ever drawn, and nothing is ever killed on
--- quit - while the detached branch has now been exercised for real on a Godot
--- game: it starts, it survives `:qa` (measured: Neovim leaves three seconds
--- after spawning, the game is still running afterwards), and it reports its
--- exit status when it dies. Still unproven is the part `:h terminal-emulator`
--- owns - the split showing output while it comes rather than at the end,
--- `<C-\><C-N>` leaving its insert mode, and closing Neovim taking the process
--- down with it instead of leaving a port held. Not now: it needs a project that
--- actually boots, and the Maven ones here resolve from a private repository that
--- is not always reachable. First step is `:Run` in one of them with the split
--- visible, then `:qa` and a look at what is still running.
-
 local M = {}
 
 -- Define `:Run` for the current buffer. `resolve` is given the arguments the
--- command was called with and returns the command as a list, or `nil` and the
--- reason when the project does not say how to run itself.
+-- command was called with. It returns a command and, as its optional third
+-- value, the project root it resolved; a failed resolver returns `nil` and the
+-- reason to report.
 --
--- NOTE: `resolve` runs before the split is opened, and the order is not a matter
--- of taste: `:vertical new` makes an unnamed buffer the current one, so a
--- resolver that asks about the file it was invoked on - the one outside any
--- project - would read an empty name.
+-- NOTE: `resolve` runs before the split is opened, and even when an override
+-- wins: `:vertical new` makes an unnamed buffer the current one, while an
+-- override still has to run from the root the original resolver identified.
 --
 -- `jobstart()` takes a list, which never goes through `:h 'shell'`, so nothing
 -- here depends on quoting rules that differ between `cmd.exe` and PowerShell. It
@@ -118,14 +103,13 @@ M.command = function(resolve, opts)
   local desc = detach and 'Run the project as its own process'
     or 'Run the project in a terminal split'
   vim.api.nvim_buf_create_user_command(0, 'Run', function(params)
-    local cmd, reason = project_command(params.fargs)
-    if cmd == nil and reason == nil then
-      cmd, reason = resolve(params.fargs)
-    end
+    local resolved, reason, cwd = resolve(params.fargs)
+    local cmd = project_command(params.fargs) or resolved
     if cmd == nil then
       vim.notify(reason or 'nothing to run here', vim.log.levels.WARN)
       return
     end
+    cwd = cwd or vim.fs.dirname(vim.api.nvim_buf_get_name(0))
 
     if detach then
       local limit = 2000
@@ -138,6 +122,7 @@ M.command = function(resolve, opts)
         end
       end
       local started, err = pcall(vim.system, cmd, {
+        cwd = cwd,
         detach = true,
         stdout = keep('stdout'),
         stderr = keep('stderr'),
@@ -165,7 +150,7 @@ M.command = function(resolve, opts)
     end
 
     vim.cmd('vertical new')
-    local ok, err = pcall(vim.fn.jobstart, cmd, { term = true })
+    local ok, err = pcall(vim.fn.jobstart, cmd, { cwd = cwd, term = true })
     if not ok then
       vim.cmd('quit')
       vim.notify(tostring(err), vim.log.levels.ERROR)
@@ -198,19 +183,20 @@ M.npm = function(args)
     path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
   })[1]
   if manifest == nil then return nil, 'no package.json above this file' end
-  if #args > 0 then return vim.list_extend({ 'npm', 'run' }, args) end
+  local root = vim.fs.dirname(manifest)
+  if #args > 0 then return vim.list_extend({ 'npm', 'run' }, args), nil, root end
 
   local ok, manifest_data =
     pcall(vim.json.decode, table.concat(vim.fn.readfile(manifest), '\n'))
   local scripts = (ok and type(manifest_data) == 'table' and manifest_data.scripts)
     or {}
   for _, script in ipairs({ 'start', 'dev', 'serve' }) do
-    if scripts[script] ~= nil then return { 'npm', 'run', script } end
+    if scripts[script] ~= nil then return { 'npm', 'run', script }, nil, root end
   end
 
   local reason =
     '%s declares no `start`, `dev` or `serve` script: name one, `:Run <task>`'
-  return nil, reason:format(vim.fs.basename(manifest))
+  return nil, reason:format(vim.fs.basename(manifest)), root
 end
 
 -- The remedy for `:make` printing paths relative to the project instead of

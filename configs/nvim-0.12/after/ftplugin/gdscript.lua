@@ -88,7 +88,7 @@ require('config.run').command(function(args)
   if root == nil then
     return nil, 'no project.godot above this file: there is no game to run'
   end
-  return vim.list_extend({ 'godot', '--path', root }, args)
+  return vim.list_extend({ 'godot', '--path', root }, args), nil, root
 end, { detach = true })
 
 -- NOTE: the output of a RUNNING game is not captured anywhere, by construction

@@ -146,15 +146,17 @@ require('config.run').command(function(args)
     local name = vim.fn.fnamemodify(path, ':t:r')
     table.insert(names, name)
     if name == args[1] then
-      return vim.list_extend({ path }, vim.list_slice(args, 2))
+      return vim.list_extend({ path }, vim.list_slice(args, 2)), nil, root
     end
   end
 
-  if #found == 1 then return vim.list_extend({ found[1] }, args) end
+  if #found == 1 then return vim.list_extend({ found[1] }, args), nil, root end
   if #found == 0 then
-    return nil, ("nothing built under '%s' yet: run `:make` first"):format(root)
+    return nil,
+      ("nothing built under '%s' yet: run `:make` first"):format(root),
+      root
   end
-  return nil, 'several programs here, name one: ' .. table.concat(names, ', ')
+  return nil, 'several programs here, name one: ' .. table.concat(names, ', '), root
 end)
 
 -- Undo what this file sets when the filetype changes away from `c`/`cpp`

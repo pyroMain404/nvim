@@ -23,20 +23,27 @@
 -- typed in full.
 vim.keymap.set('i', "'", "'", { buf = 0, desc = 'Insert a plain quote' })
 
--- Running the project, under the contract of 'lua/config/run.lua'. No reading of
--- 'Cargo.toml' is needed here because cargo reads it: `default-run`, a single
--- `[[bin]]`, or nothing - in which case it refuses and lists the binaries it
--- could not choose between (measured on a six member workspace), which is the
--- loud failure the contract asks for. `:Run --bin <name>` then picks one, and
--- `:Run --release` or `:Run -- <args>` reach the profile and the program.
+-- Running the project, under the contract of 'lua/config/run.lua'. Finding
+-- 'Cargo.toml' gives both cargo and a project override its manifest root; cargo
+-- reads its contents to choose `default-run`, a single `[[bin]]`, or nothing - in
+-- which case it refuses and lists the binaries it could not choose between
+-- (measured on a six member workspace), which is the loud failure the contract
+-- asks for. `:Run --bin <name>` then picks one, and `:Run --release` or
+-- `:Run -- <args>` reach the profile and the program.
 --
 -- NOTE: the runtime already defines `:Crun` for this ('$VIMRUNTIME/autoload/
 -- cargo.vim', which in Neovim opens `noautocmd new | terminal cargo run`), and
 -- the duplication is deliberate: what is worth remembering is one name that
 -- works in every language of this config, not one name per build tool. `:Crun`
 -- keeps working for whoever types it.
+local manifest = vim.fs.find('Cargo.toml', {
+  upward = true,
+  path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
+})[1]
+local root = manifest and vim.fs.dirname(manifest) or nil
+
 require('config.run').command(
-  function(args) return vim.list_extend({ 'cargo', 'run' }, args) end
+  function(args) return vim.list_extend({ 'cargo', 'run' }, args), nil, root end
 )
 
 -- Undo what this file sets when the filetype changes away from `rust`

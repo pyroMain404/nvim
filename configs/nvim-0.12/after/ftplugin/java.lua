@@ -134,6 +134,7 @@ local found = vim.fs.find({ 'pom.xml', 'build.xml' }, {
   path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
 })[1]
 local build = found and builds[vim.fs.basename(found)] or loose
+local root = found and vim.fs.dirname(found) or nil
 
 -- `:compiler` defines its options through a command it creates and deletes
 -- while sourcing, so it has no Lua API and `vim.cmd()` is the only way here.
@@ -163,7 +164,9 @@ if found ~= nil then require('config.run').make_root({ 'pom.xml', 'build.xml' })
 -- main class, JVM arguments - belongs to the project and not to the language,
 -- so it is passed as arguments here or it lives in the project's '.nvim.lua'
 -- (`:h 'exrc'`).
-require('config.run').command(function(args) return build.run(args, found) end)
+require('config.run').command(
+  function(args) return build.run(args, found), nil, root end
+)
 
 -- Undo what this file sets when the filetype changes away from `java`
 -- (`:h b:undo_ftplugin`). `:Run` undoes itself, registered inside

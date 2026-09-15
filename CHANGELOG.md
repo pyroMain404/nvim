@@ -104,6 +104,11 @@ upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
 ## 2026-09-16
+- Run `:Run` from the root its resolver found, rather than Neovim's own
+  directory. A nested npm/CMake/Godot/Java/Rust project now gives both the
+  terminal and detached branches its manifest/build root, including when a
+  `.nvim.lua` overrides its command; previously `npm run start` opened the
+  config repository's missing `package.json`.
 
 - Run `:make` from the project root for Angular and Maven/Ant checkouts, not
   only for Godot. `ngc`/`mvn`/`ant` print paths relative to the project while
