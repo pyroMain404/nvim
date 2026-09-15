@@ -594,6 +594,19 @@ local function check_cpp()
     }) do
       if vim.uv.fs_stat(path) ~= nil then database = path end
     end
+    -- TODO: the advice below names one build system, and a GDExtension
+    -- checkout may not be able to run it: 'godot-cpp' is historically built
+    -- with SCons (`scons compiledb=yes` writes the database), while recent
+    -- versions also ship a 'CMakeLists.txt'. A reader there is told to run a
+    -- command that may not apply, which is worse than silence because it
+    -- reads as authoritative.
+    -- Not now: there is no GDExtension project on this machine, so which of
+    -- the two that checkout actually uses would be a guess, and an advice
+    -- derived from a guess is the thing this branch exists to avoid.
+    -- First step, on the first real one: look for 'SConstruct' and
+    -- 'CMakeLists.txt' at its root before writing a line. Both or CMake only,
+    -- nothing to do here. SConstruct only, this branch grows a case that
+    -- names `scons compiledb=yes` instead.
     if database == nil then
       health.warn(("no compilation database for '%s'"):format(root), {
         'Generate one with `cmake -S . -B build -G Ninja '

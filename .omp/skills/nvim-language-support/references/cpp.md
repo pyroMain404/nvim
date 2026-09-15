@@ -241,6 +241,11 @@ Del database si stampa anche il `-std=` che porta: è l'unico posto in cui lo
 standard in vigore è visibile, e un database generato prima che
 `CMAKE_CXX_STANDARD` fosse alzato continua a rispondere quello vecchio.
 
+L'advice di quel ramo nomina però **un solo** build system, e non tutti i progetti
+C++ si configurano con CMake: un checkout GDExtension può costruirsi con SCons. Il
+caso e il primo passo per chiuderlo stanno nel TODO accanto a quel ramo in
+`lua/config/health.lua`, e non si ripetono qui.
+
 **`root_markers` non trova la radice dal `CMakeLists.txt`**, e non è un guasto:
 l'elenco di 'nvim-lspconfig' contiene `compile_commands.json`, che sta in
 `build/` e quindi non è antenato di nessun sorgente. La radice viene da `.git`.
