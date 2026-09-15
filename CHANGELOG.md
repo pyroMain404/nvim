@@ -139,6 +139,15 @@ a merge from 'minimax' conflict-free.
   starts what the build produced, looked for under 'build/' and at the root:
   with several programs it names them and refuses, with none it says to run
   `:make` first.
+- Report the C++ toolchain in `:checkhealth config`: `clangd`, `clang++`,
+  `clang-format` and `clang-tidy` - one LLVM release, hence one piece of advice
+  for the four - plus `cmake`, `ninja` and the parsers. The check that matters
+  most is the last: whether the project the reader came from has a compilation
+  database at all, and which standard it names. Without one clangd does not
+  fail, it guesses - it assumes `clang <file>` at the newest standard, reports
+  errors on perfectly valid includes and accepts code the build rejects - and
+  that is the most common failure of C++ in an editor, indistinguishable from a
+  broken config while nobody names it.
 
 ## 2026-09-14
 

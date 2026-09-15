@@ -501,12 +501,153 @@ local function check_java()
   end
 end
 
+local function check_cpp()
+  health.start('config: C++')
+
+  -- One LLVM install gives the server, the compiler, the formatter and the
+  -- linter at the same version: that is why it comes from WinGet and not from
+  -- `mise`, the same reason `rust-analyzer` comes from `rustup`. Hence one
+  -- piece of advice for the four of them.
+  local install_llvm = 'Install it with `winget install LLVM.LLVM`'
+  report(
+    'clangd',
+    'C and C++ buffers lose completion, diagnostics, rename and go to definition',
+    install_llvm
+  )
+  report('clang++', 'nothing compiles', install_llvm)
+  report(
+    'clang-format',
+    '`<Leader>lf` falls back to a server that formats differently',
+    install_llvm
+  )
+  -- 'after/lsp/clangd.lua' passes `--clang-tidy`: without the binary the
+  -- server does not fail, it simply produces none of those diagnostics.
+  --
+  -- Reported by path and not by version, unlike the three above: the first
+  -- line of `clang-tidy --version` is the LLVM banner - measured, it reads
+  -- `LLVM (http://llvm.org/):` and the number is on the line after - and the
+  -- version is the one of the install above anyway, which is the whole point
+  -- of taking the four from one release.
+  if vim.fn.executable('clang-tidy') ~= 1 then
+    health.warn('`clang-tidy` is not available', {
+      install_llvm,
+      'the server is configured to lint with clang-tidy and finds nothing to run',
+    })
+  else
+    health.ok('clang-tidy: ' .. vim.fn.exepath('clang-tidy'))
+  end
+
+  report(
+    'cmake',
+    "`:make` has nothing to run ('compiler/cmake.lua')",
+    'Install it with `mise use -g cmake@4`'
+  )
+  report(
+    'ninja',
+    'CMake falls back to a slower generator',
+    'Install it with `mise use -g ninja@1.13`'
+  )
+
+  -- The check that matters more than all the others: is there a compilation
+  -- database for the project this reader came from?
+  --
+  -- Without one clangd does not fail, it GUESSES: it attaches, answers, and
+  -- fills the buffer with errors about perfectly valid `#include`s, because it
+  -- assumes the file is built as `clang some_file.cc` and knows none of the
+  -- include paths of the project. It is the most common failure of C++ in an
+  -- editor and it is indistinguishable from a broken config while nobody names
+  -- it.
+  --
+  -- Searched from the alternate buffer for the reason spelled out in
+  -- `check_angular()`: `:checkhealth` runs inside its own report buffer, so
+  -- buffer 0 is a nameless scratch one and `vim.fs.root()` answers nil for it.
+  local source = vim.fn.bufnr('#')
+  if source == -1 or vim.api.nvim_buf_get_name(source) == '' then
+    source = vim.fn.getcwd()
+  end
+  local root = vim.fs.root(source, {
+    'CMakeLists.txt',
+    'compile_commands.json',
+    'compile_flags.txt',
+    'Makefile',
+  })
+  if root == nil then
+    health.info('not inside a C or C++ project: nothing else to check here')
+  else
+    -- Where clangd looks: the parent directories of the file and, in each of
+    -- them, a 'build/' subdirectory (documented at
+    -- https://clangd.llvm.org/installation#compile_commandsjson). That second
+    -- half is what makes a CMake project work with no extra step, because
+    -- `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` writes the file into the build
+    -- directory and not at the root - measured with the Ninja generator, which
+    -- puts it in 'build/compile_commands.json'. A build directory named
+    -- anything else is out of reach and has to be linked or copied to the
+    -- root.
+    local database = nil
+    for _, path in ipairs({
+      vim.fs.joinpath(root, 'compile_commands.json'),
+      vim.fs.joinpath(root, 'build', 'compile_commands.json'),
+      -- The hand written alternative, for a project simple enough that every
+      -- file takes the same flags. Background indexing does not work with it,
+      -- so it is reported as what it is.
+      vim.fs.joinpath(root, 'compile_flags.txt'),
+    }) do
+      if vim.uv.fs_stat(path) ~= nil then database = path end
+    end
+    if database == nil then
+      health.warn(("no compilation database for '%s'"):format(root), {
+        'Generate one with `cmake -S . -B build -G Ninja '
+          .. '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, run at that root',
+        'For a build directory not named `build`, link or copy its '
+          .. "'compile_commands.json' to the root, or name it in the project's "
+          .. "'.clangd' (`CompileFlags: CompilationDatabase: <dir>`)",
+        'clangd does not fail without one: it assumes `clang <file>` at the '
+          .. 'newest standard, so it reports errors on valid includes of the '
+          .. 'project and accepts code the build then rejects',
+      })
+    else
+      -- Which C++ standard this project is written in, read where clangd reads
+      -- it: the flags of a translation unit. It is reported because nothing
+      -- else says it - a buffer looks the same whether the server checks it
+      -- against C++11 or C++23 - and because a database generated before
+      -- `CMAKE_CXX_STANDARD` was raised keeps answering the old one.
+      -- Only the head of the file: one entry is a kilobyte at most, and the
+      -- database of a real project is megabytes (`:h readblob()` takes an
+      -- offset and a size for exactly this)
+      local standard = nil
+      local ok, blob = pcall(vim.fn.readblob, database, 0, 8192)
+      if ok then standard = tostring(blob):match('%-std=[%w%+]+') end
+      health.ok(
+        'compilation database: '
+          .. database
+          .. (standard and (' (' .. standard .. ')') or '')
+      )
+    end
+  end
+
+  -- The parser has to be installed, not merely available. This is the same
+  -- check 'plugin/40_plugins.lua' uses to decide what to install. `c` is there
+  -- because the `cpp` parser requires it, `cmake` and `make` because the files
+  -- a project is built from are read as often as its sources
+  for _, lang in ipairs({ 'cpp', 'c', 'cmake', 'make' }) do
+    if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
+      health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
+        "Restart Neovim once with '" .. lang .. "' in `languages`, and wait",
+        'Highlighting falls back to the legacy syntax file',
+      })
+    else
+      health.ok('tree-sitter parser `' .. lang .. '`: installed')
+    end
+  end
+end
+
 function M.check()
   check_external_tools()
   check_lua()
   check_rust()
   check_angular()
   check_java()
+  check_cpp()
 end
 
 return M
