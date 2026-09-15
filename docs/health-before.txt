@@ -1,0 +1,66 @@
+
+==============================================================================
+config:                                                                     ✅
+
+config: external tools ~
+- ✅ OK git: git version 2.49.0.windows.1
+- ✅ OK rg: ripgrep 15.2.0 (rev e89fff89ac)
+- ✅ OK lazygit: commit=4486c86271fc83e9ace700b1a472016d692513a5, build date=2026-01-12T19:47:02Z, build source=binaryRelease, version=0.58.1, os=windows, arch=amd64, git version=2.49.0.windows.1
+- ✅ OK stylua: stylua 2.5.2
+- ✅ OK tree-sitter: tree-sitter 0.27.0
+
+config: Lua ~
+- ✅ OK lua-language-server: 3.19.1
+- ✅ OK tree-sitter parser `lua`: installed
+
+config: Rust ~
+- ✅ OK active toolchain: stable-x86_64-pc-windows-msvc (default)
+- ✅ OK rustc: rustc 1.98.0 (88d9e12ae 2026-08-18)
+- ✅ OK cargo: cargo 1.98.0 (797e8a9bc 2026-08-05)
+- ✅ OK rust-analyzer: rust-analyzer 1.98.0 (88d9e12a 2026-08-18)
+- ✅ OK cargo-clippy: clippy 0.1.98 (88d9e12ae1 2026-08-18)
+- ✅ OK tree-sitter parser `rust`: installed
+- ✅ OK tree-sitter parser `toml`: installed
+- ✅ OK tree-sitter parser `sql`: installed
+
+config: Angular ~
+- ✅ OK node: v20.20.2
+- ✅ OK node in this directory: v20.20.2
+- ✅ OK ngserver: C:\Users\gaeesp\AppData\Local\mise\shims\ngserver.EXE
+- ✅ OK typescript-language-server: 6.0.0
+- ✅ OK prettier: 3.9.6
+- not inside an Angular project: nothing else to check here
+- ✅ OK tree-sitter parser `angular`: installed
+- ✅ OK tree-sitter parser `typescript`: installed
+- ✅ OK tree-sitter parser `html`: installed
+- ✅ OK tree-sitter parser `css`: installed
+- ✅ OK tree-sitter parser `scss`: installed
+- ✅ OK tree-sitter parser `json`: installed
+
+config: Java ~
+- ✅ OK java: openjdk 21.0.12.1 2026-08-18 LTS (C:\Users\gaeesp\AppData\Local\mise\shims\java.EXE)
+- ✅ OK jdtls JDK: temurin-21.0.12+101.0.LTS, minimum required is 21
+- ✅ OK javac: javac 21.0.12.1
+- ✅ OK mvn: Apache Maven 3.9.16 (2bdd9fddda4b155ebf8000e807eb73fd829a51d5)
+- ✅ OK JavaSE-1.8 runtime for jdtls: C:\Users\gaeesp\AppData\Local\mise\installs\java\temurin-8.0.504+1
+- ✅ OK JavaSE-11 runtime for jdtls: C:\Users\gaeesp\AppData\Local\mise\installs\java\temurin-11.0.32+101
+- ✅ OK JavaSE-21 runtime for jdtls: C:\Users\gaeesp\AppData\Local\mise\installs\java\temurin-21.0.12+101.0.LTS
+- A project on a release missing from this list is checked against the server's own JDK, and says so when it is opened
+- ✅ OK jdtls: C:\Users\gaeesp\AppData\Local\mise\shims\jdtls.EXE
+- ✅ OK python: Python 3.12.14
+- ✅ OK tree-sitter parser `java`: installed
+- ✅ OK tree-sitter parser `xml`: installed
+
+config: C++ ~
+- ✅ OK clangd: clangd version 23.1.1 (https://github.com/llvm/llvm-project 6dfe1677ab8dffbc6ec13d53a1e0215d75147689)
+- ✅ OK clang++: clang version 23.1.1 (https://github.com/llvm/llvm-project 6dfe1677ab8dffbc6ec13d53a1e0215d75147689)
+- ✅ OK clang-format: clang-format version 23.1.1 (https://github.com/llvm/llvm-project 6dfe1677ab8dffbc6ec13d53a1e0215d75147689)
+- ✅ OK clang-tidy: C:\Program Files\LLVM\bin\clang-tidy.EXE
+- ✅ OK cmake: cmake version 4.4.3
+- ✅ OK ninja: 1.13.2
+- not inside a C or C++ project: nothing else to check here
+- ✅ OK tree-sitter parser `cpp`: installed
+- ✅ OK tree-sitter parser `c`: installed
+- ✅ OK tree-sitter parser `cmake`: installed
+- ✅ OK tree-sitter parser `make`: installed
+

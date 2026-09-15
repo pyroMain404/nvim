@@ -592,7 +592,10 @@ local function check_cpp()
       -- so it is reported as what it is.
       vim.fs.joinpath(root, 'compile_flags.txt'),
     }) do
-      if vim.uv.fs_stat(path) ~= nil then database = path end
+      if vim.uv.fs_stat(path) ~= nil then
+        database = path
+        break
+      end
     end
     -- TODO: the advice below names one build system, and a GDExtension
     -- checkout may not be able to run it: 'godot-cpp' is historically built
