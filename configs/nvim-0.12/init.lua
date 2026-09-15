@@ -122,4 +122,28 @@ Config.now_if_args = vim.fn.argc(-1) > 0 and Config.now or Config.later
 Config.on_event = function(ev, f) misc.safely('event:' .. ev, f) end
 Config.on_filetype = function(ft, f) misc.safely('filetype:' .. ft, f) end
 
+-- Ask a yes/no question and run `on_yes` only on a clear 'y'. Used by any
+-- part of the config that needs permission before acting, so the prompt shape
+-- and the predicate live in one place.
+Config.confirm = function(prompt, on_yes)
+  vim.ui.input({ prompt = prompt .. ' (y/n) ' }, function(answer)
+    if (answer or ''):lower() == 'y' then on_yes() end
+  end)
+end
+
+-- Report how many items of a batch operation succeeded and how many failed,
+-- picking the notification level from the failure count. Used by review close,
+-- review open and any future bulk operation that needs a single summary.
+Config.report = function(message, done, failed, done_label, failed_label)
+  done_label = done_label or 'ok'
+  failed_label = failed_label or 'failed'
+  local msg = message .. ': ' .. done .. ' ' .. done_label
+  local level = vim.log.levels.INFO
+  if failed > 0 then
+    msg = msg .. ', ' .. failed .. ' ' .. failed_label
+    level = vim.log.levels.WARN
+  end
+  vim.notify(msg, level)
+end
+
 vim.o.exrc = true
