@@ -584,6 +584,11 @@ guasto di questo elenco è un livello che ne ha sovrascritto un altro.
   capability che compaiono solo a caricamento finito, e il primo comando di
   esecuzione della config — la forma da riusare per un linguaggio con più build
   tool.
+- `references/cpp.md` — C e C++: un linguaggio in cui i flag di compilazione non
+  stanno nel file, quindi il server non è una comodità ma la condizione per
+  sapere qualcosa; un compiler plugin da scrivere che ne **eredita** uno del
+  runtime invece di ricopiarlo; e lo standard del linguaggio come proprietà del
+  progetto e non della config.
 - `assets/` — gli scheletri dei file da creare.
 
 ### La forma di una reference di linguaggio

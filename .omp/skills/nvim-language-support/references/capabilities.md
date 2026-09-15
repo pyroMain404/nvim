@@ -433,6 +433,37 @@ Un `errorformat` che cattura anche il **fallimento dei test**, non solo gli erro
 compilazione, trasforma `:make test` in navigazione dei test falliti — ed è la
 differenza tra un compiler plugin utile e uno che serve solo a compilare.
 
+### Un compiler plugin può ereditarne un altro, invece di ricopiarlo
+
+Quando il tool che manca è un **orchestratore** — `cmake`, un wrapper, uno script
+che invoca il compilatore vero — la parte nuova è solo `'makeprg'`: l'output che
+finisce nel quickfix è quello del compilatore sottostante, e per quello un
+compiler plugin esiste già. `clang` è l'esempio: emette il formato di GCC, che
+`$VIMRUNTIME/compiler/gcc.vim` legge senza scrivere una riga.
+
+```lua
+-- in 'compiler/cmake.lua', PRIMA di rivendicare il nome
+vim.cmd('runtime compiler/gcc.vim')
+vim.g.current_compiler = 'cmake'
+vim.cmd([[CompilerSet makeprg=cmake\ --build\ build\ $*]])
+```
+
+I due meccanismi in gioco sono quelli che `:h write-compiler-plugin` descrive, usati
+al contrario di come li racconta — lì la guardia `current_compiler` serve a un file
+dell'utente per far **saltare** quello di default, qui a farlo girare prima:
+
+- ogni compiler plugin del runtime apre con `if exists("current_compiler") |
+  finish`, e `:compiler` **unlet** quella variabile prima di sorgentare il file
+  che gli è stato chiesto (`:h :compiler`): quindi il file ereditato gira, e si
+  rivendica il nome dopo — invertire l'ordine lo rende un no-op silenzioso;
+- `CompilerSet` è un comando che `:compiler` crea per la durata del sourcing,
+  quindi le righe del file ereditato si applicano **localmente** come le proprie.
+
+Quello che va aggiunto dopo è solo ciò che l'orchestratore dice **di sé**: per
+CMake un errore di parsing del `CMakeLists.txt` e una build directory mai
+configurata, che il compilatore non vede perché non gira affatto. È l'opposto del
+ricopiare venti righe di formato, che invecchiano alla prima modifica a monte.
+
 ### L'output colorato è la causa più comune di una quickfix vuota
 
 Molti strumenti moderni colorano le diagnostiche, e **una sequenza di escape in
@@ -544,6 +575,19 @@ Due strade che convivono: percorsi (funziona sempre, anche senza server) e seman
 | `'include'` | il pattern che riconosce una riga di import, per `[i` e `:checkpath` |
 | `'includeexpr'` | come trasformare il nome importato in un percorso |
 | `'define'` | il pattern di una definizione, per `[d` |
+
+> **Aggiungere a `'path'` da un ftplugin: `vim.o` in lettura, `vim.bo` in
+> scrittura.** `'path'` è **global-local**, e il valore buffer-locale di un
+> buffer che non l'ha mai impostata è la **stringa vuota**, non il globale in
+> vigore. Quindi `vim.bo.path = vim.bo.path .. ',' .. dir` non aggiunge: azzera,
+> e con il globale `.,,` spariscono la directory del file e quella di lavoro,
+> cioè le due voci che risolvono un include di un file di fianco. La forma
+> giusta è `vim.bo.path = vim.o.path .. ',' .. dir`, che è ciò che fa
+> `:setlocal path+=`; e una directory con uno spazio o una virgola dentro va
+> protetta (`dir:gsub('[ ,]', '\\%0')`), perché entrambi chiudono la voce quando
+> l'opzione viene letta. Misurato con la sonda `option_origin`, che mostra il
+> guasto come un `path` che inizia per virgola. Vale per ogni opzione
+> global-local (`'makeprg'`, `'errorformat'`, `'grepprg'`), non solo per questa.
 
 > **`[i` e `[d` in questa config non fanno più include-search e define-search.**
 > Verificato a config caricata: `[i` è `MiniIndentscope.operator('top')` e `[d` è la
