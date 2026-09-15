@@ -48,9 +48,12 @@ end
 -- Report an external program: its version when present, what breaks when not
 local function report(name, why, advice)
   if vim.fn.executable(name) ~= 1 then
-    return health.warn('`' .. name .. '` is not available', { advice, why })
+    health.warn('`' .. name .. '` is not available', { advice, why })
+    return nil
   end
-  health.ok(name .. ': ' .. (first_line({ name, '--version' }) or 'found'))
+  local version = first_line({ name, '--version' }) or 'found'
+  health.ok(name .. ': ' .. version)
+  return version
 end
 
 -- External tools =============================================================
@@ -187,7 +190,7 @@ local function check_angular()
   health.start('config: Angular')
 
   -- Everything below runs through Node, so a missing one explains all the rest
-  report(
+  local project_node = report(
     'node',
     'neither language server starts, and `:make` has no `npx` to call',
     'Install it with `mise use -g node@20`'
@@ -206,7 +209,6 @@ local function check_angular()
   -- requirements; `ngserver` asks for less. Measured on Node 14, the ceiling of
   -- Angular 15 and the pin of the PASS portal: `SyntaxError: Unexpected token
   -- '??='`, in a message that reaches no log Neovim reads.
-  local project_node = first_line({ 'node', '--version' })
   local major = tonumber((project_node or ''):match('^v?(%d+)'))
   if project_node == nil then
     health.info('node: no version answered here, so nothing to compare')

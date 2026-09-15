@@ -10,16 +10,19 @@
 -- (strictly speaking, on every 'filetype' option value change to target value).
 -- Usually it needs to define buffer/window local options and variables.
 -- So instead of `vim.o` to set options, use `vim.bo` for buffer-local options and
--- `vim.cmd('setlocal ...')` for window-local options (currently more robust).
+-- `vim.wo[0][0]` for window-local options (`:h vim.wo`).
 --
 -- This is also a good place to set buffer-local 'mini.nvim' variables.
 -- See `:h mini.nvim-buffer-local-config` and `:h mini.nvim-disabling-recipes`.
 
--- Enable spelling and wrap for window
-vim.cmd('setlocal spell wrap')
+-- Enable spelling and wrap for window. Both are window-local options.
+vim.wo[0][0].spell = true
+vim.wo[0][0].wrap = true
 
--- Fold with tree-sitter
-vim.cmd('setlocal foldmethod=expr foldexpr=v:lua.vim.treesitter.foldexpr()')
+-- Fold with tree-sitter. `foldmethod` and `foldexpr` are window-local; the
+-- second index keeps the value tied to this buffer inside this window.
+vim.wo[0][0].foldmethod = 'expr'
+vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 
 -- Disable built-in `gO` mapping in favor of 'mini.basics'
 vim.keymap.del('n', 'gO', { buf = 0 })
