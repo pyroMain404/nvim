@@ -103,9 +103,11 @@ end
 
 -- Running the game, under the contract of 'lua/config/run.lua'. Nothing is read
 -- from 'project.godot' here because the engine reads it: `run/main_scene` is the
--- default, and a project that declares none refuses loudly with `Can't run
--- project: no main scene defined in the project` (measured, exit 1), which is
--- the loud failure the contract asks for instead of starting the wrong thing.
+-- default, and a project that declares none refuses with `Can't run project: no
+-- main scene defined in the project` (measured, exit 1). That reaches the user
+-- as the exit report of the detached branch below - the engine's own output has
+-- no window to be shown in - and it is the loud failure the contract asks for
+-- instead of starting the wrong thing.
 -- Arguments reach the engine, so `:Run res://scenes/level.tscn` runs one scene.
 --
 -- DETACHED, which is the branch the contract keeps for a program with a window
@@ -122,12 +124,14 @@ require('config.run').command(function(args)
   return vim.list_extend({ 'godot', '--path', root }, args)
 end, { detach = true })
 
--- NOTE: the output of the game is not captured anywhere, by construction of
--- the branch above. Bringing it into Neovim - a scratch buffer fed by
+-- NOTE: the output of a RUNNING game is not captured anywhere, by construction
+-- of the branch above - the place to read `print()` is the Output panel of the
+-- Godot editor. What does come back is the last line the engine wrote on stderr
+-- when the game dies, which is how a project that cannot start says so.
+-- Bringing the whole output into Neovim - a scratch buffer fed by
 -- `vim.system()` with `stdout`, instead of `detach` - is a separate axis
 -- (`capabilities.md` §19), and the order matters: it is worth judging after
--- the detached form has been used on a real game, not before. Until then the
--- place to read `print()` is the Output panel of the Godot editor.
+-- the detached form has been used on a real game, not before.
 
 -- TODO: a game needs `:make`-like entries for the two things the engine cannot
 -- be asked from here - running the test suite and exporting a build - and they

@@ -1013,6 +1013,26 @@ comando vero, non l'output del comando dentro una shell. Quando il buffer resta
 vuoto, la forma catturata non costa solo una finestra inutile: sporca il disegno
 dell'interfaccia, e la scelta è staccare.
 
+**Staccato non vuol dire muto.** Il ramo staccato non ha nessuna finestra in cui
+scrivere, quindi l'unica cosa che può riportare è che il programma è **morto** — e deve,
+perché senza, un avvio fallito è indistinguibile da uno riuscito: misurato su un progetto
+Godot senza `run/main_scene`, `:Run` non diceva niente mentre `godot --path .` da shell
+stampava `Can't run project: no main scene defined in the project` e usciva 1. Si legge
+con `on_exit` di `vim.system()`, e si riporta con `vim.notify()` **dentro
+`vim.schedule()`**: la callback gira in un fast event context (`:h lua-loop-callbacks`),
+dove `vim.notify()` non è ammesso e `vim.fn.*` solleva `E5560`. Tre dettagli rendono la
+cosa utile invece che decorativa:
+
+- **l'output si legge da entrambi gli stream**, perché quale dei due porti il messaggio
+  è una proprietà del programma: Godot scrive quel `Can't run project` su stdout
+  (misurato: 65 byte lì, 0 su stderr), mentre la convenzione farebbe guardare solo
+  stderr;
+- **`stdout`/`stderr` come funzioni, non `true`**: `true` accumula tutto ciò che il
+  processo scrive per tutta la sua vita, e un gioco vive per ore. Basta lo strato finale
+  di ciascuno stream, con un tetto di caratteri;
+- **la riga finale, non il tail**: `split` sul `\n` e l'ultima riga non vuota è quella
+  che dice come è morto, e una notifica con un paragrafo dentro non si legge.
+
 E "catturato" non dice ancora **dove** finisce l'output, che è una seconda scelta:
 `rustaceanvim` ne ha un modulo per destinazione in `lua/rustaceanvim/executors/` —
 terminale, quickfix riempito man mano con `setqflist(..., 'a', { lines = … })`, e
@@ -1051,7 +1071,10 @@ un comando solo, `:Run`, con un significato definito che ogni filetype rispetta:
    con finestra propria passa `{ detach = true }`, l'altro ramo della tabella qui
    sopra, e paga il fatto di sopravvivere a `:qa`. Quale dei due valga per un
    linguaggio si **misura**, come dice il blocco qui sopra: non si deduce dal tipo
-   di programma e non si prova da una shell.
+   di programma e non si prova da una shell. Dove una finestra non c'è — il ramo
+   staccato — non si mostra niente, quindi quello che si riporta è la sola cosa che
+   resta: un'uscita diversa da 0, con l'ultima riga che il programma ha scritto (vedi
+   **Staccato non vuol dire muto**, qui sopra).
 3. **Il default si legge dal progetto, mai si fissa.** Quale script, quale goal, quale
    binario è una proprietà del checkout. Dove non si può leggere, il comando deve
    **fallire rumorosamente** — `cargo run` in una workspace elenca i binari fra cui

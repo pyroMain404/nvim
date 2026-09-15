@@ -140,7 +140,12 @@ relativi a un manifesto. `--path` da solo non basta: parla al motore, non a Neov
   `:Run res://main.tscn` avvia una scena. Il default non si legge: lo legge il
   motore (`run/main_scene`), e un progetto che non ne dichiara rifiuta con
   `Can't run project: no main scene defined in the project` ed esce 1 — il
-  fallimento rumoroso che il contratto chiede.
+  fallimento rumoroso che il contratto chiede, e che arriva all'utente solo
+  perché il ramo staccato riporta l'uscita anomala. Due misure che servono a non
+  farsi ingannare: quel messaggio il motore lo scrive su **stdout** (65 byte lì e
+  0 su stderr, sullo stesso comando che da shell lo stampa a schermo), e il
+  motore, eseguendo un progetto su Windows, gira in **due** processi — contarli
+  per sapere se il gioco è vivo risponde 2.
   **Staccato**, che è il ramo di `capabilities.md` §19 per un programma con
   finestra propria, ed è una misura e non una preferenza: invocato nella forma
   catturata, il gioco apre un `buftype=terminal` con un job vivo il cui buffer
@@ -321,6 +326,12 @@ GDScript, tutti eseguiti e tutti passati:
   getta: una scena che scrive un file e uscita pulita, **zero finestre aperte** in
   Neovim prima e dopo, e l'editor (stesso PID) ancora vivo alla fine. È il ciclo
   normale "F5 mentre l'editor resta aperto", non un caso speciale.
+- **Il gioco sopravvive a `:qa`, e la misura va presa da dentro Neovim**: un
+  autocomando `VimLeavePre` che scrive `vim.uv.now()` dice quando Neovim se n'è
+  andato (misurato: 3,05 s dopo lo spawn, con il gioco ancora vivo), mentre il
+  ritorno della shell arriva 21 s dopo — il processo figlio ha ereditato l'handle
+  rediretto e la shell aspetta lui, non Neovim. Lo stesso vale per contare i
+  processi: sono due, quindi "ne resta uno" non è la prova che il gioco è vivo.
 - **`gf` sul caso limite**, cursore esattamente su "res" e non dentro il percorso:
   senza l'estensione di `isfname` catturerebbe solo `res` e fallirebbe. Con la
   correzione, e con il `BufReadCmd` di `capabilities.md` §8, atterra sul file reale
