@@ -139,7 +139,14 @@ local function check_rust()
   -- Which toolchain answers here, which a project's 'rust-toolchain.toml' can
   -- change and a stale shell can pin to yesterday's
   local toolchain = first_line({ 'rustup', 'show', 'active-toolchain' })
-  health.ok('active toolchain: ' .. (toolchain or 'unknown'))
+  if toolchain == nil then
+    health.warn('no active Rust toolchain', {
+      'Install one with `rustup toolchain install stable`',
+      "Nothing in 'after/lsp/rust_analyzer.lua' can start without a toolchain",
+    })
+  else
+    health.ok('active toolchain: ' .. toolchain)
+  end
   local install_toolchain = 'Install one with `rustup toolchain install stable`'
   report('rustc', 'nothing compiles', install_toolchain)
   report('cargo', '`:make check` and `:make test` do nothing', install_toolchain)

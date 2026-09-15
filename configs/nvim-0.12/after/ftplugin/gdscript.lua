@@ -71,14 +71,13 @@ if root ~= nil then
     end,
   })
 
-  -- `gf` on a `preload('res://...')` or `load('res://...')` reference.
+  -- `gf` on a `preload('res://...')` or `load(...)` reference.
   --
-  -- NOTE: `:` is not in the default 'isfname' (measured), so `gf` with the
-  -- cursor on the literal text "res" - left of the colon - would try to open
-  -- a file named exactly `res` and fail. Extending 'isfname' is what makes
-  -- the whole `res://...` token one word, regardless of where inside it the
-  -- cursor sits.
-  vim.opt_local.isfname:append(':')
+  -- The buffer-local `includeexpr`/BufReadCmd pair in 'plugin/40_plugins.lua'
+  -- is what resolves these references; 'isfname' is a global-only option in
+  -- Neovim 0.12, so appending ':' here would change it for every buffer. The
+  -- default 'isfname' already contains '/', which is enough for the path part
+  -- after `res://` once the BufReadCmd strips the scheme.
 
   -- What `[i`, `[I` and `:checkpath` scan a LINE for. Covers `preload(`,
   -- `load(` and the `const X = preload(...)` form; `$NodePath` strings are
