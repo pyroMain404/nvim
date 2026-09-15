@@ -12,7 +12,10 @@
 ---   options  buffer or window options to report ('filetype', 'foldmethod')
 ---   vars     `b:` variables to report ('diff_ref', 'minidiff_summary')
 ---   expect   table of name -> pattern; the name is an option, a variable, or
----            one of 'name', 'lines', 'cursor'
+---            one of 'name', 'lines', 'cursor'. NOTE: the pattern is matched
+---            against `tostring(actual)`, and an option goes through
+---            `vim.inspect()` before that: an empty 'buftype' is `^""$` and not
+---            `^$`, while a `cursor` carries its braces (`{ 1, 0 }`)
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 

@@ -188,6 +188,19 @@ che un `gf` apra quel buffer, non dopo. Intercetta il nome fittizio, risolve la 
 dal buffer alternato o dalla cwd, apre il file vero e cancella il buffer fantasma.
 Fuori da un progetto Godot degrada con un `vim.notify` invece di aprire qualcosa.
 
+**L'autocomando deve essere `nested`, e senza il flag il guasto non si vede.** Gli
+autocomandi non ne innescano altri (`:h autocmd-nested`), quindi il `:edit` che il
+callback esegue girava con gli eventi bloccati: il buffer risolto prendeva il testo e
+nient'altro. Misurato prima in un Neovim isolato — `nested = false` dà `filetype=""` e
+nessun `BufReadPost` né `FileType`, `nested = true` dà `gdscript` con entrambi — e poi
+in A/B contro la configurazione precedente, sullo stesso `gf` della stessa fixture:
+`filetype` vuoto, cursore `(1,0)`, zero client LSP e nessun comando del ftplugin, contro
+`gdscript` con l'highlight del parser, la posizione che `MiniMisc.setup_restore_cursor()`
+ricorda, un client `gdscript` e `:make` / `:Run` / `:GodotDoc` presenti. Nello stesso
+A/B la rotta non `nested` si interrompeva con `Vim:E325` quando un'altra istanza di
+Neovim teneva aperto il file di destinazione, e quella corretta no: la correzione vale
+quindi anche per un `gf` su un file che qualcun altro ha in editing.
+
 `include` resta impostato per `[i`/`[I`/`:checkpath`, ma lo stesso schema-recognition
 di Vim li fa dichiarare "trovato" senza verificare nulla: utile da sapere, non un
 difetto da correggere qui.
