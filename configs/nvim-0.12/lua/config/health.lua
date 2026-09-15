@@ -56,6 +56,28 @@ local function report(name, why, advice)
   return version
 end
 
+-- Whether each of `langs` has an installed tree-sitter parser, not merely
+-- available - the same check 'plugin/40_plugins.lua' uses to decide what to
+-- install. `advice` is a function of the language name giving the fix line;
+-- every section but Lua shares the same one (its parser ships with Neovim
+-- itself, so a missing one means a broken install and not an absent language).
+local function check_parsers(langs, advice)
+  advice = advice
+    or function(lang)
+      return "Restart Neovim once with '" .. lang .. "' in `languages`, and wait"
+    end
+  for _, lang in ipairs(langs) do
+    if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
+      health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
+        advice(lang),
+        'Highlighting falls back to the legacy syntax file',
+      })
+    else
+      health.ok('tree-sitter parser `' .. lang .. '`: installed')
+    end
+  end
+end
+
 -- External tools =============================================================
 -- Programs the config uses when they are there and does without when they are
 -- not. None of them is required for startup (`:h mini.nvim-general-principles`).
@@ -98,6 +120,16 @@ local function check_external_tools()
     'Install it with `mise use -g tree-sitter@latest`, and make sure the '
       .. "'mise' shims directory is on PATH: on Windows nothing puts it there"
   )
+  -- Everything this config declares through it - every language server,
+  -- 'stylua' and 'tree-sitter' above included - is invisible to a session
+  -- started without its shims on `PATH`, which mise does not put there on
+  -- Windows: the symptom is a tool that installs cleanly and is never found.
+  report(
+    'mise',
+    'no declared tool - language server, formatter, linter, runtime - '
+      .. 'installs or updates',
+    'Install it with `winget install jdx.mise`, then run `mise doctor`'
+  )
 end
 
 -- Language toolchains ========================================================
@@ -119,14 +151,10 @@ local function check_lua()
   )
   -- Neovim bundles this parser, so a missing one means a broken install rather
   -- than a language left uninstalled
-  if #vim.api.nvim_get_runtime_file('parser/lua.*', false) == 0 then
-    health.warn('tree-sitter parser for `lua` is not installed', {
-      'It ships with Neovim: reinstall it, or run `:TSInstall lua`',
-      'Highlighting falls back to the legacy syntax file',
-    })
-  else
-    health.ok('tree-sitter parser `lua`: installed')
-  end
+  check_parsers(
+    { 'lua' },
+    function() return 'It ships with Neovim: reinstall it, or run `:TSInstall lua`' end
+  )
 end
 
 local function check_rust()
@@ -153,6 +181,14 @@ local function check_rust()
   local install_toolchain = 'Install one with `rustup toolchain install stable`'
   report('rustc', 'nothing compiles', install_toolchain)
   report('cargo', '`:make check` and `:make test` do nothing', install_toolchain)
+  -- 'plugin/42_format.lua' falls back to the server when this is missing, but
+  -- the server formats differently, and a rustup component is as easy to miss
+  -- as `cargo-clippy` below, which already gets its own check
+  report(
+    'rustfmt',
+    '`<Leader>lf` falls back to a server that formats differently',
+    'Install it with `rustup component add rustfmt`'
+  )
 
   -- Installed through `rustup` rather than `mise` on purpose: the server is
   -- built from the commit of the active toolchain, and for a language whose
@@ -174,16 +210,7 @@ local function check_rust()
   -- check 'plugin/40_plugins.lua' uses to decide what to install.
   -- `sql` is here because 'after/queries/rust/injections.scm' parses the SQL
   -- inside the `sqlx` macros with it, and stays inert while it is missing
-  for _, lang in ipairs({ 'rust', 'toml', 'sql' }) do
-    if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
-      health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
-        "Restart Neovim once with '" .. lang .. "' in `languages`, and wait",
-        'Highlighting falls back to the legacy syntax file',
-      })
-    else
-      health.ok('tree-sitter parser `' .. lang .. '`: installed')
-    end
-  end
+  check_parsers({ 'rust', 'toml', 'sql' })
 end
 
 local function check_angular()
@@ -312,16 +339,7 @@ local function check_angular()
 
   -- The parser has to be installed, not merely available. `angular` is the one
   -- that reads a template; the rest are the other files a component is made of
-  for _, lang in ipairs({ 'angular', 'typescript', 'html', 'css', 'scss', 'json' }) do
-    if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
-      health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
-        "Restart Neovim once with '" .. lang .. "' in `languages`, and wait",
-        'Highlighting falls back to the legacy syntax file',
-      })
-    else
-      health.ok('tree-sitter parser `' .. lang .. '`: installed')
-    end
-  end
+  check_parsers({ 'angular', 'typescript', 'html', 'css', 'scss', 'json' })
 end
 
 -- The oldest Java release jdtls agrees to start on, read from the launcher.
@@ -498,16 +516,7 @@ local function check_java()
   -- check 'plugin/40_plugins.lua' uses to decide what to install.
   -- `xml` is here for 'pom.xml', which a Maven project is read from as often
   -- as its sources
-  for _, lang in ipairs({ 'java', 'xml' }) do
-    if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
-      health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
-        "Restart Neovim once with '" .. lang .. "' in `languages`, and wait",
-        'Highlighting falls back to the legacy syntax file',
-      })
-    else
-      health.ok('tree-sitter parser `' .. lang .. '`: installed')
-    end
-  end
+  check_parsers({ 'java', 'xml' })
 end
 
 local function check_cpp()
@@ -523,7 +532,11 @@ local function check_cpp()
     'C and C++ buffers lose completion, diagnostics, rename and go to definition',
     install_llvm
   )
-  report('clang++', 'nothing compiles', install_llvm)
+  report(
+    'clang++',
+    'this is the compiler a CMake- or LLVM-configured C/C++ project builds with',
+    install_llvm
+  )
   report(
     'clang-format',
     '`<Leader>lf` falls back to a server that formats differently',
@@ -555,6 +568,15 @@ local function check_cpp()
     'ninja',
     'CMake falls back to a slower generator',
     'Install it with `mise use -g ninja@1.13`'
+  )
+  -- A plain-Makefile project (no CMake) drives `:make` through GCC's own
+  -- compiler plugin, which sets 'errorformat' and no 'makeprg': the default
+  -- `make` is the command that runs, and without it `:make` fails with
+  -- "command not found" rather than compiling anything
+  report(
+    'make',
+    "`:make` in a plain-Makefile project ('after/ftplugin/c.lua') does nothing",
+    'Install it with `winget install GnuWin32.Make`, or use a CMake project'
   )
 
   -- The check that matters more than all the others: is there a compilation
@@ -654,16 +676,7 @@ local function check_cpp()
   -- check 'plugin/40_plugins.lua' uses to decide what to install. `c` is there
   -- because the `cpp` parser requires it, `cmake` and `make` because the files
   -- a project is built from are read as often as its sources
-  for _, lang in ipairs({ 'cpp', 'c', 'cmake', 'make' }) do
-    if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
-      health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
-        "Restart Neovim once with '" .. lang .. "' in `languages`, and wait",
-        'Highlighting falls back to the legacy syntax file',
-      })
-    else
-      health.ok('tree-sitter parser `' .. lang .. '`: installed')
-    end
-  end
+  check_parsers({ 'cpp', 'c', 'cmake', 'make' })
 end
 
 -- Godot is the only section that reports on nothing when it does not apply, and
@@ -743,16 +756,7 @@ local function check_godot()
   -- check 'plugin/40_plugins.lua' uses to decide what to install. `gdshader`
   -- also carries the `gdshaderinc` filetype that 'ftdetect/godot.lua' assigns,
   -- and `godot_resource` is what reads a '.tscn' or a '.tres'
-  for _, lang in ipairs({ 'gdscript', 'gdshader', 'godot_resource' }) do
-    if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
-      health.warn('tree-sitter parser for `' .. lang .. '` is not installed', {
-        "Restart Neovim once with '" .. lang .. "' in `languages`, and wait",
-        'Highlighting falls back to the legacy syntax file',
-      })
-    else
-      health.ok('tree-sitter parser `' .. lang .. '`: installed')
-    end
-  end
+  check_parsers({ 'gdscript', 'gdshader', 'godot_resource' })
 end
 
 function M.check()
