@@ -125,7 +125,11 @@ local loose = {
   end,
 }
 
-local found = vim.fs.find(vim.tbl_keys(builds), {
+-- Explicit order, not `vim.tbl_keys(builds)`: `vim.fs.find()` tests names in
+-- list order (`:h vim.fs.find()`), and a table's key order is unspecified, so
+-- a checkout holding both a `pom.xml` and a leftover `build.xml` would pick
+-- between them by hash order instead of by precedence.
+local found = vim.fs.find({ 'pom.xml', 'build.xml' }, {
   upward = true,
   path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
 })[1]

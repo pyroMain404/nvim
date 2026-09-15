@@ -35,7 +35,7 @@ vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- '$VIMRUNTIME/ftplugin/rust.vim' does for 'Cargo.toml'; nothing here reads a
 -- file until `:make` or `:Run` is called.
 local build = vim.fs.find({ 'CMakeLists.txt', 'Makefile', 'makefile' }, {
-  path = vim.api.nvim_buf_get_name(0),
+  path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
   upward = true,
 })[1]
 local root = build and vim.fs.dirname(build) or nil
