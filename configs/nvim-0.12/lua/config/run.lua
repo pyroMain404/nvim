@@ -171,6 +171,10 @@ M.command = function(resolve, opts)
       vim.notify(tostring(err), vim.log.levels.ERROR)
     end
   end, { nargs = '*', desc = desc })
+  -- Every ftplugin that calls `M.command()` gets `:Run` undone for free when
+  -- the filetype changes away, instead of each one registering it by hand
+  -- (`:h b:undo_ftplugin`).
+  vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '') .. '\n' .. 'delcommand Run'
 end
 
 -- The npm ecosystem, used by both 'after/ftplugin/typescript.lua' and

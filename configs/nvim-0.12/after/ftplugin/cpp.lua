@@ -13,10 +13,22 @@
 -- skill `nvim-project-environment`), not to this shared config.
 --
 -- Everything this config adds for the two languages - folds, `:make`, project
--- `'path'`, `:Run` - is the same work whichever of the two a checkout builds
--- (the projects sampled here build both from one 'CMakeLists.txt' or
--- 'Makefile'), so it is written once in 'after/ftplugin/c.lua' and sourced
--- from here (`:h runtime!`) rather than the other way around: `c` is the
--- filetype Neovim's own detector falls back to for a header-less file, so it
--- is the one that has to work on its own.
-vim.cmd('runtime! after/ftplugin/c.lua')
+-- `'path'`, `:Run` - is written once, in 'after/ftplugin/c.lua', and NOTHING
+-- HERE SOURCES IT: `$VIMRUNTIME/ftplugin/cpp.vim` already runs
+-- `runtime! ftplugin/c.vim ftplugin/c.lua` for every `cpp` buffer, and
+-- 'runtimepath' carries this config's directory twice - once as itself, once
+-- as its own `.../after` entry, which Neovim appends for every config
+-- (`:set runtimepath?`). `ftplugin/c.lua`, resolved against that second
+-- entry, IS `after/ftplugin/c.lua` - our file.
+--
+-- NOTE: an earlier version of this file added its own
+-- `vim.cmd('runtime! after/ftplugin/c.lua')`, sourcing it a SECOND time on
+-- every `cpp` buffer - harmless for the idempotent option assignments, but
+-- fatal for `require('config.run').command()`'s `:Run` definition, whose
+-- `b:undo_ftplugin` line (`delcommand Run`) was then registered twice, and
+-- the second `delcommand` raised `E184` on the next filetype change.
+-- Measured: a load counter added to 'c.lua' showed it sourced twice per
+-- `cpp` buffer with the explicit call in place, once without it. `.c` is
+-- still the filetype Neovim's own detector falls back to for a header-less
+-- file, and 'after/ftplugin/c.lua' is the one that has to work on its own
+-- without this file's help.

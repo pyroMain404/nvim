@@ -157,3 +157,19 @@ require('config.run').command(function(args)
   end
   return nil, 'several programs here, name one: ' .. table.concat(names, ', ')
 end)
+
+-- Undo what this file sets when the filetype changes away from `c`/`cpp`
+-- (`:h b:undo_ftplugin`). `:Run` undoes itself, registered inside
+-- 'lua/config/run.lua''s `M.command()`. The compiler selection and the
+-- project `'path'` entries only exist when a build was found.
+local undo_parts = { 'setlocal foldmethod< foldexpr<' }
+if build ~= nil then
+  vim.list_extend(
+    undo_parts,
+    { 'setlocal makeprg< errorformat<', 'unlet! b:current_compiler' }
+  )
+end
+if root ~= nil then table.insert(undo_parts, 'setlocal path<') end
+vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
+  .. '\n'
+  .. table.concat(undo_parts, ' | ')
