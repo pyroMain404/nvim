@@ -215,7 +215,7 @@ end, { desc = 'Reattach the language server after restarting Godot' })
 -- of these two exists precisely because the server is not answering.
 if root ~= nil then
   local map = function(lhs, rhs, desc)
-    vim.keymap.set('n', lhs, rhs, { buffer = true, desc = desc })
+    vim.keymap.set('n', lhs, rhs, { buf = true, desc = desc })
   end
   map('<Leader>og', '<Cmd>GodotDoc<CR>', 'Godot docs (word)')
   map('<Leader>oG', '<Cmd>GodotReconnect<CR>', 'Godot server reattach')
