@@ -146,8 +146,10 @@ TypeScript. Catturare lo `(string_fragment)` interno sembra più semplice ed è
 sbagliato: un template con un `${}` ha **più** fragment, e un tag aperto prima della
 sostituzione e chiuso dopo non verrebbe mai chiuso.
 
-**I server**: `angularls` e `ts_ls` dentro `vim.lsp.enable()`, e nessun file in
-`after/lsp/` ("Fase 2 — cosa di questo tenere").
+**I server**: `angularls` e `ts_ls` dentro `vim.lsp.enable()`. `angularls` non ha un
+file in `after/lsp/`, perché non c'è niente da aggiungere ("Fase 2 — cosa di questo
+tenere"); `ts_ls` invece sì — `after/lsp/ts_ls.lua`, per il `MISE_NODE_VERSION`
+descritto più sotto.
 
 **Build e quickfix**: `compiler/ngc.lua`, più `:compiler ngc` nei due ftplugin.
 `:compiler tsc` non è la risposta, e la prova è misurabile: su un componente il cui

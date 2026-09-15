@@ -91,10 +91,19 @@ directory degli shim deve essere nel `PATH`, e `mise` non ce la mette.
 configs/nvim-0.12/
 ├── plugin/40_plugins.lua        parser, server abilitato, formatter
 ├── after/lsp/clangd.lua         solo `cmd`
-├── after/ftplugin/cpp.lua       compiler, fold, `path`, `:Run`
+├── after/ftplugin/c.lua         compiler, fold, `path`, `:Run` — condiviso con C++
+├── after/ftplugin/cpp.lua       `runtime!`s c.lua, niente di specifico a C++ oggi
 ├── compiler/cmake.lua           `:make` → `cmake --build`
 └── lua/config/health.lua        sezione C++
 ```
+
+**C è coperto quanto C++.** `after/ftplugin/cpp.lua` era l'unico file della
+coppia finché un `.c` - il filetype a cui Neovim ricade per un file senza
+header - non aveva né `:compiler`, né fold, né `'path'` di progetto, né
+`:Run`, mentre `clangd`, `clang-format`, il parser `c` e `check_cpp()`
+dichiaravano tutti il linguaggio supportato. Il corpo condiviso vive ora in
+`after/ftplugin/c.lua`; `cpp.lua` lo sorgenta con `runtime!` invece del
+contrario, perché `c` è il filetype che deve funzionare da solo.
 
 ### 4.1 Parser
 
@@ -152,7 +161,8 @@ si legge come una build passata**, e quella è una build che non è mai partita.
 Tutto il resto si scarta: le righe `[1/2]` di Ninja, il `FAILED:`, la riga di
 comando che riecheggia, l'estratto sotto ogni diagnostica, `2 errors generated.`.
 
-In `after/ftplugin/cpp.lua` la scelta del compiler risale come fa il ftplugin di
+In `after/ftplugin/c.lua` (condiviso da `.c` e `.cpp`) la scelta del compiler risale
+come fa il ftplugin di
 Rust per `Cargo.toml`: `CMakeLists.txt` → `compiler cmake`, `Makefile` →
 `compiler gcc` (che imposta `errorformat` e nessun `makeprg`, cioè esattamente ciò
 che serve dove il `make` di default è già il comando giusto). Un file che non

@@ -38,10 +38,15 @@ directory `snippets/lua`, che `after/snippets/lua.json` sovrascrive per prefisso
 
 ## 2. Fase 2 — cosa di questo tenere
 
-**Tutto.** È il caso in cui il livello ereditato non lascia buchi: il ftplugin di
-Neovim è recente (usa tree-sitter e `vim.lua_omnifunc`), quello di Vim è del 2025 e
-copre `gf` e i commenti, il parser è built-in. Non c'è niente da sostituire e non
-serve un `after/ftplugin/lua.lua`.
+**Quasi tutto.** È il caso in cui il livello ereditato non lascia quasi buchi: il
+ftplugin di Neovim è recente (usa tree-sitter e `vim.lua_omnifunc`), quello di Vim è
+del 2025 e copre `gf` e i commenti, il parser è built-in. L'unico buco è
+`'textwidth'`, che nessun livello ereditato imposta e che questa config vuole a 85 -
+gli stessi `column_width` di `.stylua.toml` - così `'colorcolumn'` disegna il limite
+mentre si scrive invece di scoprirlo da un `stylua --check` fallito. Da qui
+`after/ftplugin/lua.lua`, il file più corto di questa config: una riga di
+`vim.bo.textwidth`, un `b:undo_ftplugin` e il commento che spiega perché non è un
+vezzo di stile.
 
 L'unico file datato è `indent/lua.vim` (2017), che però funziona e resta l'unica
 indentazione disponibile: Neovim non spedisce un `indentexpr` tree-sitter per Lua.
@@ -208,12 +213,15 @@ qui:
   restituire la forma di StyLua. Se non cambia niente, il primo sospetto è che il
   buffer non sia sintatticamente valido: StyLua non formatta ciò che non parsa, e non
   lo dice;
-- `<Leader>ll` deve trovare code lens in un file della config (quattro in
-  `plugin/40_plugins.lua`), e risolte devono avere `command = ""`: se un giorno ne
-  arriva una con un comando vero, il messaggio descritto in "Il ciclo di lavoro" non è più atteso;
+- `<Leader>ll` su un file della config non deve più trovare code lens da LuaLS:
+  `after/lsp/lua_ls.lua` disabilita `codeLens` perché ogni lens che il server
+  pubblicava aveva `command = ""` - un conteggio senza azione. Se un giorno ne
+  arriva una con un comando vero, quella è la ragione per riattivarle, non
+  una regressione da correggere qui;
 - `:verbose setlocal commentstring? includeexpr?` deve nominare
-  `$VIMRUNTIME/ftplugin/lua.vim`: la config non ha un `after/ftplugin/lua.lua` e non
-  deve averne uno per sbaglio.
+  `$VIMRUNTIME/ftplugin/lua.vim`, mentre `:verbose setlocal textwidth?` deve
+  nominare `after/ftplugin/lua.lua` - la config NE ha uno, per `'textwidth'`
+  soltanto.
 
 **La trappola di questo linguaggio in fase di verifica**: LuaLS non pubblica
 diagnostiche per un file che non sta in un workspace. In uno scratch senza
