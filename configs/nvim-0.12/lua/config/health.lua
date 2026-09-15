@@ -45,13 +45,25 @@ local function first_line(cmd)
   return vim.trim(vim.split(vim.trim(out.stdout), '\n')[1] or '')
 end
 
--- Report an external program: its version when present, what breaks when not
+-- Report an external program: its version when present. A program on `PATH`
+-- whose `--version` still fails is not the same as one that works - measured
+-- on this machine: `rustup` leaves `rustc.exe` in place after a toolchain
+-- drops the `rustc` component, and it exits 1 on every invocation - so this
+-- warns instead of reporting a version-less `OK`, which would read as
+-- healthy for a toolchain that cannot compile anything.
 local function report(name, why, advice)
   if vim.fn.executable(name) ~= 1 then
     health.warn('`' .. name .. '` is not available', { advice, why })
     return nil
   end
-  local version = first_line({ name, '--version' }) or 'found'
+  local version = first_line({ name, '--version' })
+  if version == nil then
+    health.warn(
+      '`' .. name .. '` is on PATH but `--version` failed',
+      { advice, why }
+    )
+    return nil
+  end
   health.ok(name .. ': ' .. version)
   return version
 end
