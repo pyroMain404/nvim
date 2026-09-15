@@ -105,6 +105,12 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-15
 
+- Parse GDScript with tree-sitter. The parser is tier 3 in 'nvim-treesitter' -
+  no declared maintainer - which is why the '$VIMRUNTIME/syntax/gdscript.vim'
+  underneath is a fallback worth keeping rather than a leftover. The parsers of
+  the rest of the ecosystem stay out until they are needed: `gdshader` (which
+  covers both '.gdshader' and '.gdshaderinc') and `godot_resource` (the
+  `gdresource` of '.tscn' and '.tres') both work today and are one line each.
 - Parse C, C++, CMake and makefiles with tree-sitter: highlighting, structural
   folds and the textobjects of 'nvim-treesitter-textobjects' stop falling back
   to the legacy syntax files. The `cpp` parser requires `c`, which ships with

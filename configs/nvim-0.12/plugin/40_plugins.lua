@@ -97,6 +97,15 @@ now_if_args(function()
     -- the same reason `toml` sits next to `rust` and `xml` next to `java`
     'cmake',
     'make',
+    -- GDScript, the language of the Godot engine. Tier 3 in 'parsers.lua' of
+    -- 'nvim-treesitter' - no declared maintainer - which is what makes the
+    -- '$VIMRUNTIME/syntax/gdscript.vim' left underneath a fallback worth
+    -- having rather than a leftover. The rest of the ecosystem stays out
+    -- until it is written: `gdshader` (which declares both `gdshader` and
+    -- `gdshaderinc`) and `godot_resource` (which declares the `gdresource` of
+    -- '.tscn' and '.tres') both work today and are one line each, the day
+    -- shaders are written or a scene is edited by hand instead of in Godot.
+    'gdscript',
   }
   local isnt_installed = function(lang)
     return #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0
