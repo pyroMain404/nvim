@@ -300,6 +300,13 @@ later(function()
       -- 2 spaces, which is already the default of 'plugin/10_options.lua'.
       cpp = { 'clang-format' },
       c = { 'clang-format' },
+      -- The formatter of GDScript Toolkit, the official one of the language.
+      -- Declaring it is what gives `<Leader>lf` something to call at all: the
+      -- Godot server does not implement formatting, so the `lsp_format`
+      -- fallback above would reach a server with nothing to answer. It
+      -- indents with tabs, which is what '$VIMRUNTIME/ftplugin/gdscript.vim'
+      -- already sets in the buffer.
+      gdscript = { 'gdformat' },
     },
   })
 end)

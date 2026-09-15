@@ -123,6 +123,10 @@ a merge from 'minimax' conflict-free.
   completion, diagnostics and definitions of a DIFFERENT game, silently.
   Nothing else is written there because the inherited `cmd` is a function - the
   TCP connection itself - and a function is replaced rather than merged.
+- Format GDScript with `gdformat` of GDScript Toolkit. Declaring it is what
+  gives `<Leader>lf` something to call at all: the Godot server does not
+  implement formatting, so the `lsp_format` fallback reached a server with
+  nothing to answer.
 - Parse C, C++, CMake and makefiles with tree-sitter: highlighting, structural
   folds and the textobjects of 'nvim-treesitter-textobjects' stop falling back
   to the legacy syntax files. The `cpp` parser requires `c`, which ships with
