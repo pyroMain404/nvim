@@ -189,7 +189,7 @@ When config code detects something wrong — a missing executable, a buffer that
 
 Neovim in fact went the other way once. The `bad_files` list in `$VIMRUNTIME/lua/vim/health/health.lua` — files whose presence makes `:checkhealth` report a leftover installation — includes `lua/provider/node/health.lua`, `lua/provider/perl/health.lua`, `lua/provider/python/health.lua` and `lua/provider/ruby/health.lua`. The per-provider split existed and was merged back into the single `vim/provider/health.lua`.
 
-The dividing line those files draw is **"is this a subsystem worth interrogating on its own?"**, not "is this a separate directory". `:checkhealth vim.lsp` is worth asking alone; `:checkhealth config.keymaps` answers a question nobody has. This config is one subsystem, so it gets one file, and size is not a reason to split it — `lua/config/health.lua` is 757 lines and is not split.
+The dividing line those files draw is **"is this a subsystem worth interrogating on its own?"**, not "is this a separate directory". `:checkhealth vim.lsp` is worth asking alone; `:checkhealth config.keymaps` answers a question nobody has. This config is one subsystem, so it gets one file, and size is not a reason to split it — `lua/config/health.lua` is 784 lines and is not split.
 
 Follow the shape those files share (`vim/health/health.lua` is the clearest example):
 
