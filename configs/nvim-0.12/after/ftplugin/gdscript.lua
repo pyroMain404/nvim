@@ -11,14 +11,19 @@
 -- `:verbose setlocal commentstring? tabstop? foldexpr?` says who set what.
 --
 -- What is missing is everything that talks to the engine, and it is what
--- follows: `:make`, the documentation with the editor closed, and the way back
--- after the editor is restarted.
+-- follows: `:make`, `:Run`, the documentation with the editor closed, and the
+-- way back after the editor is restarted.
+
+-- The project this buffer belongs to, read once and HERE: `:Run` resolves after
+-- `:vertical new` may have made a nameless buffer current, so a resolver that
+-- asked then would read an empty name.
+local root = vim.fs.root(0, { 'project.godot' })
 
 -- Build and test through `:h :make`, so that a parse error lands in the
 -- quickfix list and `]q` / `[q` of 'mini.bracketed' walk it. What the engine
 -- can and cannot answer is in 'compiler/godot.lua'; only the project gate is
 -- here, because a '.gd' file outside a project has no engine to ask.
-if vim.fs.root(0, { 'project.godot' }) ~= nil then
+if root ~= nil then
   vim.cmd('compiler godot')
 
   -- `:make` has to run from the project root, and a compiler plugin cannot put
@@ -67,20 +72,26 @@ if vim.fs.root(0, { 'project.godot' }) ~= nil then
   })
 end
 
--- NOTE: no `:Run` here, and it is a measurement rather than an omission. The
--- command to start a game is universal enough - `godot --path <root>`, with an
--- argument for one scene, and the engine itself refuses loudly with `Can't run
--- project: no main scene defined in the project` when the project declares
--- none - but the contract of 'lua/config/run.lua' CAPTURES, in a terminal
--- split, and a game does not fit that half of `capabilities.md` §19.
+-- Running the game, under the contract of 'lua/config/run.lua'. Nothing is read
+-- from 'project.godot' here because the engine reads it: `run/main_scene` is the
+-- default, and a project that declares none refuses loudly with `Can't run
+-- project: no main scene defined in the project` (measured, exit 1), which is
+-- the loud failure the contract asks for instead of starting the wrong thing.
+-- Arguments reach the engine, so `:Run res://scenes/level.tscn` runs one scene.
 --
--- Measured with the real command, a windowed engine and a scene that prints:
--- `:Run` does open a `buftype=terminal` with a live job, and the buffer stays
--- EMPTY - the output of the game comes out on the stdout of the Neovim process
--- instead, which in a session is the screen the interface is drawn on. So the
--- split buys nothing and costs a redraw. The form that fits is the detached
--- one (`:h vim.system()` with `detach`), and it needs the shared contract to
--- gain that branch first: a decision about every language, not about this one.
+-- DETACHED, which is the branch the contract keeps for a program with a window
+-- of its own, and here it is a measurement and not a preference: invoked
+-- captured, the game opens a `buftype=terminal` with a live job whose buffer
+-- stays EMPTY, while its output comes out on the stdout of Neovim itself - the
+-- screen the interface is drawn on. NOTE: a detached game therefore outlives
+-- `:qa`. That is the trade of this branch, and for a windowed program it is the
+-- right way round: closing the editor is not a reason to kill what is running.
+require('config.run').command(function(args)
+  if root == nil then
+    return nil, 'no project.godot above this file: there is no game to run'
+  end
+  return vim.list_extend({ 'godot', '--path', root }, args)
+end, { detach = true })
 
 -- The documentation of the word under the cursor, in the browser. The LSP hover
 -- gives it too, and better - but only with Godot open on the project, which is

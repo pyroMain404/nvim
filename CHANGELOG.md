@@ -105,6 +105,15 @@ a merge from 'minimax' conflict-free.
 
 ## 2026-09-15
 
+- Give `:Run` a detached branch, and with it a `:Run` for Godot. The contract
+  captured in a terminal split and nothing else, which is right for a program
+  that writes to stdout and wrong for one that draws its own window: a game
+  invoked that way leaves the split empty and puts its output on the stdout of
+  Neovim itself, the screen the interface is drawn on. `require('config.run')
+  .command(resolve, { detach = true })` starts it as its own process instead -
+  no window in the editor, and a game that outlives `:qa`, which for something
+  with a window of its own is the right way round. Every other language keeps
+  the captured form unchanged.
 - Parse GDScript with tree-sitter. The parser is tier 3 in 'nvim-treesitter' -
   no declared maintainer - which is why the '$VIMRUNTIME/syntax/gdscript.vim'
   underneath is a fallback worth keeping rather than a leftover. The parsers of
@@ -145,15 +154,13 @@ a merge from 'minimax' conflict-free.
   file names the engine prints are relative to it while Neovim resolves
   quickfix names against its own directory: without that, `:make` from
   'scripts/' produced entries pointing at 'scripts/scripts/…' and `]q` opened
-  an empty buffer with a plausible name. `:GodotDoc` opens the documentation of
-  the word under the cursor, which the LSP hover also gives but only with the
-  editor open, that is not while reading code. And `:GodotReconnect` reattaches
-  the server after Godot has been restarted, which otherwise leaves every open
-  buffer without a client and nothing to say so. No `:Run`: the command to
-  start a game is universal enough, but the contract of 'lua/config/run.lua'
-  captures in a terminal split, and a windowed Godot leaves that split empty
-  while its output comes out on the stdout of Neovim itself - measured by
-  invoking the real command, which a pipe in a shell does not reproduce.
+  an empty buffer with a plausible name. `:Run` starts the game, detached,
+  defaulting to the main scene the project declares - a project that declares
+  none refuses loudly instead of starting the wrong thing. `:GodotDoc` opens
+  the documentation of the word under the cursor, which the LSP hover also
+  gives but only with the editor open, that is not while reading code. And
+  `:GodotReconnect` reattaches the server after Godot has been restarted, which
+  otherwise leaves every open buffer without a client and nothing to say so.
 - Report the Godot toolchain in `:checkhealth config`, but only inside a Godot
   project, because the whole toolchain is a game's rather than the machine's.
   Presence and version of the engine are two checks and not one: a `mise` shim

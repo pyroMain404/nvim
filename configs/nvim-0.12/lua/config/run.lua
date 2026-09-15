@@ -3,8 +3,8 @@
 -- └─────────────────┘
 --
 -- `:Run` is one command with one meaning in every language that has one: start
--- *this project*, in a terminal split, with the command the project itself says
--- to use. Deliberately not one name per ecosystem - `:Crun` for cargo, an
+-- *this project*, with the command the project itself says to use. Deliberately
+-- not one name per ecosystem - `:Crun` for cargo, an
 -- `:NpmStart`, an `:MvnExec` - because what has to be remembered when opening an
 -- unfamiliar repository is a single key, not the build tool it happens to use.
 --
@@ -12,10 +12,15 @@
 --
 -- - It runs the PROJECT, not the file. The only exception is a file that belongs
 --   to no project at all, where the two coincide.
--- - It captures: a terminal split (`:h terminal-emulator`), so the output is
---   there while it comes and the process dies with the editor instead of being
---   left holding a port. Something with a window of its own would be detached
---   instead (`:h vim.system()` with `detach`), which is another axis.
+-- - It shows the output where the program actually writes it, and that is one
+--   choice per language rather than one for all. The default is CAPTURED: a
+--   terminal split (`:h terminal-emulator`), so the output is there while it
+--   comes and the process dies with the editor instead of being left holding a
+--   port. A program with a window of its own takes `{ detach = true }` instead
+--   (`:h vim.system()`), and the reason is not taste: measured on Windows with
+--   Godot, a captured game leaves the split EMPTY and writes on the stdout of
+--   Neovim itself - the screen the interface is drawn on. A detached process
+--   outlives `:qa`, which is the price of having a window of its own.
 -- - Its default is READ from the project, never fixed: which script, which goal,
 --   which binary is a property of the checkout. Where it cannot be read, the
 --   command has to fail loudly - `cargo run` in a workspace lists the binaries
@@ -80,7 +85,14 @@ local function project_command(args)
   return nil, nil
 end
 
-M.command = function(resolve)
+-- `opts.detach` picks the other branch: no window, no terminal buffer, and a
+-- process that survives the editor - for a program that draws its own window and
+-- would leave an empty split behind. `vim.system()` also takes a list and also
+-- raises when the program is missing, so the two branches fail the same way.
+M.command = function(resolve, opts)
+  local detach = (opts or {}).detach == true
+  local desc = detach and 'Run the project as its own process'
+    or 'Run the project in a terminal split'
   vim.api.nvim_buf_create_user_command(0, 'Run', function(params)
     local cmd, reason = project_command(params.fargs)
     if cmd == nil and reason == nil then
@@ -91,13 +103,19 @@ M.command = function(resolve)
       return
     end
 
+    if detach then
+      local started, err = pcall(vim.system, cmd, { detach = true })
+      if not started then vim.notify(tostring(err), vim.log.levels.ERROR) end
+      return
+    end
+
     vim.cmd('vertical new')
     local ok, err = pcall(vim.fn.jobstart, cmd, { term = true })
     if not ok then
       vim.cmd('quit')
       vim.notify(tostring(err), vim.log.levels.ERROR)
     end
-  end, { nargs = '*', desc = 'Run the project in a terminal split' })
+  end, { nargs = '*', desc = desc })
 end
 
 -- The npm ecosystem, used by both 'after/ftplugin/typescript.lua' and
