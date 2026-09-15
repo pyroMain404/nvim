@@ -602,7 +602,7 @@ end
 -- modifier (`:h cmdline-special`).
 -- NOTE: the path is written out rather than left as `%:p`, which would name the
 -- current buffer and not the one asked for.
-local git_log_cmd = [[Git log --pretty=format:\%h\ \%ad\ │\ \%s --date=format:'\%Y-\%m-\%d\ \%H:\%M:\%S' --topo-order]]
+local git_log_cmd = [[Git log --pretty=format:\%h\ \%ad\ │\ \%s --date=format:\%Y-\%m-\%d\ \%H:\%M:\%S --topo-order]]
 -- NOTE: probed first with `git log --oneline -1`, mirroring `show_patch()`
 -- below: 'mini.git' opens no window and says nothing when the log it runs
 -- is empty (a path with no commits, `--follow` included), which reads
