@@ -976,6 +976,20 @@ da fare consapevolmente, perché il sintomo — un programma che resta aperto do
 chiuso l'editor, o che si chiude insieme a esso — arriva molto dopo la riga che l'ha
 deciso.
 
+**E "catturato" non è sempre disponibile**, il che sposta la scelta da preferenza a
+vincolo. Un programma con finestra propria può ignorare gli handle che gli vengono
+dati: misurato su Windows avviando Godot da `jobstart(…, { term = true })` — il
+terminal buffer esiste, il job è vivo, e il buffer resta **vuoto**, mentre l'output
+del gioco esce sullo **stdout del processo Neovim**, cioè in una sessione vera sullo
+schermo su cui l'interfaccia è disegnata.
+
+Provarlo da una shell **non** lo mostra, ed è la trappola: lì lo stdout di Neovim è
+già la pipe che si sta guardando, quindi l'output sembra arrivare correttamente. La
+prova che conta è leggere il **contenuto del terminal buffer** dopo aver invocato il
+comando vero, non l'output del comando dentro una shell. Quando il buffer resta
+vuoto, la forma catturata non costa solo una finestra inutile: sporca il disegno
+dell'interfaccia, e la scelta è staccare.
+
 E "catturato" non dice ancora **dove** finisce l'output, che è una seconda scelta:
 `rustaceanvim` ne ha un modulo per destinazione in `lua/rustaceanvim/executors/` —
 terminale, quickfix riempito man mano con `setqflist(..., 'a', { lines = … })`, e
