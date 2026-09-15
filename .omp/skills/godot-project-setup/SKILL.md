@@ -30,6 +30,16 @@ mise use godot@4.5.1-stable     # scrive il 'mise.toml' del progetto, da committ
 godot --version                 # deve rispondere quella versione, eseguito da qui
 ```
 
+**Verificare dove `mise` ha scritto, non solo cosa.** `mise use` senza `--path`
+risale l'albero delle directory e aggiorna il **primo** `mise.toml` che trova già
+esistente, invece di crearne uno in `<root del gioco>`. Misurato: con un
+`mise.toml` già presente più in alto (un file condiviso per strumenti globali), il
+comando ha scritto la versione del motore **lì**, pinnandola per ogni progetto sotto
+quella directory e non solo per questo gioco — il comando stesso nomina il file nel
+suo output (`mise <percorso> tools: godot@...`), ed è quella riga a dover essere
+letta, non solo l'exit code. Se il percorso non è `<root del gioco>/mise.toml`,
+rimuovere la riga da dove è finita e creare il file corretto a mano.
+
 Se `godot --version` risponde `mise ERROR No version is set for shim: godot`, il
 comando è stato eseguito fuori dal progetto: lo shim risolve la versione **dalla
 directory corrente**, e `--path` non rimedia perché quel flag parla al motore dopo che

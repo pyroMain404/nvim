@@ -85,7 +85,7 @@ Tre conseguenze misurate:
 
 ```text
 configs/nvim-0.12/
-├── plugin/40_plugins.lua           'gdscript' in languages, in vim.lsp.enable() e in formatters_by_ft
+├── plugin/40_plugins.lua           'gdscript' in languages, in vim.lsp.enable(), in formatters_by_ft, BufReadCmd su res://
 ├── after/lsp/gdscript.lua          solo root_markers
 ├── after/snippets/gdscript.json    correzione dei cinque prefissi Godot 3
 ├── after/ftplugin/gdscript.lua     :make dalla radice, :Run, :GodotDoc, :GodotReconnect
@@ -162,7 +162,37 @@ relativi a un manifesto. `--path` da solo non basta: parla al motore, non a Neov
   (`capabilities.md` §17, punto 4). Rifiuta su un buffer modificato invece di
   perderne il contenuto.
 
-### 4.4 Snippet: già attivi e già sbagliati
+### 4.4 `gf` su `res://`
+
+Il progetto era deciso, non scritto: due misure mancavano, ed entrambe hanno cambiato
+l'implementazione rispetto a quanto previsto.
+
+**`:` non è in `isfname` di default** (misurato). Senza estenderlo, `gf` con il
+cursore su "res" — a sinistra dei due punti — cattura solo `res` e cerca un file con
+quel nome. `vim.opt_local.isfname:append(':')` rende `res://scripts/x.gd` una parola
+sola qualunque sia la posizione del cursore al suo interno.
+
+**`includeexpr` non entra mai in gioco, ed è un fatto di Vim, non di GDScript.**
+`:h 'includeexpr'` promette che `gf` lo consulti "se un nome non modificato non si
+trova". Misurato: `findfile('res://scripts/x.gd')` restituisce la stringa
+**invariata**, come se il file esistesse, invece di stringa vuota — confermato contro
+un nome senza alcuna corrispondenza possibile, che risponde correttamente `''`. Vim
+tratta qualunque cosa contenga `"://"` come uno schema di rete e non la verifica sul
+filesystem, quindi la condizione "non trovato" da cui dipende `includeexpr` non
+scatta mai. Vale per qualunque `schema://` in qualunque linguaggio, non solo per
+Godot: registrato in `capabilities.md` §8.
+
+La correzione è la stessa di `jdt://` (`capabilities.md` §8): un `BufReadCmd` sullo
+schema, in `plugin/40_plugins.lua` — non nel ftplugin, perché deve esistere **prima**
+che un `gf` apra quel buffer, non dopo. Intercetta il nome fittizio, risolve la radice
+dal buffer alternato o dalla cwd, apre il file vero e cancella il buffer fantasma.
+Fuori da un progetto Godot degrada con un `vim.notify` invece di aprire qualcosa.
+
+`include` resta impostato per `[i`/`[I`/`:checkpath`, ma lo stesso schema-recognition
+di Vim li fa dichiarare "trovato" senza verificare nulla: utile da sapere, non un
+difetto da correggere qui.
+
+### 4.5 Snippet: già attivi e già sbagliati
 
 L'asse con il rapporto costo/beneficio migliore, e quello che si archivia per errore
 come "non serve ora". Cinque prefissi di 'friendly-snippets' producono codice che
@@ -247,6 +277,13 @@ GDScript, tutti eseguiti e tutti passati:
   Misurato confrontando `nvim_buf_get_commands()` nei due buffer, che dice in un
   colpo solo entrambe le metà — `:GodotDoc` in un buffer Lua darebbe `E492`, ma una
   sonda che pretende un errore non distingue le ragioni.
+- `<Leader>og` e `<Leader>oG` premuti per davvero in una sessione con PTY, non
+  iniettati con `-S`: cursore su una parola vera, `<Leader>og` produce l'URL con
+  quella parola (non un placeholder), e `<Leader>oG` su un buffer modificato rifiuta
+  con lo stesso `WARN` che il codice promette. Il solo ramo non chiuso così è
+  `:GodotReconnect` su un buffer **pulito**: l'automazione della tastiera in una
+  sessione interattiva reale ha un costo di fragilità che vale la pena conoscere
+  prima di ripeterla — vedi `nvim-config-testing`.
 - Un comando che avvia un'applicazione si verifica **sostituendo `vim.fn.jobstart`**
   (o `vim.system`) con uno stub che ne registra gli argomenti. Serve per sapere
   *quale* comando partirebbe, e non basta: dove la domanda è *dove finisce
@@ -263,6 +300,44 @@ GDScript, tutti eseguiti e tutti passati:
   comparire affatto), e con lo shim che non risolve — riproducibile con
   `$env:MISE_GLOBAL_CONFIG_FILE` su un file vuoto, che è il modo di far dire a
   `godot --version` `No version is set for shim` senza toccare niente.
-- La direzione Godot → Neovim (§9 dell'analisi) resta da provare in sessione
-  grafica: non è simulabile in headless, e la base della riga del `--remote-send` non
-  è garantita.
+- **Il server è stato verificato anche contro l'editor GUI reale**, non solo contro
+  l'headless: con Godot aperto per davvero su un progetto (`W:/repos/godot-sandbox`),
+  la sonda `lsp` ha trovato lo stesso client, la stessa `root`, la stessa risposta —
+  nessuna differenza fra le due forme per quanto riguarda il client Neovim.
+- **`:Run` staccato accanto all'editor reale aperto**, non solo in un fixture usa e
+  getta: una scena che scrive un file e uscita pulita, **zero finestre aperte** in
+  Neovim prima e dopo, e l'editor (stesso PID) ancora vivo alla fine. È il ciclo
+  normale "F5 mentre l'editor resta aperto", non un caso speciale.
+- **`gf` sul caso limite**, cursore esattamente su "res" e non dentro il percorso:
+  senza l'estensione di `isfname` catturerebbe solo `res` e fallirebbe. Con la
+  correzione, e con il `BufReadCmd` di `capabilities.md` §8, atterra sul file reale
+  (`is real file on disk = true`), e il buffer fittizio `res://…` non resta in giro
+  (conteggio buffer verificato prima e dopo). Fuori da un progetto Godot, degrada con
+  un `vim.notify` invece di aprire qualcosa.
+- **Le impostazioni di Godot erano già tutte corrette meno una**, lette da
+  `editor_settings-4.7.tres` senza toccare l'editor in esecuzione: `exec_path`,
+  `exec_flags` (identici alla forma raccomandata), `use_external_editor`,
+  `network/language_server/remote_port = 6005`, `enable_smart_resolve = true`,
+  `use_thread = true`. Assente: `Auto Reload Scripts on External Change`, che è
+  disattivata per default in Godot (confermato via la documentazione ufficiale, non
+  dedotto) e non compariva affatto nel file — un'impostazione al default non lascia
+  una riga nel `.tres`.
+- **La base della riga non è 0 vs 1: è un bug noto di Godot**, e non richiede più una
+  sessione grafica per essere inquadrato. La documentazione e l'issue
+  `godotengine/godot#118228` confermano che il motore invia la riga **reale, 1-based**
+  (misurato nel report: `p_line=106` per un errore alla riga 106) — `cursor({line},{col})`
+  senza `+1`, cioè la forma già configurata, è quella corretta. Esiste però un bug
+  distinto: cliccare un `Parse Error` nel log per uno script **già caricato con
+  successo in precedenza** genera una SECONDA chiamata con `p_line=-1`, che sovrascrive
+  il salto corretto portando il cursore alla riga 1. L'issue è chiuso come
+  `COMPLETED`, ma non è confermato se la correzione sia nella 4.7.2 installata qui:
+  resta un controllo pratico da fare aprendo uno script buono, introducendo un errore
+  e cliccando il log — se il cursore atterra sulla riga giusta e ci resta, il bug non
+  c'è (o è stato corretto); se scatta indietro alla riga 1 dopo esserci arrivato bene,
+  c'è, e il rimedio è affidarsi a `:make` per gli errori di parsing invece che al click
+  sul log.
+- La direzione Godot → Neovim per il resto (il `.nvim.lua` con `serverstart`, la
+  fiducia, l'apertura da Godot) è stata eseguita su un progetto vero
+  (`W:/repos/godot-sandbox`, skill `godot-project-setup`), ma il click che genera la
+  richiesta reale da Godot resta da fare in sessione grafica: non è simulabile in
+  headless.

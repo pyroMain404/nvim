@@ -665,6 +665,29 @@ L'asse si pone solo dove le librerie si distribuiscono **compilate**: in Rust il
 registry contiene i `.rs` e `rust_analyzer` risponde con un percorso vero, in Java è
 la differenza fra leggere il codice di una dipendenza e guardare un buffer vuoto.
 
+**Lo stesso schema, ma raggiunto da `gf` invece che da un server.** `jdt://` arriva
+da una risposta LSP; un `preload('res://x.gd')` di GDScript, o qualunque riferimento
+`schema://` scritto a mano in un file, arriva da `gf`, `[i`, `[I` o `:checkpath` —
+cioè dalla risoluzione **built-in** di Vim, non da un client. E lì il rimedio
+ovvio, `includeexpr`, **non funziona**, per un motivo di Vim e non del linguaggio.
+
+`:h 'includeexpr'` promette che `gf` lo consulti "se un nome non modificato non si
+trova". Misurato: `findfile('res://x.gd')` restituisce la stringa **invariata**, come
+se il file esistesse, invece di stringa vuota — confermato contro un nome senza
+nessuna corrispondenza possibile, che risponde correttamente `''`. Vim tratta
+qualunque cosa contenga `"://"` come uno schema di rete e non la interroga sul
+filesystem: la condizione "non trovato" da cui dipende `includeexpr` non scatta mai,
+e la stessa scorciatoia rende anche `[i`/`:checkpath` "trovato" senza aver verificato
+niente. Non è una particolarità di GDScript: qualunque `schema://` in qualunque
+linguaggio finisce sulla stessa strada.
+
+Il rimedio è lo stesso `BufReadCmd` sullo schema di cui sopra, **anche qui registrato
+prima che il buffer esista** — `gf` crea il nome fittizio e basta, un ftplugin
+arriverebbe sempre un file troppo tardi. `'isfname'` va comunque esteso a includere
+i due punti se lo schema li usa (`res:`, `jdt:`): di default `:` non c'è, e senza
+quella estensione `gf` con il cursore prima dei due punti cattura solo la parte
+prima dello schema e cerca un file con quel nome sbagliato.
+
 ## 9. Completamento e snippet
 
 - **Completamento**: 'mini.completion' usa l'LSP quando c'è, le parole del buffer
