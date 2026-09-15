@@ -73,7 +73,8 @@ return {
       -- lens under the cursor and then runs it, so `<Leader>ll` answers
       -- "does not support command ``" with an empty name. The count in virtual
       -- text is what they are for; `<Leader>lR` is what goes to the references.
-      -- Setting `codeLens = { enable = false }` here removes both together.
+      -- They are disabled here because the empty command is not useful.
+      codeLens = { enable = false },
     },
   },
 }
