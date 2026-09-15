@@ -622,8 +622,6 @@ a merge from 'minimax' conflict-free.
 - Report the Lua toolchain in `:checkhealth config`: the language server with
   its version, and whether the tree-sitter parser is installed.
 
-## 2026-09-04
-
 - Format only the lines that changed, in every language: `<Leader>lf` now runs
   the formatter over the hunks 'mini.diff' reports against its reference
   instead of over the whole buffer, so a one line fix stops arriving as a
@@ -789,7 +787,9 @@ a merge from 'minimax' conflict-free.
 
 - Add the `nvim-language-support` skill under '.claude/skills/': the procedure for
   adding support for a language, platform or format, with a catalogue of what
-  Neovim can be made to do for a language and a reference for Rust.
+  Neovim can be made to do for a language and a reference for Rust. (Skills now
+  live under '.omp/skills/'; this entry records where they were added at the
+  time, unedited.)
 
 - Adopt `mise` as the way external dependencies (language servers, formatters,
   linters, language runtimes) are declared and installed.
