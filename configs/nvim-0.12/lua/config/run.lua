@@ -51,7 +51,7 @@ local M = {}
 -- reason to report.
 --
 -- NOTE: `resolve` runs before the split is opened, and even when an override
--- wins: `:vertical new` makes an unnamed buffer the current one, while an
+-- wins: `:new` makes an unnamed buffer the current one, while an
 -- override still has to run from the root the original resolver identified.
 --
 -- `jobstart()` takes a list, which never goes through `:h 'shell'`, so nothing
@@ -149,7 +149,7 @@ M.command = function(resolve, opts)
       return
     end
 
-    vim.cmd('vertical new')
+    vim.cmd('new')
     local ok, err = pcall(vim.fn.jobstart, cmd, { cwd = cwd, term = true })
     if not ok then
       vim.cmd('quit')
