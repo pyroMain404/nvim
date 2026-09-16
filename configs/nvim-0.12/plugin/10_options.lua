@@ -118,6 +118,51 @@ vim.o.completetimeout = 100                             -- Limit sources delay
 local f = function() vim.cmd('setlocal formatoptions-=c formatoptions-=o') end
 Config.new_autocmd('FileType', nil, f, "Proper 'formatoptions'")
 
+-- `:make`/`:lmake` run synchronously and leave the result to be read off the
+-- (location) list - useful once inside it, silent the moment the command
+-- returns control. This is language agnostic on purpose: every `:compiler`
+-- plugin ('java.lua', 'maven.vim' through it, `gcc`, `cargo`, …) already
+-- populates the same two lists the same way, so one autocommand answers for
+-- all of them instead of each ftplugin reporting for itself.
+--
+-- NOTE: `v:shell_error` is NOT the ground truth on this machine, the
+-- opposite of what `:h v:shell_error` suggests. `'shellpipe'` here is
+-- `2>&1| tee %s` (`cmd.exe`, so the compiler's exit code is piped into
+-- `tee`, and cmd's pipeline exit code is `tee`'s - always 0. Measured:
+-- `:make` on a command that exits 1 still leaves `v:shell_error` at 0.
+-- Counting only the `E`-type entries `errorformat` recognized is the
+-- reliable half of the signal, and the one already proven on Maven (the
+-- case that asked for this). It still reads a build as green when the
+-- `errorformat` matches nothing at all on a real failure - measured on
+-- Gradle, 'after/ftplugin/java.lua''s own TODO - the same gap `v:shell_error`
+-- would have closed anywhere else.
+Config.new_autocmd('QuickFixCmdPost', { 'make', 'lmake' }, function(args)
+  local list = args.match == 'lmake' and vim.fn.getloclist(0) or vim.fn.getqflist()
+  local errors, warnings = 0, 0
+  for _, item in ipairs(list) do
+    if item.valid == 1 then
+      local t = item.type:upper()
+      if t == 'E' then
+        errors = errors + 1
+      elseif t == 'W' then
+        warnings = warnings + 1
+      end
+    end
+  end
+  if errors > 0 then
+    vim.notify(
+      ('Build failed: %d error%s'):format(errors, errors == 1 and '' or 's'),
+      vim.log.levels.ERROR
+    )
+  else
+    local message = 'Build succeeded'
+    if warnings > 0 then
+      message = message .. (' (%d warning%s)'):format(warnings, warnings == 1 and '' or 's')
+    end
+    vim.notify(message, vim.log.levels.INFO)
+  end
+end, 'Report the outcome of :make/:lmake')
+
 -- There are other autocommands created by 'mini.basics'. See 'plugin/30_mini.lua'.
 
 -- Diagnostics ================================================================
