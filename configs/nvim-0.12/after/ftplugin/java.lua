@@ -84,35 +84,24 @@ vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- Every `run` takes the same two arguments, the build file included where it
 -- is not read: two of them with different arities is what turns a correct call
 -- into a `redundant-parameter` warning from the server.
-local function goal(args, default) return #args > 0 and args or { default } end
-
+-- The `run` half of each build tool - the Maven goal, the Ant task - is
+-- shared with 'after/ftplugin/xml.lua' through 'lua/config/run.lua''s
+-- `java_builds`: that file registers `:Run` on a `pom.xml`/`build.xml`
+-- buffer opened directly, which this ftplugin never loads for (Neovim
+-- detects those as `xml`, not `java`). Only `compiler`, which selects what
+-- `:make` parses, stays here: it is Java-specific and has no meaning on a
+-- plain XML buffer.
 local builds = {
-  ['pom.xml'] = {
-    compiler = 'maven',
-    -- Maven has no universal goal for running a project: `spring-boot:run`
-    -- exists only with the Spring Boot plugin, `exec:java` only where the
-    -- project configures `exec-maven-plugin`. Reading which one off the POM
-    -- and letting the other fail loudly in the terminal beats picking one and
-    -- doing nothing quietly.
-    run = function(args, build_file)
-      local boot = false
-      for _, line in ipairs(vim.fn.readfile(build_file)) do
-        if line:find('spring%-boot%-maven%-plugin') then
-          boot = true
-          break
-        end
-      end
-      local task = boot and 'spring-boot:run' or 'exec:java'
-      return vim.list_extend({ 'mvn' }, goal(args, task))
-    end,
-  },
-  ['build.xml'] = {
-    compiler = 'ant',
-    -- NOTE: `run` is a convention among Ant builds, not a target Ant defines,
-    -- so this one is a guess in a way the Maven goals above are not. Unproven:
-    -- there is no Ant project on this machine to check it against.
-    run = function(args, _) return vim.list_extend({ 'ant' }, goal(args, 'run')) end,
-  },
+  ['pom.xml'] = vim.tbl_extend(
+    'force',
+    { compiler = 'maven' },
+    require('config.run').java_builds['pom.xml']
+  ),
+  ['build.xml'] = vim.tbl_extend(
+    'force',
+    { compiler = 'ant' },
+    require('config.run').java_builds['build.xml']
+  ),
 }
 
 -- A file that belongs to no build at all: `javac` (`:h compiler-javac`) so

@@ -246,4 +246,45 @@ M.make_root = function(markers)
   })
 end
 
+-- Shared Maven/Ant run resolution. `after/ftplugin/java.lua` uses this when
+-- walking up from an arbitrary '.java' buffer to the project's `pom.xml`/
+-- `build.xml`; `after/ftplugin/xml.lua` uses the same table when the buffer
+-- opened IS that manifest - the case that used to have no `:Run` at all,
+-- because `:h ft-xml-plugin` never loads `java.lua`. Only the *run* half is
+-- shared: which compiler plugin `:make` selects, and the rest of Java's
+-- buffer-local settings, stay in `java.lua` and are never pulled into a
+-- plain XML buffer.
+--
+-- `goal(args, default)` turns the arguments `:Run` was called with into the
+-- goal/task handed to the build tool, or the project's own default when
+-- none were given.
+local function goal(args, default) return #args > 0 and args or { default } end
+
+M.java_builds = {
+  ['pom.xml'] = {
+    -- Maven has no universal goal for running a project: `spring-boot:run`
+    -- exists only with the Spring Boot plugin, `exec:java` only where the
+    -- project configures `exec-maven-plugin`. Reading which one off the POM
+    -- and letting the other fail loudly in the terminal beats picking one
+    -- and doing nothing quietly.
+    run = function(args, build_file)
+      local boot = false
+      for _, line in ipairs(vim.fn.readfile(build_file)) do
+        if line:find('spring%-boot%-maven%-plugin') then
+          boot = true
+          break
+        end
+      end
+      local task = boot and 'spring-boot:run' or 'exec:java'
+      return vim.list_extend({ 'mvn' }, goal(args, task))
+    end,
+  },
+  ['build.xml'] = {
+    -- NOTE: `run` is a convention among Ant builds, not a target Ant
+    -- defines, so this one is a guess in a way the Maven goal above is not.
+    -- Unproven: there is no Ant project on this machine to check it against.
+    run = function(args, _) return vim.list_extend({ 'ant' }, goal(args, 'run')) end,
+  },
+}
+
 return M
