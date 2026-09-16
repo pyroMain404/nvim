@@ -220,8 +220,15 @@ end)
 -- - `:h MiniFiles-manipulation` - more details about how to manipulate
 -- - `:h MiniFiles-examples` - examples of common setups
 now_if_args(function()
-  -- Enable directory/file preview
-  require('mini.files').setup({ windows = { preview = true } })
+  -- Enable directory/file preview; hide Godot's `*.gd.uid` files (per-script
+  -- import metadata Godot regenerates on its own, never edited by hand)
+  local filter_show = function(fs_entry)
+    return not vim.endswith(fs_entry.name, '.gd.uid')
+  end
+  require('mini.files').setup({
+    content = { filter = filter_show },
+    windows = { preview = true },
+  })
 
   -- Add common bookmarks for every explorer. Example usage inside explorer:
   -- - `'c` to navigate into your config directory
