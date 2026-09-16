@@ -104,6 +104,28 @@ upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
 ## 2026-09-16
+- Notify the outcome of `:make`/`:lmake` through `vim.notify()`: an error
+  count at `ERROR` level, otherwise success with a warning count if any.
+  Both were run synchronously and left the result to be read off the
+  (location) list, silent the moment the command returned. Deliberately not
+  `v:shell_error`: measured on this machine, `'shellpipe' = 2>&1| tee %s`
+  under `cmd.exe` masks the compiler's real exit code behind `tee`'s
+  (always 0).
+
+- Make `:Run` and `:make clean install` work when `pom.xml` itself is the
+  open buffer, not only from a `.java` file of the same project. Neovim
+  detects the manifest as plain `xml`, so it never loaded
+  `after/ftplugin/java.lua` - the file that defined both - and `:Run` from
+  that buffer raised `E492`. New `after/ftplugin/xml.lua` registers them,
+  gated on the exact basename `pom.xml`, reusing the same Maven/Ant
+  resolver `java.lua` now shares through `lua/config/run.lua`'s
+  `java_builds` rather than duplicating it.
+
+- Open `:Run`'s terminal split with `:new` instead of `:vertical new`. A
+  terminal buffer wraps its own output at the split's width, and halving it
+  hard-wrapped anything a running program printed past roughly half the
+  editor's columns.
+
 - Run `:Run` from the root its resolver found, rather than Neovim's own
   directory. A nested npm/CMake/Godot/Java/Rust project now gives both the
   terminal and detached branches its manifest/build root, including when a
