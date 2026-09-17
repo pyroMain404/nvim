@@ -37,7 +37,9 @@ if not original then
     readonly = vim.bo.readonly,
     windows = {},
   }
-  for _, win in ipairs(vim.fn.getbufinfo(vim.api.nvim_get_current_buf())[1].windows or {}) do
+  for _, win in
+    ipairs(vim.fn.getbufinfo(vim.api.nvim_get_current_buf())[1].windows or {})
+  do
     original.windows[win] = {
       conceallevel = vim.wo[win][0].conceallevel,
       concealcursor = vim.wo[win][0].concealcursor,
@@ -65,13 +67,33 @@ local function restore()
   end
 end
 
-local renderer_available = #vim.api.nvim_get_runtime_file('lua/render-markdown/init.lua', false) > 0
+local renderer_available
+local renderer_namespace
+
+local function refresh_renderer()
+  renderer_namespace = nil
+  renderer_available = #vim.api.nvim_get_runtime_file(
+    'lua/render-markdown/init.lua',
+    false
+  ) > 0
+  if renderer_available then
+    local ok, ui = pcall(require, 'render-markdown.core.ui')
+    renderer_available = ok and type(ui) == 'table' and ui.ns ~= nil
+    if renderer_available then renderer_namespace = ui.ns end
+  end
+  return renderer_available
+end
+
+refresh_renderer()
+
 -- HACK: render-markdown.nvim 640a3ec6 exposes hidden lines only through its
 -- private extmark namespace. Reading needs `j`/`k` to skip a concealed fence,
 -- so inspect those marks here. Delete this when it offers a visible-line motion.
-local renderer_namespace = renderer_available and require('render-markdown.core.ui').ns
+
+local renderer_activated = false
 
 local function line_is_hidden(line)
+  if not renderer_namespace then return false end
   local marks = vim.api.nvim_buf_get_extmarks(
     0,
     renderer_namespace,
@@ -101,20 +123,28 @@ local function move_visible(direction)
   end
 end
 
-vim.keymap.set('n', 'j', function() move_visible('j') end, { buffer = 0, desc = 'Next visible Markdown line' })
-vim.keymap.set('n', 'k', function() move_visible('k') end, { buffer = 0, desc = 'Previous visible Markdown line' })
+vim.keymap.set(
+  'n',
+  'j',
+  function() move_visible('j') end,
+  { buffer = 0, desc = 'Next visible Markdown line' }
+)
+vim.keymap.set(
+  'n',
+  'k',
+  function() move_visible('k') end,
+  { buffer = 0, desc = 'Previous visible Markdown line' }
+)
 
-
-local function renderer_set(enabled)
-  require('render-markdown').set_buf(enabled)
-end
+local function renderer_set(enabled) require('render-markdown').set_buf(enabled) end
 
 -- HACK: render-markdown.nvim 640a3ec6 caches `anti_conceal` per buffer but has
 -- no public per-buffer override. Reading alone must keep its extmarks on the
 -- cursor line, so change that cache before the renderer refreshes. Delete this
 -- when the plugin exposes a per-buffer anti-conceal API.
 local function set_anti_conceal(enabled)
-  require('render-markdown.state').get(vim.api.nvim_get_current_buf()).anti_conceal.enabled = enabled
+  require('render-markdown.state').get(vim.api.nvim_get_current_buf()).anti_conceal.enabled =
+    enabled
 end
 
 local function set_state(state)
@@ -122,6 +152,7 @@ local function set_state(state)
   set_anti_conceal(state ~= 'reading')
   if state == 'source' then
     renderer_set(false)
+    renderer_activated = false
     restore()
     return
   end
@@ -129,6 +160,7 @@ local function set_state(state)
   vim.bo.readonly = false
   vim.bo.modifiable = true
   renderer_set(true)
+  renderer_activated = true
   if state == 'reading' then
     vim.bo.modifiable = false
     vim.bo.readonly = true
@@ -136,20 +168,23 @@ local function set_state(state)
 end
 
 vim.keymap.set('n', '<Leader>om', function()
-  if not renderer_available then
-    vim.notify('render-markdown.nvim is unavailable; run :checkhealth config', vim.log.levels.ERROR)
+  if not refresh_renderer() then
+    vim.notify(
+      'render-markdown.nvim is unavailable; run :checkhealth config',
+      vim.log.levels.ERROR
+    )
     return
   end
   local next_state = ({ source = 'live', live = 'reading', reading = 'source' })[vim.b.markdown_om]
   set_state(next_state or 'source')
 end, { buffer = 0, desc = 'Toggle Markdown source/live/reading' })
 
-
 vim.b.markdown_om_cleanup = function()
   vim.b.markdown_om = 'source'
-  if renderer_available then
-    set_anti_conceal(true)
-    renderer_set(false)
+  if renderer_activated then
+    pcall(set_anti_conceal, true)
+    pcall(renderer_set, false)
+    renderer_activated = false
   end
   restore()
   vim.keymap.del('n', '<Leader>om', { buffer = 0 })
@@ -159,6 +194,7 @@ vim.b.markdown_om_cleanup = function()
   vim.b.markdown_om_original = nil
   vim.b.markdown_om_cleanup = nil
 end
+
 -- `b:undo_ftplugin` is run when the filetype changes (`:h b:undo_ftplugin`).
 -- Cleanup explicitly restores the captured per-buffer/per-window options, so
 -- reading mode cannot strand a buffer readonly or nonmodifiable.
