@@ -303,6 +303,69 @@ now_if_args(function()
   end
 end)
 
+-- Markdown rendering =========================================================
+
+-- 'render-markdown.nvim' supplies the rendered Markdown view that MINI does
+-- not provide. It is configured here, while the state machine belongs in the
+-- filetype plugin (`:h ftplugin-overview`, `:h b:undo_ftplugin`).
+later(function()
+  add({ 'https://github.com/MeanderingProgrammer/render-markdown.nvim' })
+
+  if #vim.api.nvim_get_runtime_file('lua/render-markdown/init.lua', false) == 0 then
+    vim.notify_once(
+      'render-markdown.nvim is unavailable; run :checkhealth config',
+      vim.log.levels.ERROR
+    )
+    return
+  end
+
+  local get_buf_var = function(buf, name)
+    local ok, value = pcall(vim.api.nvim_buf_get_var, buf, name)
+    return ok and value or nil
+  end
+
+  require('render-markdown').setup({
+    -- Keep the raw state as the buffer-local starting point; the ftplugin
+    -- enables rendering explicitly for the live and reading states.
+    enabled = false,
+    -- Render in Normal, Visual, Insert, command-line and terminal modes
+    -- (`:h mode()`).
+    -- Keep rendering active in Visual modes so reading mode remains concealed
+    -- while a selection is made (`:h visual-mode`, `:h mode()`).
+    render_modes = { 'n', 'v', 'V', '\22', 'i', 'c', 't' },
+    anti_conceal = { enabled = true },
+    on = {
+      -- The plugin reapplies `win_options` on every refresh. Reapply the
+      -- state-specific conceal settings from this documented post-render hook
+      -- (`:h render-markdown-setup`) rather than relying on a one-time change.
+      render = function(args)
+        local state = get_buf_var(args.buf, 'markdown_om')
+        if state and state ~= 'source' then
+          for _, win in ipairs(vim.fn.getbufinfo(args.buf)[1].windows or {}) do
+            -- Both rendered modes keep syntax concealed; live relies on an
+            -- empty `concealcursor` to reveal source only at cursor/selection.
+            vim.wo[win][0].conceallevel = 3
+            vim.wo[win][0].concealcursor = state == 'reading' and 'nv' or ''
+          end
+        end
+      end,
+      clear = function(args)
+        if get_buf_var(args.buf, 'markdown_om') == 'source' then
+          local original = get_buf_var(args.buf, 'markdown_om_original')
+          if original then
+            for win, options in pairs(original.windows) do
+              if vim.api.nvim_win_is_valid(win) then
+                vim.wo[win][0].conceallevel = options.conceallevel
+                vim.wo[win][0].concealcursor = options.concealcursor
+              end
+            end
+          end
+        end
+      end,
+    },
+  })
+end)
+
 -- Formatting =================================================================
 
 -- Programs dedicated to text formatting (a.k.a. formatters) are very useful.

@@ -169,6 +169,20 @@ local function check_lua()
   )
 end
 
+local function check_markdown()
+  health.start('config: Markdown')
+
+  if #vim.api.nvim_get_runtime_file('lua/render-markdown/init.lua', false) > 0 then
+    health.ok('render-markdown.nvim: installed')
+  else
+    health.warn('render-markdown.nvim is not available', {
+      'Start Neovim with network access so vim.pack can install the locked plugin',
+      '`<Leader>om` cannot switch Markdown buffers to live or reading view',
+    })
+  end
+  check_parsers({ 'markdown' })
+end
+
 local function check_rust()
   health.start('config: Rust')
 
@@ -774,6 +788,7 @@ end
 function M.check()
   check_external_tools()
   check_lua()
+  check_markdown()
   check_rust()
   check_angular()
   check_java()

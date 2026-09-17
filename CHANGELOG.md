@@ -103,6 +103,15 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-17
+
+- Add a Markdown-only `<Leader>om` cycle for source, live and reading views.
+  The live view renders Markdown while revealing source at the cursor or Visual
+  selection; reading keeps the rendering concealed and makes the buffer
+  nonmodifiable and readonly. It uses 'render-markdown.nvim', which is enabled
+  per buffer, so opening a Markdown file still starts in the existing source
+  view.
+
 ## 2026-09-16
 - Notify the outcome of `:make`/`:lmake` through `vim.notify()`: an error
   count at `ERROR` level, otherwise success with a warning count if any.
