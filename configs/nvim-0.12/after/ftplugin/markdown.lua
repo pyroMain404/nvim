@@ -72,13 +72,27 @@ local renderer_available = #vim.api.nvim_get_runtime_file(
   false
 ) > 0
 -- HACK: render-markdown.nvim 640a3ec6 exposes hidden lines only through its
--- private extmark namespace. Reading needs `j`/`k` to skip a concealed fence,
--- so inspect those marks here. Delete this when it offers a visible-line motion.
+-- private extmark namespace, without identifying which feature concealed them.
+-- Reading needs `j`/`k` to skip concealed fence delimiters, but must visit every
+-- pipe-table source row. Delete this when it offers a visible-line motion.
+local function line_is_pipe_table(line)
+  local ok, node = pcall(vim.treesitter.get_node, {
+    bufnr = 0,
+    pos = { line - 1, 0 },
+  })
+  if not ok or not node then return false end
+  while node do
+    if node:type() == 'pipe_table' then return true end
+    node = node:parent()
+  end
+  return false
+end
+
 local renderer_namespace = renderer_available
   and require('render-markdown.core.ui').ns
 
 local function line_is_hidden(line)
-  if not renderer_namespace then return false end
+  if line_is_pipe_table(line) or not renderer_namespace then return false end
   local marks = vim.api.nvim_buf_get_extmarks(
     0,
     renderer_namespace,

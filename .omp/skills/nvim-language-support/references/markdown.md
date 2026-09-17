@@ -46,8 +46,9 @@ captures each affected window's `conceallevel` and `concealcursor`, plus the
 buffer's original editability, and restores them both on return to `source` and
 through `b:undo_ftplugin`.
 
-In `reading`, buffer-local `j` and `k` skip lines concealed by the renderer,
-including fenced-code delimiters. Other modes preserve their ordinary motions.
+In `reading`, buffer-local `j` and `k` skip concealed non-table source lines,
+including fenced-code delimiters, but visit every pipe-table source row. Other
+modes preserve their ordinary motions.
 
 ## 4. Manual verification
 
@@ -56,7 +57,8 @@ Open any `.md` file and press `<Leader>om` three times. Confirm in order:
 1. `live` renders headings, lists and other Markdown while source markup appears at
 the cursor and over a Visual selection; insert text on that line.
 2. `reading` rejects edits, keeps source markup concealed when moving the cursor
-or making a Visual selection, and makes `j`/`k` skip concealed fence lines.
+or making a Visual selection, makes `j`/`k` skip concealed non-table lines, and
+visits every pipe-table source row.
 3. The following `source` press restores the original unrendered view and the
 buffer's original editability.
 
