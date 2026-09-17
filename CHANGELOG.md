@@ -112,6 +112,23 @@ a merge from 'minimax' conflict-free.
   per buffer, so opening a Markdown file still starts in the existing source
   view.
 
+- Make `j` / `k` cross visual rows of wrapped Markdown lines in source, live
+  and reading modes. They previously replayed logical-line `j` / `k`, leaving
+  wrapped rows unreachable without typing `gj` / `gk`.
+
+- Enable 'obsidian.nvim' only after a Markdown buffer resolves an ancestor
+  '.obsidian/' directory, so opening an ordinary Markdown file does not load a
+  vault workflow. The first vault note opened at startup or later establishes
+  the plugin workspace without embedding a machine-specific vault path.
+
+- Keep 'mini.bracketed' on `[o` / `]o` in an Obsidian note. `<Space>on` and
+  `<Space>op` instead move to the next and previous valid link in that note.
+
+- Follow Markdown links from the Obsidian help without a Lua parse error while
+  Neovim reloads the Markdown ftplugin. Its `b:undo_ftplugin` now makes the
+  trailing `:lua` cleanup the final Ex command, instead of passing later
+  cleanup text to Lua as source.
+
 ## 2026-09-16
 - Notify the outcome of `:make`/`:lmake` through `vim.notify()`: an error
   count at `ERROR` level, otherwise success with a warning count if any.

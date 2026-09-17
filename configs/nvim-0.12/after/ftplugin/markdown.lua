@@ -107,18 +107,19 @@ local function line_is_hidden(line)
 end
 
 local function move_visible(direction)
+  local motion = 'g' .. direction
   if vim.b.markdown_om ~= 'reading' then
-    vim.cmd.normal({ args = { vim.v.count1 .. direction }, bang = true })
+    vim.cmd.normal({ args = { vim.v.count1 .. motion }, bang = true })
     return
   end
 
   local remaining = vim.v.count1
   while remaining > 0 do
-    local before = vim.api.nvim_win_get_cursor(0)[1]
-    vim.cmd.normal({ args = { direction }, bang = true })
-    local current = vim.api.nvim_win_get_cursor(0)[1]
-    if current == before then return end
-    if not line_is_hidden(current) then remaining = remaining - 1 end
+    local before = vim.api.nvim_win_get_cursor(0)
+    vim.cmd.normal({ args = { motion }, bang = true })
+    local current = vim.api.nvim_win_get_cursor(0)
+    if vim.deep_equal(current, before) then return end
+    if not line_is_hidden(current[1]) then remaining = remaining - 1 end
   end
 end
 
@@ -193,11 +194,12 @@ end
 
 -- `b:undo_ftplugin` is run when the filetype changes (`:h b:undo_ftplugin`).
 -- Cleanup explicitly restores the captured per-buffer/per-window options, so
--- reading mode cannot strand a buffer readonly or nonmodifiable.
+-- reading mode cannot strand a buffer readonly or nonmodifiable. `:lua`
+-- consumes the remainder of its source, so it has to be the final command.
 vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
   .. '\n'
   .. table.concat({
     'setlocal spell< wrap< foldmethod< foldexpr<',
+    'unlet! b:minisurround_config',
     'lua vim.b.markdown_om_cleanup()',
-    'lua vim.b.minisurround_config = nil',
   }, ' | ')

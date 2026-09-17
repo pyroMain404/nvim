@@ -180,6 +180,26 @@ local function check_markdown()
       '`<Leader>om` cannot switch Markdown buffers to live or reading view',
     })
   end
+
+  local obsidian_init = vim.fs.joinpath(
+    vim.fn.stdpath('data'),
+    'site',
+    'pack',
+    'core',
+    'opt',
+    'obsidian.nvim',
+    'lua',
+    'obsidian',
+    'init.lua'
+  )
+  if vim.uv.fs_stat(obsidian_init) ~= nil then
+    health.ok('obsidian.nvim: installed')
+  else
+    health.warn('obsidian.nvim is not available', {
+      'Start Neovim with network access so vim.pack can install the locked plugin',
+      'Obsidian vault integration is unavailable until obsidian.nvim is installed',
+    })
+  end
   check_parsers({ 'markdown' })
 end
 

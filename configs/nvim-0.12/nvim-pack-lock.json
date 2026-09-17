@@ -28,6 +28,10 @@
       "rev": "5c7b0263797dfd1bd6202f2b219f3b53a80b2187",
       "src": "https://github.com/nvim-treesitter/nvim-treesitter-textobjects"
     },
+    "obsidian.nvim": {
+      "rev": "b13b2e9952db2bd08bec4d3b68871a3ae7c11567",
+      "src": "https://github.com/obsidian-nvim/obsidian.nvim"
+    },
     "render-markdown.nvim": {
       "rev": "640a3ec6d538bad17c328be373c7cad0293d9589",
       "src": "https://github.com/MeanderingProgrammer/render-markdown.nvim"

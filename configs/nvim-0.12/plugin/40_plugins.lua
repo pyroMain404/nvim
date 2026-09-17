@@ -366,6 +366,85 @@ now_if_args(function()
   })
 end)
 
+-- Obsidian vaults ============================================================
+
+-- Keep obsidian.nvim out of unrelated buffers. A vault is identified by the
+-- nearest ancestor directory containing the standard '.obsidian/' marker.
+
+local find_obsidian_root = function(buf)
+  local name = vim.api.nvim_buf_get_name(buf)
+  if name == '' then return nil end
+
+  local marker = vim.fs.find('.obsidian', {
+    path = vim.fs.dirname(name),
+    upward = true,
+    type = 'directory',
+  })[1]
+  return marker and vim.fs.dirname(marker) or nil
+end
+
+-- Package setup is intentionally one-shot: resolve the root from the first
+-- matching buffer and keep that concrete workspace for obsidian.nvim. The
+-- event gate is registered through now_if_args so an initial note is covered
+-- during startup; when there is no initial argument, Config.later defers this
+-- registration until the normal deferred configuration phase.
+local obsidian_setup = false
+local setup_obsidian = function(ev)
+  if obsidian_setup then return end
+
+  local root = find_obsidian_root(ev.buf)
+  if not root then return end
+
+  add({ 'https://github.com/obsidian-nvim/obsidian.nvim' })
+  if #vim.api.nvim_get_runtime_file('lua/obsidian/init.lua', false) == 0 then
+    vim.notify_once(
+      'obsidian.nvim is unavailable; run :checkhealth config',
+      vim.log.levels.ERROR
+    )
+    return
+  end
+  require('obsidian').setup({
+    legacy_commands = false,
+    picker = { name = 'mini.pick' },
+    callbacks = {
+      -- Preserve 'mini.bracketed' on `[o` / `]o`. In a vault note,
+      -- `<Space>on` / `<Space>op` visit the next / previous valid link.
+      -- See 'docs/Keymaps.md' in the installed 'obsidian.nvim' package.
+      enter_note = function(note)
+        vim.keymap.del('n', '[o', { buf = note.bufnr })
+        vim.keymap.del('n', ']o', { buf = note.bufnr })
+        vim.keymap.set(
+          'n',
+          '<Leader>on',
+          function() require('obsidian.actions').nav_link('next') end,
+          { buf = note.bufnr, desc = 'Next Obsidian link' }
+        )
+        vim.keymap.set(
+          'n',
+          '<Leader>op',
+          function() require('obsidian.actions').nav_link('prev') end,
+          { buf = note.bufnr, desc = 'Previous Obsidian link' }
+        )
+      end,
+    },
+    workspaces = {
+      { name = 'vault', path = root },
+    },
+  })
+  obsidian_setup = true
+end
+
+now_if_args(
+  function()
+    Config.new_autocmd(
+      { 'BufReadPre', 'BufNewFile' },
+      { '*.md', '*.markdown', '*.qmd', '*.base' },
+      setup_obsidian,
+      'Setup obsidian.nvim for vault'
+    )
+  end
+)
+
 -- Formatting =================================================================
 
 -- Programs dedicated to text formatting (a.k.a. formatters) are very useful.
