@@ -20,11 +20,11 @@ buffer. `render-markdown.nvim` supplies the conceal and extmark rendering layer.
 `MeanderingProgrammer/render-markdown.nvim` is declared in
 `plugin/40_plugins.lua` through `vim.pack.add()`. It has no executable to install:
 `vim.pack` fetches it and maintains `nvim-pack-lock.json`. In this config,
-`vim.pack.add()` and the renderer setup run from `later()`, so a Markdown ftplugin
-can load before the managed directory is on the runtimepath. The ftplugin refreshes
-renderer availability when `<Leader>om` is pressed. A missing module after that
-means installation failed or its managed directory is incomplete, not that a
-restart is needed.
+`vim.pack.add()` and the renderer setup run from `now_if_args()`: with a file
+argument, setup completes before that file's ftplugins run; with no file argument,
+setup remains deferred. A Markdown ftplugin therefore sees the managed directory
+when opening a file from the command line, while startup without a file keeps the
+deferred loading behavior.
 
 `:checkhealth config` has a `config: Markdown` section. It reports a missing
 renderer and also checks that the Markdown tree-sitter parser is installed.

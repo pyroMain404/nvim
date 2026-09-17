@@ -67,30 +67,15 @@ local function restore()
   end
 end
 
-local renderer_available
-local renderer_namespace
-
-local function refresh_renderer()
-  renderer_namespace = nil
-  renderer_available = #vim.api.nvim_get_runtime_file(
-    'lua/render-markdown/init.lua',
-    false
-  ) > 0
-  if renderer_available then
-    local ok, ui = pcall(require, 'render-markdown.core.ui')
-    renderer_available = ok and type(ui) == 'table' and ui.ns ~= nil
-    if renderer_available then renderer_namespace = ui.ns end
-  end
-  return renderer_available
-end
-
-refresh_renderer()
-
+local renderer_available = #vim.api.nvim_get_runtime_file(
+  'lua/render-markdown/init.lua',
+  false
+) > 0
 -- HACK: render-markdown.nvim 640a3ec6 exposes hidden lines only through its
 -- private extmark namespace. Reading needs `j`/`k` to skip a concealed fence,
 -- so inspect those marks here. Delete this when it offers a visible-line motion.
-
-local renderer_activated = false
+local renderer_namespace = renderer_available
+  and require('render-markdown.core.ui').ns
 
 local function line_is_hidden(line)
   if not renderer_namespace then return false end
@@ -152,7 +137,6 @@ local function set_state(state)
   set_anti_conceal(state ~= 'reading')
   if state == 'source' then
     renderer_set(false)
-    renderer_activated = false
     restore()
     return
   end
@@ -160,7 +144,6 @@ local function set_state(state)
   vim.bo.readonly = false
   vim.bo.modifiable = true
   renderer_set(true)
-  renderer_activated = true
   if state == 'reading' then
     vim.bo.modifiable = false
     vim.bo.readonly = true
@@ -168,7 +151,7 @@ local function set_state(state)
 end
 
 vim.keymap.set('n', '<Leader>om', function()
-  if not refresh_renderer() then
+  if not renderer_available then
     vim.notify(
       'render-markdown.nvim is unavailable; run :checkhealth config',
       vim.log.levels.ERROR
@@ -181,10 +164,9 @@ end, { buffer = 0, desc = 'Toggle Markdown source/live/reading' })
 
 vim.b.markdown_om_cleanup = function()
   vim.b.markdown_om = 'source'
-  if renderer_activated then
-    pcall(set_anti_conceal, true)
-    pcall(renderer_set, false)
-    renderer_activated = false
+  if renderer_available then
+    set_anti_conceal(true)
+    renderer_set(false)
   end
   restore()
   vim.keymap.del('n', '<Leader>om', { buffer = 0 })

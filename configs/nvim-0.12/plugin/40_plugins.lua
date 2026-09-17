@@ -308,7 +308,7 @@ end)
 -- 'render-markdown.nvim' supplies the rendered Markdown view that MINI does
 -- not provide. It is configured here, while the state machine belongs in the
 -- filetype plugin (`:h ftplugin-overview`, `:h b:undo_ftplugin`).
-later(function()
+now_if_args(function()
   add({ 'https://github.com/MeanderingProgrammer/render-markdown.nvim' })
 
   if #vim.api.nvim_get_runtime_file('lua/render-markdown/init.lua', false) == 0 then
