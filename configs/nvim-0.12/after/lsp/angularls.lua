@@ -1,0 +1,42 @@
+-- ┌───────────┐
+-- │ angularls │
+-- └───────────┘
+--
+-- This file contains configuration of the Angular language server.
+-- Source: https://github.com/angular/angular/tree/main/vscode-ng-language-service
+-- Install: see `check_angular()` in 'lua/config/health.lua' for the exact `mise`
+-- line.
+--
+-- It is used by `:h vim.lsp.enable()` and `:h vim.lsp.config()`.
+-- See `:h vim.lsp.Config` and `:h vim.lsp.ClientConfig` for all available fields.
+--
+-- 'nvim-lspconfig' declares `filetypes = { 'typescript', 'html',
+-- 'typescriptreact', 'htmlangular' }` with `root_markers = { 'angular.json',
+-- 'nx.json' }`, and `config.workspace_required` defaults to `false`
+-- (`:h lsp-root_dir()`, `:h vim.lsp.start()`): with no marker found, `nvim.lsp`
+-- still calls `vim.lsp.start()` with `root_dir = nil` rather than skip it.
+-- That combination makes `angularls` a candidate client for *every* plain
+-- '.ts' file on the machine, Angular project or not.
+--
+-- Its own `cmd` (`lsp/angularls.lua` in 'nvim-lspconfig') then falls back to
+-- `vim.fn.getcwd()` for the probe locations `ngserver` needs to find the
+-- project's own `typescript` and `@angular/language-service`. Outside a real
+-- Angular checkout that directory has neither, and the server does not
+-- degrade: it throws and exits (`exit code 1`), on Node's own message
+-- `Failed to resolve 'typescript/lib/tsserverlibrary' with minimum version
+-- '5.0' from [...]`, one popup per plain TypeScript file opened anywhere -
+-- measured on a Pi extension's `.ts` file under 'gesp-ai-marketplace', a repo
+-- with no 'angular.json' at all.
+--
+-- NOTE: `single_file_support` (the field 'nvim-lspconfig''s OLD `setup()`
+-- framework used for this) is not read anywhere in Neovim 0.12's own
+-- `lua/vim/lsp.lua` - measured by grepping the shipped runtime for the name
+-- and finding nothing. `workspace_required` is the field `vim.lsp.start()`
+-- actually checks (`lua/vim/lsp.lua:752-761`): with no `root_dir` and no
+-- `workspace_folders`, it logs and returns without starting the client at
+-- all. That is the fix here: `angularls` has nothing to offer a lone file, so
+-- it should not spawn one; a `.ts` file inside a real Angular project is
+-- unaffected because `root_markers` finds 'angular.json' there.
+return {
+  workspace_required = true,
+}
