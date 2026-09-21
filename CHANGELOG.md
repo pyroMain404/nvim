@@ -120,6 +120,13 @@ a merge from 'minimax' conflict-free.
   use. The fallback now requires `tsserver.js` itself, and keeps walking to an
   older install when it is missing.
 
+- Fix `angularls` crashing with exit code 1 on any plain `.ts` file outside
+  an Angular project: `root_markers` finds no `angular.json`/`nx.json`, and
+  Neovim still started it with `root_dir = nil`, whose `cmd` then probed
+  `vim.fn.getcwd()` for `typescript` and found none. `after/lsp/angularls.lua`
+  now sets `workspace_required = true`, so it does not start at all without a
+  real Angular project root; a `.ts` file inside one is unaffected.
+
 ## 2026-09-17
 
 - Add a Markdown-only `<Leader>om` cycle for source, live and reading views.
