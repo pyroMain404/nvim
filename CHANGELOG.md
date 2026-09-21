@@ -103,6 +103,16 @@ Entries of this fork, newest first. They are kept below upstream's log because
 upstream always adds at the top of the file: keeping the two apart is what makes
 a merge from 'minimax' conflict-free.
 
+## 2026-09-21
+
+- Fix `ts_ls` failing outright, instead of degrading, on a `.ts` file that is
+  not part of any Node project (no `node_modules/typescript`): it now passes
+  `initializationOptions.tsserver.fallbackPath`, pointed at the newest
+  `npm:typescript` `mise` installs globally, so the server falls back to it
+  when a project has no `typescript` of its own. Additive: a project pinning
+  its own version (an Angular checkout, resolved by `angularls` and `ts_ls`
+  through its own `node_modules`) is unaffected.
+
 ## 2026-09-17
 
 - Add a Markdown-only `<Leader>om` cycle for source, live and reading views.

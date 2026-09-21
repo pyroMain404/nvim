@@ -62,6 +62,31 @@ if node == nil then
   )
 end
 
+-- The `typescript` package `tsserver.js` falls back to when a project has
+-- none of its own: a plain `.ts` file outside any Node project (no
+-- `node_modules`, no `tsconfig.json`) makes the server fail outright with
+-- "Could not find a valid TypeScript installation" instead of degrading,
+-- because its own workspace walk and its fallback to a package next to its
+-- own install both come up empty - the server and `typescript` are two
+-- separate `mise` npm packages, so neither install sees the other.
+-- `fallbackPath` is additive: 'nvim-lspconfig' does not set it, and the
+-- server only reaches it when a project's own `typescript` was not found, so
+-- a project pinning its own version (as an Angular checkout does, resolved by
+-- `angularls` and `ts_ls` both through the project's own 'node_modules') keeps
+-- using it untouched.
+--
+-- Verified against typescript-language-server 6.0.0's `docs/configuration.md`
+-- (2026-09-21): `path` is fixed and always wins; `fallbackPath` is the one
+-- meant for exactly this case.
+local tsserver_fallback = nil
+for _, entry in ipairs(mise.installed('npm:typescript') or {}) do
+  local lib = vim.fs.joinpath(entry.path, 'node_modules', 'typescript', 'lib')
+  if vim.fn.isdirectory(lib) == 1 then
+    tsserver_fallback = lib
+    break
+  end
+end
+
 return {
   -- HACK: this whole function exists to pass one environment variable, and it
   -- is a copy of the `cmd` of 'nvim-lspconfig' with `env` added to the spawn.
@@ -95,4 +120,7 @@ return {
     local env = node ~= nil and { MISE_NODE_VERSION = node } or nil
     return vim.lsp.rpc.start({ cmd, '--stdio' }, dispatchers, { env = env })
   end,
+  init_options = tsserver_fallback ~= nil and {
+    tsserver = { fallbackPath = tsserver_fallback },
+  } or nil,
 }

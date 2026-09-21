@@ -318,6 +318,15 @@ local function check_angular()
     'TypeScript buffers lose completion, diagnostics, rename and go to definition',
     'Install it with `mise use -g npm:typescript-language-server@latest`'
   )
+  -- `after/lsp/ts_ls.lua` falls back to this when a `.ts` buffer has no
+  -- project of its own (no `node_modules/typescript`) - the case for a
+  -- standalone script, not only an Angular checkout - and without it the
+  -- server exits at `initialize` instead of degrading.
+  report(
+    'tsc',
+    'a `.ts` file outside any Node project gets no `ts_ls` at all, instead of falling back',
+    'Install it with `mise use -g npm:typescript@latest`'
+  )
   -- Declared in 'plugin/40_plugins.lua' for every filetype an Angular project
   -- holds, so `<Leader>lf` silently falls back to a server without it
   report(
