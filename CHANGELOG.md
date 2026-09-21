@@ -113,6 +113,13 @@ a merge from 'minimax' conflict-free.
   its own version (an Angular checkout, resolved by `angularls` and `ts_ls`
   through its own `node_modules`) is unaffected.
 
+- Fix that same `ts_ls` fallback picking a `npm:typescript` install with no
+  `tsserver.js` at all: TypeScript 7 replaced it with `tsc.js`, and an
+  unpinned 7.0.2 install sitting next to the pinned 5.9.3 one made the newest
+  loop iteration "exists" check pass on a directory the server still could not
+  use. The fallback now requires `tsserver.js` itself, and keeps walking to an
+  older install when it is missing.
+
 ## 2026-09-17
 
 - Add a Markdown-only `<Leader>om` cycle for source, live and reading views.

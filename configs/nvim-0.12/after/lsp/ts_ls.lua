@@ -78,10 +78,20 @@ end
 -- Verified against typescript-language-server 6.0.0's `docs/configuration.md`
 -- (2026-09-21): `path` is fixed and always wins; `fallbackPath` is the one
 -- meant for exactly this case.
+--
+-- The newest installed `typescript` is not necessarily a usable one: since
+-- TypeScript 7 ("Corsa"), the package ships `tsc.js` and drops the classic
+-- `tsserver.js` this server requires entirely - measured on `npm:typescript`
+-- 7.0.2's `lib/` (`getExePath.js`, `tsc.js`, `version.cjs`, no `tsserver.js`)
+-- next to the pinned 5.9.3 that has it. Picking "newest directory that
+-- exists" alone found exactly that lib and produced the same failure this
+-- file exists to prevent, wearing a different mask. Requiring `tsserver.js`
+-- itself, not just the `lib` directory, skips a TypeScript 7 install and
+-- keeps walking to an older one that still has it.
 local tsserver_fallback = nil
 for _, entry in ipairs(mise.installed('npm:typescript') or {}) do
   local lib = vim.fs.joinpath(entry.path, 'node_modules', 'typescript', 'lib')
-  if vim.fn.isdirectory(lib) == 1 then
+  if vim.fn.filereadable(vim.fs.joinpath(lib, 'tsserver.js')) == 1 then
     tsserver_fallback = lib
     break
   end
