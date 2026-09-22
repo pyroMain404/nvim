@@ -35,7 +35,30 @@ local library = {
 -- 'plugin/30_mini.lua' are defined
 vim.list_extend(library, vim.api.nvim_get_runtime_file('lua/mini', true))
 
+-- HACK: `root_markers` (inherited from 'nvim-lspconfig', see the file header)
+-- includes `.git` as its lowest-priority tier, and this machine's user
+-- profile directory (`$HOME`) happens to have one - unrelated to any Lua
+-- project. `vim.fs.root()` then resolves ANY loose '.lua' file opened
+-- anywhere under the profile (a scratch script, an editor test file) to
+-- `$HOME` itself, and `lua_ls` starts a workspace scan of the whole profile
+-- (100000+ files, growing notification) instead of running in single-file
+-- mode. `root_dir` overrides `root_markers` (`:h lsp-root_dir()`), so the
+-- same tiers are repeated here with that one directory excluded; not
+-- calling `on_dir()` leaves `lua_ls` off for that buffer entirely, which is
+-- the same "outside any workspace" outcome vim.fs.root() would have given if
+-- $HOME had no '.git' at all.
+-- `vim.fs.normalize()` because `os_homedir()` answers with backslashes on
+-- Windows while `vim.fs.root()` always answers with forward slashes.
+local home = vim.fs.normalize(vim.uv.os_homedir())
 return {
+  root_dir = function(bufnr, on_dir)
+    local root = vim.fs.root(bufnr, {
+      { '.emmyrc.json', '.luarc.json', '.luarc.jsonc' },
+      { '.luacheckrc', '.stylua.toml', 'stylua.toml', 'selene.toml', 'selene.yml' },
+      { '.git' },
+    })
+    if root ~= nil and root ~= home then on_dir(root) end
+  end,
   on_attach = function(client)
     -- Reduce very long list of triggers for better 'mini.completion' experience
     client.server_capabilities.completionProvider.triggerCharacters =
