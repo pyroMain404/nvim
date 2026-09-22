@@ -548,4 +548,11 @@ Config.now(function()
   -- first: picking a scheme by a name Neovim happens to ship - `catppuccin`
   -- is one - silently loads the runtime copy instead.
   vim.cmd('color ayu-mirage')
+
+  -- ayu-mirage's own 'WinBar'/'WinBarNC' background is nearly black
+  -- (`#07080d`), almost indistinguishable from an empty bar. Link to
+  -- 'Title' instead of hardcoding a color (`:h highlight-groups`), matching
+  -- what the breadcrumb actually is: the enclosing definitions' names.
+  vim.api.nvim_set_hl(0, 'WinBar', { link = 'Title' })
+  vim.api.nvim_set_hl(0, 'WinBarNC', { link = 'Title' })
 end)
