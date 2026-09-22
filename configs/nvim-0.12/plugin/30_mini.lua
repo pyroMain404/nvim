@@ -27,7 +27,10 @@
 local now, now_if_args, later = Config.now, Config.now_if_args, Config.later
 
 -- Step one ===================================================================
--- Enable 'miniwinter' color scheme. It comes with 'mini.nvim' and uses 'mini.hues'.
+-- 'miniwinter' is a documented alternative color scheme, currently disabled:
+-- this config loads its own 'purplehue' in 'plugin/40_plugins.lua'. Uncomment
+-- the line below to switch - 'miniwinter' comes with 'mini.nvim' and uses
+-- 'mini.hues'. Use only one of the two.
 --
 -- See also:
 -- - `:h mini.nvim-color-schemes` - list of other color schemes
