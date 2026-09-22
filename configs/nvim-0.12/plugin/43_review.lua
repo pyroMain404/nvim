@@ -191,10 +191,7 @@ Config.review.close = function()
       Config.git.set_diff_ref(nil, diff_ref.prev)
     end
 
-    local msg = 'Review closed: ' .. (#bufs - kept) .. ' buffer(s) dropped'
-    if kept == 0 then return vim.notify(msg) end
-    msg = msg .. ', ' .. kept .. ' kept (unsaved changes)'
-    vim.notify(msg, vim.log.levels.WARN)
+    Config.report('Review closed', #bufs - kept, kept, 'buffer(s) dropped', 'kept (unsaved changes)')
   end)
 end
 
