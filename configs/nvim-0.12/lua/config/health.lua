@@ -90,6 +90,28 @@ local function check_parsers(langs, advice)
   end
 end
 
+-- The project root of the buffer the reader came from: the search walks up from
+-- that buffer until one of `markers` - the files that identify a project of one
+-- language - is found, and answers `nil` when there is none.
+--
+-- Not from buffer 0, which is what this used to do: `:checkhealth` opens its own
+-- nameless report buffer first and runs every check inside it, so buffer 0 is a
+-- scratch buffer and `vim.fs.root(0, …)` answers nil for every run. A section
+-- therefore reported "not inside a project" on every run, one started from a
+-- project included, and everything below that answer never ran at all.
+--
+-- When there is no alternate buffer either - a `:checkhealth` run from a fresh
+-- session - the working directory stands in. That is right whenever the reader
+-- is inside the project, and misses the project that sits below its repository
+-- root, which is the case `check_angular()` documents.
+local function source_root(markers)
+  local source = vim.fn.bufnr('#')
+  if source == -1 or vim.api.nvim_buf_get_name(source) == '' then
+    source = vim.fn.getcwd()
+  end
+  return vim.fs.root(source, markers)
+end
+
 -- External tools =============================================================
 -- Programs the config uses when they are there and does without when they are
 -- not. None of them is required for startup (`:h mini.nvim-general-principles`).
@@ -340,10 +362,8 @@ local function check_angular()
   -- `npx`. Both fail in a checkout where nobody ran the install, and the
   -- failure looks like a broken config rather than a missing directory.
   --
-  -- Searched from the buffer the reader came from, not from buffer 0 as this
-  -- used to do: `:checkhealth` opens its own report buffer first and runs the
-  -- checks inside it, so buffer 0 is a nameless scratch buffer and
-  -- `vim.fs.root()` answers nil for it. Every run therefore said "not inside an
+  -- Searched from the buffer the reader came from (`source_root`), and on this
+  -- section the stakes are the whole check: every run said "not inside an
   -- Angular project", one started from a project included - and with it went
   -- the version check below, the one voice of this section that catches a
   -- server on the wrong major.
@@ -353,11 +373,7 @@ local function check_angular()
   -- *repository*, while 'angular.json' can sit well below it: measured on the
   -- PASS portal, cwd is the checkout and the Angular project is four
   -- directories down, so a search upward from cwd finds nothing.
-  local source = vim.fn.bufnr('#')
-  if source == -1 or vim.api.nvim_buf_get_name(source) == '' then
-    source = vim.fn.getcwd()
-  end
-  local root = vim.fs.root(source, { 'angular.json', 'nx.json' })
+  local root = source_root({ 'angular.json', 'nx.json' })
   if root == nil then
     health.info('not inside an Angular project: nothing else to check here')
   elseif vim.uv.fs_stat(vim.fs.joinpath(root, 'node_modules')) == nil then
@@ -644,14 +660,8 @@ local function check_cpp()
   -- editor and it is indistinguishable from a broken config while nobody names
   -- it.
   --
-  -- Searched from the alternate buffer for the reason spelled out in
-  -- `check_angular()`: `:checkhealth` runs inside its own report buffer, so
-  -- buffer 0 is a nameless scratch one and `vim.fs.root()` answers nil for it.
-  local source = vim.fn.bufnr('#')
-  if source == -1 or vim.api.nvim_buf_get_name(source) == '' then
-    source = vim.fn.getcwd()
-  end
-  local root = vim.fs.root(source, {
+  -- Searched from the buffer the reader came from (`source_root`)
+  local root = source_root({
     'CMakeLists.txt',
     'compile_commands.json',
     'compile_flags.txt',
@@ -807,10 +817,8 @@ local function check_godot()
     )
   end
 
-  -- The parser has to be installed, not merely available. This is the same
-  -- check 'plugin/40_plugins.lua' uses to decide what to install. `gdshader`
-  -- also carries the `gdshaderinc` filetype that 'ftdetect/godot.lua' assigns,
-  -- and `godot_resource` is what reads a '.tscn' or a '.tres'
+  -- `gdshader` also carries the `gdshaderinc` filetype that 'ftdetect/godot.lua'
+  -- assigns, and `godot_resource` is what reads a '.tscn' or a '.tres'
   check_parsers({ 'gdscript', 'gdshader', 'godot_resource' })
 end
 
