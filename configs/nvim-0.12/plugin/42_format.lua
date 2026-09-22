@@ -58,6 +58,28 @@ local format_range = function(from, to)
   return err, did_edit
 end
 
+-- Whether a format pass has anything to run, warned about here because both
+-- callers refuse the same way. `list_formatters()` only names AVAILABLE conform
+-- formatters (a declared one whose binary is missing does not count), and never
+-- counts the LSP fallback 'plugin/40_plugins.lua' configures (`lsp_format =
+-- 'fallback'`). Refusing on the first alone left a Java buffer (no CLI
+-- formatter declared, jdtls formats) and a Lua buffer without `stylua` warned
+-- and untouched by `<Leader>lf`, while `<Leader>lF` formatted them through the
+-- server - two entry points of one API disagreeing. Warn only when BOTH are
+-- absent, and return false once warned so callers only have to `return`.
+local has_formatter = function(conform)
+  if #conform.list_formatters(0) > 0 then return true end
+  if #vim.lsp.get_clients({ bufnr = 0, method = 'textDocument/formatting' }) > 0 then
+    return true
+  end
+  local ft = vim.bo.filetype == '' and '<no filetype>' or vim.bo.filetype
+  vim.notify(
+    'No formatter for ' .. ft .. ', and no language server to format',
+    vim.log.levels.WARN
+  )
+  return false
+end
+
 --- Format the lines that differ from the diff reference.
 ---
 --- Order matters: hunks are formatted from the bottom of the buffer upwards,
@@ -68,25 +90,7 @@ Config.format.changed = function()
   if not ok then
     return vim.notify("'conform.nvim' is not loaded yet", vim.log.levels.ERROR)
   end
-  -- `list_formatters()` only names AVAILABLE conform formatters (a declared
-  -- one whose binary is missing does not count), and never counts the LSP
-  -- fallback 'plugin/40_plugins.lua' configures (`lsp_format = 'fallback'`).
-  -- Refusing on the first alone left a Java buffer (no CLI formatter
-  -- declared, jdtls formats) and a Lua buffer without `stylua` warned and
-  -- untouched by `<Leader>lf`, while `<Leader>lF` formatted them through the
-  -- server - two entry points of one API disagreeing. Warn only when BOTH
-  -- are absent.
-  if #conform.list_formatters(0) == 0 then
-    local has_lsp_formatter = #vim.lsp.get_clients({
-      bufnr = 0,
-      method = 'textDocument/formatting',
-    }) > 0
-    if not has_lsp_formatter then
-      local ft = vim.bo.filetype == '' and '<no filetype>' or vim.bo.filetype
-      local msg = 'No formatter for ' .. ft .. ', and no language server to format'
-      return vim.notify(msg, vim.log.levels.WARN)
-    end
-  end
+  if not has_formatter(conform) then return end
 
   -- Without a reference text nothing here is "unchanged", so the whole buffer
   -- is the honest answer, and the message says which one was taken. Two
@@ -172,17 +176,7 @@ Config.format.selection = function()
   if not ok then
     return vim.notify("'conform.nvim' is not loaded yet", vim.log.levels.ERROR)
   end
-  if #conform.list_formatters(0) == 0 then
-    local has_lsp_formatter = #vim.lsp.get_clients({
-      bufnr = 0,
-      method = 'textDocument/formatting',
-    }) > 0
-    if not has_lsp_formatter then
-      local ft = vim.bo.filetype == '' and '<no filetype>' or vim.bo.filetype
-      local msg = 'No formatter for ' .. ft .. ', and no language server to format'
-      return vim.notify(msg, vim.log.levels.WARN)
-    end
-  end
+  if not has_formatter(conform) then return end
   local from, to = vim.fn.getpos('v')[2], vim.fn.getpos('.')[2]
   if from > to then
     from, to = to, from
