@@ -132,9 +132,7 @@ Config.review.open = function(paths, label, on_open)
     return open_arglist(paths, label, on_open)
   end
 
-  local prompt = #paths .. ' files to review. Open them all? (y/n) '
-  vim.ui.input({ prompt = prompt }, function(answer)
-    if (answer or ''):lower() ~= 'y' then return end
+  Config.confirm(#paths .. ' files to review. Open them all?', function()
     open_arglist(paths, label, on_open)
   end)
 end
