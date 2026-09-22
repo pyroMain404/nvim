@@ -258,10 +258,9 @@ local diff_sources_at = function(rev)
   local source = {
     name = 'git-' .. rev,
     attach = attach,
-    detach = function(_) end,
     apply_hunks = apply_hunks,
   }
-  return { source, diff_source_git }
+  return source
 end
 
 -- Revision used as 'mini.diff' reference text, `nil` for the Git index: in
