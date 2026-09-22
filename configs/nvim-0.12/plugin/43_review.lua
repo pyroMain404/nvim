@@ -113,7 +113,13 @@ local open_arglist = function(paths, label, on_open)
   end
   vim.t.review_bufs = opened
 
-  Config.report('Review ' .. label, #paths, unloaded, 'file(s)', 'not loaded (open elsewhere?)')
+  Config.report(
+    'Review ' .. label,
+    #paths,
+    unloaded,
+    'file(s)',
+    'not loaded (open elsewhere?)'
+  )
 end
 
 -- Open `paths` as the review, asking first when it is a big one. The question
@@ -132,9 +138,10 @@ Config.review.open = function(paths, label, on_open)
     return open_arglist(paths, label, on_open)
   end
 
-  Config.confirm(#paths .. ' files to review. Open them all?', function()
-    open_arglist(paths, label, on_open)
-  end)
+  Config.confirm(
+    #paths .. ' files to review. Open them all?',
+    function() open_arglist(paths, label, on_open) end
+  )
 end
 
 -- Close the review of the current tabpage. The tabpage goes, and the argument
@@ -191,7 +198,13 @@ Config.review.close = function()
       Config.git.set_diff_ref(nil, diff_ref.prev)
     end
 
-    Config.report('Review closed', #bufs - kept, kept, 'buffer(s) dropped', 'kept (unsaved changes)')
+    Config.report(
+      'Review closed',
+      #bufs - kept,
+      kept,
+      'buffer(s) dropped',
+      'kept (unsaved changes)'
+    )
   end)
 end
 
