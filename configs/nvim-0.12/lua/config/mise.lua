@@ -44,10 +44,7 @@ function M.installed(tool)
   end
 
   -- `mise` reports oldest first; reverse so the newest release is at index 1.
-  for i = 1, math.floor(#installed / 2) do
-    local j = #installed - i + 1
-    installed[i], installed[j] = installed[j], installed[i]
-  end
+  installed = vim.fn.reverse(installed)
 
   cache[tool] = installed
   return installed
