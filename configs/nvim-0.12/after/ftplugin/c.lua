@@ -14,13 +14,21 @@
 -- says so in its own '.clang-format', which is the file both the formatter and
 -- the server read.
 --
--- `after/ftplugin/cpp.lua` sources this file (`:h runtime!`) instead of the
--- other way around: `.c` is the filetype Neovim's own detector falls back to
--- for a header-less file, and every project sampled on this machine that
--- builds C also builds C++ from the same 'CMakeLists.txt' or 'Makefile' - so
--- the language with the narrower audience is the one that borrows from the
--- other, not the reverse. There is nothing cpp-only below to split out; if
--- that changes, it stays in 'cpp.lua' after the `runtime!` line.
+-- `.c` is the filetype Neovim's own detector falls back to for a header-less
+-- file, and every project sampled on this machine that builds C also builds
+-- C++ from the same 'CMakeLists.txt' or 'Makefile' - so one file covers both,
+-- the one the narrower audience borrows from. C++ arrives here by itself:
+-- '$VIMRUNTIME/ftplugin/cpp.vim' runs `runtime! ftplugin/c[.]{vim,lua} ...`
+-- for every `cpp` buffer, 'runtimepath' carries this config twice - as itself
+-- and as the `.../after` entry Neovim appends for every config
+-- (`:set runtimepath?`) - and `ftplugin/c.lua`, resolved against that second
+-- entry, IS this file. There is nothing cpp-only to split out; if that
+-- changes, it goes in a 'cpp.lua' that adds to what this file did.
+--
+-- NOTE: a `runtime! after/ftplugin/c.lua` of our own would source this file
+-- twice per `cpp` buffer. The option assignments survive that; `:Run` does not
+-- - the second copy of its `b:undo_ftplugin` line registers `delcommand Run`
+-- twice, and the second one raises `E184` on the next filetype change.
 
 -- Fold on functions and classes instead of on indentation, now that the parser
 -- is installed (`:h vim.treesitter.foldexpr()`), the same way

@@ -5,7 +5,7 @@
 -- `:compiler cmake` teaches `:make` to build a CMake project and put what the
 -- compiler says in the quickfix list, so that `]q` and `[q` of
 -- 'mini.bracketed' walk the errors. Selected for a buffer in
--- 'after/ftplugin/cpp.lua'. See `:h write-compiler-plugin`, `:h :compiler`,
+-- 'after/ftplugin/c.lua'. See `:h write-compiler-plugin`, `:h :compiler`,
 -- `:h errorformat`.
 --
 -- It has to be written because the runtime has no compiler plugin for CMake:
@@ -65,7 +65,7 @@ vim.cmd([[CompilerSet errorformat+=%+GError:%.%#]])
 -- gcc.vim offers `g:compiler_gcc_ignore_unmatched_lines` for this, and it is
 -- not used on purpose: that variable is global and stays set, so it would also
 -- change what a later `:compiler gcc` does - the branch
--- 'after/ftplugin/cpp.lua' takes for a plain makefile. Appending the entry
+-- 'after/ftplugin/c.lua' takes for a plain makefile. Appending the entry
 -- here keeps the decision inside this compiler plugin, the way
 -- 'compiler/ngc.lua' already does it.
 vim.cmd([[CompilerSet errorformat+=%-G%.%#]])
