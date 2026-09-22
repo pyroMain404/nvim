@@ -948,9 +948,7 @@ Config.git.update_config = function()
       local n = tonumber(vim.trim(counted.stdout))
       if n == 0 then return vim.notify('Already up to date with `minimax/main`') end
 
-      local prompt = n .. ' new commit(s) upstream. Merge? (y/n) '
-      vim.ui.input({ prompt = prompt }, function(answer)
-        if (answer or ''):lower() ~= 'y' then return end
+      Config.confirm(n .. ' new commit(s) upstream. Merge?', function()
         git({ 'merge', '--no-edit', 'minimax/main' }, function(merged)
           if not is_ok(merged) then return end
           -- Reload the config files the merge changed on disk
