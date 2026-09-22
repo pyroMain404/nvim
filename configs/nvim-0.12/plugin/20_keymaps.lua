@@ -118,7 +118,6 @@ end
 local edit_plugin_file = function(filename)
   return config_file('plugin/' .. filename)
 end
-local explore_at_file = '<Cmd>lua MiniFiles.open(vim.api.nvim_buf_get_name(0))<CR>'
 local explore_quickfix = function()
   vim.cmd(vim.fn.getqflist({ winid = true }).winid ~= 0 and 'cclose' or 'copen')
 end
@@ -126,16 +125,16 @@ local explore_locations = function()
   vim.cmd(vim.fn.getloclist(0, { winid = true }).winid ~= 0 and 'lclose' or 'lopen')
 end
 
-nmap_leader('ed', '<Cmd>lua MiniFiles.open()<CR>',          'Directory')
-nmap_leader('ef', explore_at_file,                          'File directory')
-nmap_leader('ei', config_file('init.lua'),                  'init.lua')
-nmap_leader('ek', edit_plugin_file('20_keymaps.lua'),       'Keymaps config')
-nmap_leader('em', edit_plugin_file('30_mini.lua'),          'MINI config')
-nmap_leader('en', '<Cmd>lua MiniNotify.show_history()<CR>', 'Notifications')
-nmap_leader('eo', edit_plugin_file('10_options.lua'),       'Options config')
-nmap_leader('ep', edit_plugin_file('40_plugins.lua'),       'Plugins config')
-nmap_leader('eq', explore_quickfix,                         'Quickfix list')
-nmap_leader('eQ', explore_locations,                        'Location list')
+nmap_leader('ed', '<Cmd>lua MiniFiles.open()<CR>',                             'Directory')
+nmap_leader('ef', '<Cmd>lua MiniFiles.open(vim.api.nvim_buf_get_name(0))<CR>', 'File directory')
+nmap_leader('ei', config_file('init.lua'),                                     'init.lua')
+nmap_leader('ek', edit_plugin_file('20_keymaps.lua'),                          'Keymaps config')
+nmap_leader('em', edit_plugin_file('30_mini.lua'),                             'MINI config')
+nmap_leader('en', '<Cmd>lua MiniNotify.show_history()<CR>',                    'Notifications')
+nmap_leader('eo', edit_plugin_file('10_options.lua'),                          'Options config')
+nmap_leader('ep', edit_plugin_file('40_plugins.lua'),                          'Plugins config')
+nmap_leader('eq', explore_quickfix,                                            'Quickfix list')
+nmap_leader('eQ', explore_locations,                                           'Location list')
 
 -- f is for 'Fuzzy Find'. Common usage:
 -- - `<Leader>ff` - find files; for best performance requires `ripgrep`
@@ -145,7 +144,6 @@ nmap_leader('eQ', explore_locations,                        'Location list')
 -- - `<Leader>fv` - all visited paths; requires 'mini.visits'
 --
 -- All these use 'mini.pick'. See `:h MiniPick-overview` for an overview.
-local pick_workspace_symbols_live = '<Cmd>Pick lsp scope="workspace_symbol_live"<CR>'
 
 -- HACK: `:Pick ... path="%"` can not be used on Windows, as 'mini.pick' converts
 -- command arguments to a table by loading them as Lua code, where backslashes of
@@ -163,30 +161,30 @@ local pick_buf_path = function(picker, scope)
   end
 end
 
-nmap_leader('f/', '<Cmd>Pick history scope="/"<CR>',            '"/" history')
-nmap_leader('f:', '<Cmd>Pick history scope=":"<CR>',            '":" history')
-nmap_leader('fa', '<Cmd>Pick git_hunks scope="staged"<CR>',     'Added hunks (all)')
-nmap_leader('fA', pick_buf_path('git_hunks', 'staged'),         'Added hunks (buf)')
-nmap_leader('fb', '<Cmd>Pick buffers<CR>',                      'Buffers')
-nmap_leader('fc', '<Cmd>Pick git_commits<CR>',                  'Commits (all)')
-nmap_leader('fC', pick_buf_path('git_commits'),                 'Commits (buf)')
-nmap_leader('fd', '<Cmd>Pick diagnostic scope="all"<CR>',       'Diagnostic workspace')
-nmap_leader('fD', '<Cmd>Pick diagnostic scope="current"<CR>',   'Diagnostic buffer')
-nmap_leader('ff', '<Cmd>Pick files<CR>',                        'Files')
-nmap_leader('fg', '<Cmd>Pick grep_live<CR>',                    'Grep live')
-nmap_leader('fG', '<Cmd>Pick grep pattern="<cword>"<CR>',       'Grep current word')
-nmap_leader('fh', '<Cmd>Pick help<CR>',                         'Help tags')
-nmap_leader('fH', '<Cmd>Pick hl_groups<CR>',                    'Highlight groups')
-nmap_leader('fl', '<Cmd>Pick buf_lines scope="all"<CR>',        'Lines (all)')
-nmap_leader('fL', '<Cmd>Pick buf_lines scope="current"<CR>',    'Lines (buf)')
-nmap_leader('fm', '<Cmd>Pick git_hunks<CR>',                    'Modified hunks (all)')
-nmap_leader('fM', pick_buf_path('git_hunks'),                   'Modified hunks (buf)')
-nmap_leader('fr', '<Cmd>Pick resume<CR>',                       'Resume')
-nmap_leader('fR', '<Cmd>Pick lsp scope="references"<CR>',       'References (LSP)')
-nmap_leader('fs', pick_workspace_symbols_live,                  'Symbols workspace (live)')
-nmap_leader('fS', '<Cmd>Pick lsp scope="document_symbol"<CR>',  'Symbols document')
-nmap_leader('fv', '<Cmd>Pick visit_paths cwd=""<CR>',           'Visit paths (all)')
-nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cwd)')
+nmap_leader('f/', '<Cmd>Pick history scope="/"<CR>',                 '"/" history')
+nmap_leader('f:', '<Cmd>Pick history scope=":"<CR>',                 '":" history')
+nmap_leader('fa', '<Cmd>Pick git_hunks scope="staged"<CR>',          'Added hunks (all)')
+nmap_leader('fA', pick_buf_path('git_hunks', 'staged'),              'Added hunks (buf)')
+nmap_leader('fb', '<Cmd>Pick buffers<CR>',                           'Buffers')
+nmap_leader('fc', '<Cmd>Pick git_commits<CR>',                       'Commits (all)')
+nmap_leader('fC', pick_buf_path('git_commits'),                      'Commits (buf)')
+nmap_leader('fd', '<Cmd>Pick diagnostic scope="all"<CR>',            'Diagnostic workspace')
+nmap_leader('fD', '<Cmd>Pick diagnostic scope="current"<CR>',        'Diagnostic buffer')
+nmap_leader('ff', '<Cmd>Pick files<CR>',                             'Files')
+nmap_leader('fg', '<Cmd>Pick grep_live<CR>',                         'Grep live')
+nmap_leader('fG', '<Cmd>Pick grep pattern="<cword>"<CR>',            'Grep current word')
+nmap_leader('fh', '<Cmd>Pick help<CR>',                              'Help tags')
+nmap_leader('fH', '<Cmd>Pick hl_groups<CR>',                         'Highlight groups')
+nmap_leader('fl', '<Cmd>Pick buf_lines scope="all"<CR>',             'Lines (all)')
+nmap_leader('fL', '<Cmd>Pick buf_lines scope="current"<CR>',         'Lines (buf)')
+nmap_leader('fm', '<Cmd>Pick git_hunks<CR>',                         'Modified hunks (all)')
+nmap_leader('fM', pick_buf_path('git_hunks'),                        'Modified hunks (buf)')
+nmap_leader('fr', '<Cmd>Pick resume<CR>',                            'Resume')
+nmap_leader('fR', '<Cmd>Pick lsp scope="references"<CR>',            'References (LSP)')
+nmap_leader('fs', '<Cmd>Pick lsp scope="workspace_symbol_live"<CR>', 'Symbols workspace (live)')
+nmap_leader('fS', '<Cmd>Pick lsp scope="document_symbol"<CR>',       'Symbols document')
+nmap_leader('fv', '<Cmd>Pick visit_paths cwd=""<CR>',                'Visit paths (all)')
+nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                       'Visit paths (cwd)')
 
 -- g is for 'Git'. Common usage:
 -- - `<Leader>gi` - show information at cursor
@@ -268,30 +266,24 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 --
 -- Everything these mappings call lives in 'plugin/41_git.lua', under
 -- `Config.git`, next to the 'mini.diff' and 'mini.git' setup it configures.
--- The revision toggles and the patch of one commit are named here only to keep
--- the block below aligned.
-local git_ref = '<Cmd>lua Config.git.toggle_diff_ref()<CR>'
-local git_ref_buf = '<Cmd>lua Config.git.toggle_diff_ref(0)<CR>'
-local git_patch = '<Cmd>lua Config.git.diff_commit_only()<CR>'
-local git_patch_buf = '<Cmd>lua Config.git.diff_commit_only(0)<CR>'
 
-nmap_leader('ga', '<Cmd>lua Config.git.diff_staged()<CR>',      'Added diff')
-nmap_leader('gA', '<Cmd>lua Config.git.diff_staged(0)<CR>',     'Added diff buffer')
-nmap_leader('gb', '<Cmd>lua Config.git.toggle_blame()<CR>',     'Blame line (toggle)')
-nmap_leader('gc', '<Cmd>Git commit<CR>',                        'Commit')
-nmap_leader('gC', '<Cmd>Git commit --amend<CR>',                'Commit amend')
-nmap_leader('gd', '<Cmd>lua Config.git.diff_unstaged()<CR>',    'Diff')
-nmap_leader('gD', '<Cmd>lua Config.git.diff_unstaged(0)<CR>',   'Diff buffer')
-nmap_leader('gi', '<Cmd>lua MiniGit.show_at_cursor()<CR>',      'Info at cursor')
-nmap_leader('gl', '<Cmd>lua Config.git.log()<CR>',              'Log')
-nmap_leader('gL', '<Cmd>lua Config.git.log(0)<CR>',             'Log buffer')
-nmap_leader('go', '<Cmd>lua Config.git.toggle_overlay()<CR>', 'Toggle overlay')
-nmap_leader('gp', git_patch,                                    'Commit patch')
-nmap_leader('gP', git_patch_buf,                                'Commit patch buffer')
-nmap_leader('gr', git_ref,                                      'Reference revision')
-nmap_leader('gR', git_ref_buf,                                  'Reference revision buffer')
-nmap_leader('gs', '<Cmd>lua Config.git.diff_commit()<CR>',      'Since commit')
-nmap_leader('gS', '<Cmd>lua Config.git.diff_commit(0)<CR>',     'Since commit buffer')
+nmap_leader('ga', '<Cmd>lua Config.git.diff_staged()<CR>',       'Added diff')
+nmap_leader('gA', '<Cmd>lua Config.git.diff_staged(0)<CR>',      'Added diff buffer')
+nmap_leader('gb', '<Cmd>lua Config.git.toggle_blame()<CR>',      'Blame line (toggle)')
+nmap_leader('gc', '<Cmd>Git commit<CR>',                         'Commit')
+nmap_leader('gC', '<Cmd>Git commit --amend<CR>',                 'Commit amend')
+nmap_leader('gd', '<Cmd>lua Config.git.diff_unstaged()<CR>',     'Diff')
+nmap_leader('gD', '<Cmd>lua Config.git.diff_unstaged(0)<CR>',    'Diff buffer')
+nmap_leader('gi', '<Cmd>lua MiniGit.show_at_cursor()<CR>',       'Info at cursor')
+nmap_leader('gl', '<Cmd>lua Config.git.log()<CR>',               'Log')
+nmap_leader('gL', '<Cmd>lua Config.git.log(0)<CR>',              'Log buffer')
+nmap_leader('go', '<Cmd>lua Config.git.toggle_overlay()<CR>',    'Toggle overlay')
+nmap_leader('gp', '<Cmd>lua Config.git.diff_commit_only()<CR>',  'Commit patch')
+nmap_leader('gP', '<Cmd>lua Config.git.diff_commit_only(0)<CR>', 'Commit patch buffer')
+nmap_leader('gr', '<Cmd>lua Config.git.toggle_diff_ref()<CR>',   'Reference revision')
+nmap_leader('gR', '<Cmd>lua Config.git.toggle_diff_ref(0)<CR>',  'Reference revision buffer')
+nmap_leader('gs', '<Cmd>lua Config.git.diff_commit()<CR>',       'Since commit')
+nmap_leader('gS', '<Cmd>lua Config.git.diff_commit(0)<CR>',      'Since commit buffer')
 
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 
@@ -354,12 +346,11 @@ nmap_leader('mt', '<Cmd>lua MiniMap.toggle()<CR>',       'Toggle')
 -- session, and it is the first thing to answer when something misbehaves.
 -- Being a Git operation like the others, it is written in 'plugin/41_git.lua'.
 -- NOTE: plugins are a separate matter, updated with `:h vim.pack.update()`.
-local git_update_config = '<Cmd>lua Config.git.update_config()<CR>'
 
-nmap_leader('or', '<Cmd>lua MiniMisc.resize_window()<CR>', 'Resize to default width')
-nmap_leader('ot', '<Cmd>lua MiniTrailspace.trim()<CR>',    'Trim trailspace')
-nmap_leader('ou', git_update_config,                       'Update from upstream')
-nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
+nmap_leader('or', '<Cmd>lua MiniMisc.resize_window()<CR>',   'Resize to default width')
+nmap_leader('ot', '<Cmd>lua MiniTrailspace.trim()<CR>',      'Trim trailspace')
+nmap_leader('ou', '<Cmd>lua Config.git.update_config()<CR>', 'Update from upstream')
+nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',            'Zoom toggle')
 
 -- r is for 'Review'. Common usage:
 -- - `<Leader>rd` - open the files changed and not staged yet
@@ -433,13 +424,12 @@ nmap_leader('rs', '<Cmd>lua Config.review.git()<CR>',          'Since commit fil
 -- - `<Leader>sn` - start new session
 -- - `<Leader>sr` - read previously started session
 -- - `<Leader>sR` - restart Neovim preserving current session
-local session_new = 'vim.ui.input({ prompt = "Session name: " }, MiniSessions.write)'
 
-nmap_leader('sd', '<Cmd>lua MiniSessions.select("delete")<CR>', 'Delete')
-nmap_leader('sn', '<Cmd>lua ' .. session_new .. '<CR>',         'New')
-nmap_leader('sr', '<Cmd>lua MiniSessions.select("read")<CR>',   'Read')
-nmap_leader('sR', '<Cmd>lua MiniSessions.restart()<CR>',        'Restart')
-nmap_leader('sw', '<Cmd>lua MiniSessions.write()<CR>',          'Write current')
+nmap_leader('sd', '<Cmd>lua MiniSessions.select("delete")<CR>',                                   'Delete')
+nmap_leader('sn', '<Cmd>lua vim.ui.input({ prompt = "Session name: " }, MiniSessions.write)<CR>', 'New')
+nmap_leader('sr', '<Cmd>lua MiniSessions.select("read")<CR>',                                     'Read')
+nmap_leader('sR', '<Cmd>lua MiniSessions.restart()<CR>',                                          'Restart')
+nmap_leader('sw', '<Cmd>lua MiniSessions.write()<CR>',                                            'Write current')
 
 -- t is for 'Terminal'. Common usage:
 -- - `<Leader>tt` / `<Leader>tT` - terminal in vertical/horizontal split
