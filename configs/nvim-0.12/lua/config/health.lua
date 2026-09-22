@@ -203,18 +203,7 @@ local function check_markdown()
     })
   end
 
-  local obsidian_init = vim.fs.joinpath(
-    vim.fn.stdpath('data'),
-    'site',
-    'pack',
-    'core',
-    'opt',
-    'obsidian.nvim',
-    'lua',
-    'obsidian',
-    'init.lua'
-  )
-  if vim.uv.fs_stat(obsidian_init) ~= nil then
+  if #vim.api.nvim_get_runtime_file('lua/obsidian/init.lua', false) > 0 then
     health.ok('obsidian.nvim: installed')
   else
     health.warn('obsidian.nvim is not available', {
