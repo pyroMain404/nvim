@@ -113,14 +113,11 @@ local open_arglist = function(paths, label, on_open)
   end
   vim.t.review_bufs = opened
 
-  local msg = 'Review ' .. label .. ': ' .. #paths .. ' file(s)'
-  if unloaded == 0 then return vim.notify(msg) end
-  msg = msg .. ', ' .. unloaded .. ' not loaded (open elsewhere?)'
-  vim.notify(msg, vim.log.levels.WARN)
+  Config.report('Review ' .. label, #paths, unloaded, 'file(s)', 'not loaded (open elsewhere?)')
 end
 
 -- Open `paths` as the review, asking first when it is a big one. The question
--- is asked with `:h vim.ui.input()`, as in `Config.git.update_config()`. This
+-- is asked through `Config.confirm()`, as in `Config.git.update_config()`. This
 -- is the whole contract a source has to meet: a list of paths and a label, plus
 -- an `on_open` when producing them is not all it does - the Git source
 -- references the revision there, and a source with nothing to add passes
@@ -292,7 +289,7 @@ end
 
 -- Root of the repository to review, `nil` outside one - `Config.git`'s own
 -- resolver and warning, reused instead of repeated across all four sources.
-local review_root = function() return Config.git.require_root() end
+local review_root = Config.git.require_root
 
 -- Reference `rev` in every buffer, which is what `<Leader>gr` does by hand, and
 -- write down in the review tabpage both it and the reference it replaces.
