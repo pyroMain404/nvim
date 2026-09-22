@@ -176,13 +176,16 @@ end
 -- window-local cache, and only when the cursor's LINE actually changed;
 -- `'winbar'` itself only ever reads the cache, never recomputes.
 local winbar_cache = {} ---@type table<integer, { line: integer, text: string }>
-Config.new_autocmd({ 'CursorMoved', 'CursorMovedI' }, nil, function(args)
-  local containers = winbar_containers[vim.bo[args.buf].filetype]
+local function refresh_winbar_cache(bufnr)
+  local containers = winbar_containers[vim.bo[bufnr].filetype]
   if containers == nil then return end
   local line = vim.api.nvim_win_get_cursor(0)[1]
-  local cache = winbar_cache[args.buf]
+  local cache = winbar_cache[bufnr]
   if cache ~= nil and cache.line == line then return end
-  winbar_cache[args.buf] = { line = line, text = compute_winbar(args.buf, containers) }
+  winbar_cache[bufnr] = { line = line, text = compute_winbar(bufnr, containers) }
+end
+Config.new_autocmd({ 'CursorMoved', 'CursorMovedI' }, nil, function(args)
+  refresh_winbar_cache(args.buf)
 end, 'Cache the winbar breadcrumb on cursor line change')
 
 Config.winbar = function()
@@ -198,6 +201,9 @@ end
 Config.new_autocmd({ 'BufWinEnter', 'FileType' }, nil, function(args)
   if vim.bo[args.buf].buftype ~= '' then return end
   vim.wo[0][0].winbar = '%{%v:lua.Config.winbar()%}'
+  -- Without this the bar sits empty until the first cursor move, since only
+  -- `CursorMoved`/`CursorMovedI` used to populate the cache above.
+  refresh_winbar_cache(args.buf)
 end, "Show the container breadcrumb in 'winbar'")
 
 -- `:make`/`:lmake` run synchronously and leave the result to be read off the
