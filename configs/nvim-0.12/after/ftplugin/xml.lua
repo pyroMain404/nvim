@@ -9,10 +9,7 @@
 -- editor command: Run`.
 --
 -- The fix stays minimal and gated on the exact basename `pom.xml` - never a
--- blanket XML behavior, and `build.xml` is left out: nothing on this machine
--- has exercised opening an Ant `build.xml` directly, and adding it
--- unverified would be unrequested expansion; extend the lookup the same way
--- once there is a real one to check it against.
+-- blanket XML behavior.
 --
 -- Two things follow from being that manifest, both reused from `java.lua`
 -- rather than duplicated:
@@ -57,7 +54,7 @@ vim.cmd('compiler maven')
 -- `pom.xml`'s own directory in a multi-module checkout. Same remedy
 -- 'java.lua' needs for a `.java` buffer, shared through
 -- 'lua/config/run.lua''s `make_root()`.
-require('config.run').make_root({ 'pom.xml', 'build.xml' })
+require('config.run').make_root({ 'pom.xml' })
 
 -- Undo the compiler selection when the filetype changes away from `xml`
 -- (`:h b:undo_ftplugin`). `:Run` undoes itself, registered inside

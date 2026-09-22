@@ -148,9 +148,10 @@ end
 -- Report how many items of a batch operation succeeded and how many failed,
 -- picking the notification level from the failure count. Used by review close,
 -- review open and any future bulk operation that needs a single summary.
+-- The two labels are required, not defaulted: what is 1 item of the batch is a
+-- file when opening a review and a buffer when closing one, so a generic
+-- default would read as a wrong count rather than as a missing argument.
 Config.report = function(message, done, failed, done_label, failed_label)
-  done_label = done_label or 'ok'
-  failed_label = failed_label or 'failed'
   local msg = message .. ': ' .. done .. ' ' .. done_label
   local level = vim.log.levels.INFO
   if failed > 0 then

@@ -400,42 +400,18 @@ local function check_angular()
   check_parsers({ 'angular', 'typescript', 'html', 'css', 'scss', 'json' })
 end
 
--- The oldest Java release jdtls agrees to start on, read from the launcher.
---
--- The number lives in one place and it is not this file: 'bin/jdtls.py' raises
--- `Exception: jdtls requires at least Java 21` and that string is the only
--- statement of the requirement anywhere. Writing 21 here instead would be a
--- copy that stays behind on the day the server raises its minimum - which is
--- exactly the day this check exists for, because the symptom then is a language
--- server that quietly never attaches.
---
--- `mise which` resolves the shim to the real script, whose sibling is the
--- Python it runs. Anything unexpected on the way - jdtls installed some other
--- way, the message reworded upstream - returns `nil`, and the caller reports
--- nothing rather than a number it invented.
-local function jdtls_minimum_java()
-  local launcher = first_line({ 'mise', 'which', 'jdtls' })
-  if launcher == nil then return nil end
-  local ok, lines =
-    pcall(vim.fn.readfile, vim.fs.joinpath(vim.fs.dirname(launcher), 'jdtls.py'))
-  if not ok then return nil end
-  for _, line in ipairs(lines) do
-    local minimum = line:match('requires at least Java (%d+)')
-    if minimum ~= nil then return tonumber(minimum) end
-  end
-  return nil
-end
-
 local function check_java()
   health.start('config: Java')
 
-  -- NOTE: the fallback is only reached when the launcher could not be read at
-  -- all, which in practice means jdtls is not installed - and the check that
-  -- says so is a few lines below. 21 is the minimum of jdtls 1.61, kept here
-  -- because advice with a placeholder in it is advice nobody can run.
-  local minimum = jdtls_minimum_java()
+  -- The oldest release jdtls agrees to start on, written here rather than read
+  -- from the launcher: 'bin/jdtls.py' raises `Exception: jdtls requires at
+  -- least Java 21` and nothing else states the requirement, but reaching that
+  -- string costs a `mise which` and a file read, and answers nothing in the one
+  -- case this check exists for - a jdtls that cannot be resolved at all. 21 is
+  -- the minimum of the 1.61 pinned below; raise it with that line.
+  local minimum = 21
   local install_jdk = ('Install one with `mise install java@temurin-%s`'):format(
-    minimum or 21
+    minimum
   )
 
   -- Which JDK answers here. `mise` resolves it through its shims, so a project
@@ -479,7 +455,7 @@ local function check_java()
     -- legacy '1.8' spelling an Eclipse compliance level can carry, so the
     -- release is the first number after the vendor name
     local release = tonumber(server_jdk:gsub('^%D+', ''):match('^%d+'))
-    if minimum ~= nil and release ~= nil and release < minimum then
+    if release ~= nil and release < minimum then
       health.warn(
         ('jdtls needs Java %d and the newest one installed is %d'):format(
           minimum,
@@ -493,10 +469,7 @@ local function check_java()
       )
     else
       health.ok(
-        ('jdtls JDK: %s%s'):format(
-          server_jdk,
-          minimum ~= nil and (', minimum required is %d'):format(minimum) or ''
-        )
+        ('jdtls JDK: %s, minimum required is %d'):format(server_jdk, minimum)
       )
     end
   end
@@ -664,20 +637,16 @@ local function check_cpp()
     -- puts it in 'build/compile_commands.json'. A build directory named
     -- anything else is out of reach and has to be linked or copied to the
     -- root.
-    local database = nil
-    for _, path in ipairs({
-      vim.fs.joinpath(root, 'compile_commands.json'),
-      vim.fs.joinpath(root, 'build', 'compile_commands.json'),
-      -- The hand written alternative, for a project simple enough that every
-      -- file takes the same flags. Background indexing does not work with it,
-      -- so it is reported as what it is.
-      vim.fs.joinpath(root, 'compile_flags.txt'),
-    }) do
-      if vim.uv.fs_stat(path) ~= nil then
-        database = path
-        break
-      end
-    end
+    local database = vim
+      .iter({
+        vim.fs.joinpath(root, 'compile_commands.json'),
+        vim.fs.joinpath(root, 'build', 'compile_commands.json'),
+        -- The hand written alternative, for a project simple enough that every
+        -- file takes the same flags. Background indexing does not work with it,
+        -- so it is reported as what it is.
+        vim.fs.joinpath(root, 'compile_flags.txt'),
+      })
+      :find(vim.uv.fs_stat)
     -- TODO: the advice below names one build system, and a GDExtension
     -- checkout may not be able to run it: 'godot-cpp' is historically built
     -- with SCons (`scons compiledb=yes` writes the database), while recent

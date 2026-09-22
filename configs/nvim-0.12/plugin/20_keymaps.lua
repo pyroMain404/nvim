@@ -88,14 +88,10 @@ end
 -- - `<Leader>bs` - create scratch (temporary) buffer
 -- - `<Leader>ba` - navigate to the alternative buffer
 -- - `<Leader>bw` - wipeout (fully delete) current buffer
-local new_scratch_buffer = function()
-  vim.api.nvim_win_set_buf(0, vim.api.nvim_create_buf(true, true))
-end
-
 nmap_leader('ba', '<Cmd>b#<CR>',                                 'Alternate')
 nmap_leader('bd', '<Cmd>lua MiniBufremove.delete()<CR>',         'Delete')
 nmap_leader('bD', '<Cmd>lua MiniBufremove.delete(0, true)<CR>',  'Delete!')
-nmap_leader('bs', new_scratch_buffer,                            'Scratch')
+nmap_leader('bs', function() vim.api.nvim_win_set_buf(0, vim.api.nvim_create_buf(true, true)) end, 'Scratch')
 nmap_leader('bw', '<Cmd>lua MiniBufremove.wipeout()<CR>',        'Wipeout')
 nmap_leader('bW', '<Cmd>lua MiniBufremove.wipeout(0, true)<CR>', 'Wipeout!')
 
@@ -183,6 +179,8 @@ nmap_leader('fr', '<Cmd>Pick resume<CR>',                            'Resume')
 nmap_leader('fR', '<Cmd>Pick lsp scope="references"<CR>',            'References (LSP)')
 nmap_leader('fs', '<Cmd>Pick lsp scope="workspace_symbol_live"<CR>', 'Symbols workspace (live)')
 nmap_leader('fS', '<Cmd>Pick lsp scope="document_symbol"<CR>',       'Symbols document')
+nmap_leader('ft', '<Cmd>HipatternsLoc<CR>',                          'Todo/Fixme/Hack/Note (buf)')
+nmap_leader('fT', '<Cmd>HipatternsGrep<CR>',                         'Todo/Fixme/Hack/Note (all)')
 nmap_leader('fv', '<Cmd>Pick visit_paths cwd=""<CR>',                'Visit paths (all)')
 nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                       'Visit paths (cwd)')
 
@@ -192,77 +190,6 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                       'Visit path
 -- - `<Leader>gd` - show unstaged changes as a patch in separate tabpage
 -- - `<Leader>gL` - show Git log of current file
 -- - `<Leader>gb` - toggle who last changed the line under the cursor
---
--- This group reads the repository, it does not manage it: changing what Git
--- stores (staging, branching, stashing, rebasing) is done in 'lazygit'
--- (`<Leader>tl`), which is a Git client already. Committing stays here because
--- writing a message is editing text. Everything else answers "what changed,
--- when, and by whom", so that the code can be read through its history.
---
--- `<Leader>gb` writes who last changed the line under the cursor at the end of
--- that line, off until asked for. Blaming the whole file at once is still
--- `:vertical Git blame -- %:p`, aligned with the window it was called from.
---
--- Inside the output of these commands `gf` works on the patch paths, `<CR>`
--- shows more data about the entry at cursor, `zm` / `zr` adjust folds, and
--- `q` closes the window. See 'plugin/41_git.lua' for how this is set up.
--- What `<CR>` opens is placed by what it is: a commit goes full width below
--- the log it was read from, a file goes into a column at the far right.
---
--- Every mapping which reads the repository goes through `Config.git` rather
--- than running `:Git` itself, and the two commits are what is left of the
--- direct commands. Two answers are the reason: `:Git diff` on a working tree
--- with nothing changed opens no window and says nothing - indistinguishable
--- from a mapping which does not work - and outside a repository it answers with
--- the whole usage message of `git diff --no-index`. Both are replaced by the
--- one line the `<Leader>r` group gives, and 'plugin/41_git.lua' says how.
---
--- Those functions also take the buffer to ask about (`0` for the current one)
--- and write its path out themselves, where a command would need `-- %:p` and
--- not `-- %`: `:Git` runs from the root of the repository, while `%` expands
--- relative to the current directory. The two differ as soon as Neovim is
--- started below the root, and Git then gets a path which matches nothing and
--- answers with an empty output.
---
--- To review already committed changes the commit is picked from the Git log, by
--- subject rather than by distance from `HEAD`, and the key says which of the
--- two questions about it is being asked:
--- - `<Leader>gs` / `<Leader>gS` - patch of everything changed *since* the
---   picked commit (all/buffer), in a separate tabpage.
--- - `<Leader>gp` / `<Leader>gP` - patch of the picked commit *alone*, what it
---   changed against the commit before it, in a separate tabpage.
---
--- The list of the uppercase ones holds only the commits which touched the
--- current file. Which of the two is wanted follows from what is being read:
--- "is this file still the way that commit left it" is the first, "what did this
--- commit do" is the second, and a commit at the tip of the branch answers the
--- same in both.
---
--- Reading only the patch is not always enough: a change is also judged next to
--- the code that stayed, which means opening the files it touched. That is the
--- `<Leader>r` group below, where every diff above has its counterpart under the
--- same second key: `<Leader>rd` opens the files `<Leader>gd` shows as a patch,
--- `<Leader>ra` the ones `<Leader>ga` shows, `<Leader>rs` those of `<Leader>gs`,
--- `<Leader>rp` those of `<Leader>gp`.
---
--- Reading the code as it was at some revision is done by referencing it: the
--- revision becomes the 'mini.diff' reference text, which makes every commit
--- made after it look exactly like it is not committed yet. Hunk navigation
--- (`[h` / `]h`), hunk textobject (`gh`) and overlay then work on the history.
--- - `<Leader>gr` / `<Leader>gR` - reference a revision in every buffer / in the
---   current one. Pressing it again restores the reference to the Git index.
--- - The revision is picked from the Git log (of the current file for
---   `<Leader>gR`), the same way `<Leader>gs` picks the commit to diff against.
---   `:lua Config.git.toggle_diff_ref(nil, 'HEAD~3')` names one without picking.
--- - What is referenced can be read in `Config.git.diff_ref` and `vim.b.diff_ref`,
---   the source that actually attached in `vim.b.minidiff_summary.source_name`.
--- - Hunks can not be applied (`gh`) while a revision is referenced: they would
---   be staged against the index, which is not what is shown.
--- - A file opened at some commit from a patch (`<CR>` / `gF`) references the
---   commit before it on its own, so it is read as the change it received there.
--- - `<Leader>rs` references the commit it reviews, so the files it opens are
---   read the same way without picking that commit twice. `<Leader>rc` puts back
---   what was referenced before the review.
 --
 -- Everything these mappings call lives in 'plugin/41_git.lua', under
 -- `Config.git`, next to the 'mini.diff' and 'mini.git' setup it configures.
@@ -300,19 +227,10 @@ xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 -- LSP mappings (like `:h gra` and others). This is needed because `gr` is mapped
 -- by an "replace" operator in 'mini.operators' (which is more commonly used).
 --
--- TODO: make `:h :make` asynchronous, and give it a mapping in this group.
--- Building and testing from here is already almost free: runtime compiler plugins
--- set `:h 'makeprg'` and `:h 'errorformat'` per language, so `:make check` fills
--- the quickfix list and `]q` walks the errors. The single flaw is that `:make`
--- blocks the interface until the command returns.
---
--- The fix is to keep everything and replace only the waiting: run the command
--- with `:h vim.system()` and feed its output to `:h setqflist()` with the buffer's
--- own 'errorformat', so compiler plugins, `:compiler` and the quickfix mappings
--- keep working untouched. Reaching for a terminal instead gives up all of that.
---
--- Worth handling when doing it: one run at a time per buffer, a way to know it is
--- still running, and `:h 'autowrite'` so a stale buffer is never compiled.
+-- `:make`/`:lmake` stay synchronous here on purpose; `:Make`/`:LMake` in
+-- 'plugin/10_options.lua' are the async, vim.system()-backed equivalents,
+-- and are commands rather than mappings because they take the same
+-- optional arguments `:make` itself does.
 nmap_leader('la', '<Cmd>lua vim.lsp.buf.code_action()<CR>',     'Actions')
 nmap_leader('ld', '<Cmd>lua vim.diagnostic.open_float()<CR>',   'Diagnostic popup')
 nmap_leader('lf', '<Cmd>lua Config.format.changed()<CR>',       'Format changed')
@@ -360,57 +278,6 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',            'Zoom toggle')
 -- - `<Leader>rp` - open the files that commit changed by itself
 -- - `<Leader>rc` - close the review and drop the buffers it opened
 --
--- This group opens files in order to read them, and its unit is the set of
--- them: the argument list (`:h argument-list`) of a new tabpage, with every one
--- loaded. `:next` / `:previous` walk the review, `:args` shows where it stands,
--- `:argdo` runs something over all of it, `:first` starts it over. That list is
--- local to the tabpage (`:h :arglocal`), so the files Neovim was started with
--- are left as they are.
---
--- What the group has in common is that, not where the files came from - which
--- is why it is not part of `<Leader>g` although Git is its only source today.
--- The second key names the set being read, and it is the key that set has in
--- `<Leader>g`, which shows the same one as a patch: `<Leader>rd` reads what
--- `<Leader>gd` shows, `<Leader>ra` what `<Leader>ga` shows, `<Leader>rs` what
--- `<Leader>gs` shows, `<Leader>rp` what `<Leader>gp` shows. Reading a change as
--- a patch and reading it in its files
--- are then the same two keys with the first one changed, and nothing has to be
--- remembered twice. A set produced by something which is not Git gets a key
--- here too, named after whatever names it, rather than a home in the group of
--- whatever produced it. There is no uppercase counterpart to any of them: the
--- review of a single file is that file, and opening it needs no group.
---
--- NOTE: a file Git does not track yet is in none of these, `git diff` being
--- about what Git already knows - the same blind spot the patches have.
---
--- `<Leader>rs` picks the commit from the Git log and reviews everything changed
--- since it, `<Leader>rp` the files that commit changed by itself. Another Git
--- command defines another review, from the command line:
--- `:lua Config.review.git('main...')` is the branch being written against the
--- point it left the one it will be merged into, and a second argument narrows
--- the review to a part of the tree (`:lua Config.review.git('main', 'configs/')`).
--- The same argument narrows the other three (`:lua Config.review.staged('*.md')`).
---
--- That commit is also referenced, which is `<Leader>gr` pressed on the same
--- one: every buffer - of the review and not - then holds the change it received
--- since then, walked with `[h` / `]h` and read in place with the overlay, and
--- nothing is picked twice. `<Leader>rp` references the commit before the picked
--- one instead, so what is shown in the files is what that commit did, which is
--- the review it opens. `<Leader>rc` puts the previous reference back,
--- unless it was changed by hand in the meantime: what a review is read against
--- ends with it.
---
--- The other two set no reference - the Git index is what they are read against
--- already - and a review named from the command line references its revision
--- like `<Leader>rs` does, `main...` and the other ranges excepted: there is no
--- single state to show a file at, and they fall back to the index.
---
--- `<Leader>rc` ends the review: the tabpage closes and the buffers it opened go
--- with it, while the ones that were already open stay. `:tabclose` does half of
--- that - the files remain listed, and 'mini.tabline' shows every listed buffer.
--- Which only matters once there are many: for a review of five files, deleting
--- them one by one with `<Leader>bd` is the same thing.
---
 -- Everything these mappings call lives in 'plugin/43_review.lua', under
 -- `Config.review`.
 
@@ -447,8 +314,7 @@ nmap_leader('tt', '<Cmd>vertical term<CR>',            'Terminal (vertical)')
 local make_pick_core = function(cwd, desc)
   return function()
     local sort_latest = MiniVisits.gen_sort.default({ recency_weight = 1 })
-    local local_opts = { cwd = cwd, filter = 'core', sort = sort_latest }
-    MiniExtra.pickers.visit_paths(local_opts, { source = { name = desc } })
+    MiniExtra.pickers.visit_paths({ cwd = cwd, filter = 'core', sort = sort_latest }, { source = { name = desc } })
   end
 end
 

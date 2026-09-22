@@ -30,6 +30,33 @@ vim.o.switchbuf   = 'usetab'       -- Use already opened buffers when switching
 
 vim.o.shada = "'100,<50,s10,:1000,/100,@100,h" -- Limit ShaDa file (for startup)
 
+-- Use PowerShell 7, not the Windows default `cmd.exe`, for `:!`, `:make`,
+-- `system()` and the terminal - this machine's own convention (see personal
+-- memory, "Ambiente": "Invocare PowerShell con `pwsh`, non Windows PowerShell
+-- 5.1"). `shellquote`/`shellxquote` are cleared because `pwsh -Command`
+-- parses its own argument, unlike `cmd.exe` which expects Vim to wrap it in
+-- quotes (`:h 'shellxquote'`). `shellpipe`/`shellredir` route through
+-- `Tee-Object`/`Out-File` with UTF8 explicitly, because PowerShell's default
+-- console encoding is UTF-16LE with a BOM, which `errorformat` does not skip
+-- and would otherwise corrupt every line pushed into the quickfix list.
+--
+-- Measured, replacing the equivalent NOTE this used to carry about
+-- `cmd.exe`: unlike `cmd.exe`'s `2>&1| tee %s` (whose own exit code is
+-- always `tee`'s, always 0), PowerShell's `$LastExitCode` after
+-- `<command> 2>&1 | Tee-Object <file>; exit $LastExitCode` still reports the
+-- external command's real exit code - `Tee-Object` is a cmdlet, not an
+-- external process, so it never overwrites `$LastExitCode`. `v:shell_error`
+-- is therefore trustworthy again; see the `QuickFixCmdPost` autocommand
+-- below for what still does not rely on it and why.
+if vim.fn.has('win32') == 1 then
+  vim.o.shell = 'pwsh'
+  vim.o.shellcmdflag = '-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command'
+  vim.o.shellredir = '2>&1 | Out-File -Encoding UTF8 %s; exit $LastExitCode'
+  vim.o.shellpipe = '2>&1 | Tee-Object %s; exit $LastExitCode'
+  vim.o.shellquote = ''
+  vim.o.shellxquote = ''
+end
+
 -- UI =========================================================================
 vim.o.breakindentopt = 'list:-1'  -- Add padding for lists (if 'wrap' is set)
 vim.o.colorcolumn    = '+1'       -- Draw column on the right of maximum width
@@ -47,27 +74,9 @@ vim.o.cursorlineopt  = 'screenline,number' -- Show cursor line per screen line
 vim.o.fillchars = 'eob: ,fold:╌'
 vim.o.listchars = 'extends:…,nbsp:␣,precedes:…,tab:> '
 
--- TODO: show the innermost container of the cursor in `:h 'winbar'`: the
--- enclosing function or method, the current header in Markdown, the open tag in
--- HTML. Not a full breadcrumb chain - only the nearest one, which is the part
--- that is actually lost when scrolling inside a long body.
---
--- 'winbar' is the right tool for it: it is per window, so each split answers for
--- itself; it is filled exactly like `:h 'statusline'`, so it accepts a Lua
--- function; and it takes a line from the window frame instead of mixing into the
--- text, as virtual text would.
---
--- Two things decide whether it stays simple:
--- - Where the container comes from. Tree-sitter answers synchronously from the
---   node under the cursor (`:h vim.treesitter.get_node()`), while LSP document
---   symbols are asynchronous and need a cache to be usable here.
--- - How the interesting nodes are named per language. Instead of a table of node
---   types - which would be language specific logic in a shared file - reuse the
---   `@function.outer` and `@class.outer` captures that 'nvim-treesitter-textobjects'
---   already maintains for every language ('plugin/40_plugins.lua' installs it).
---
--- It is evaluated on every redraw, so it has to be cheap: cache per buffer and
--- cursor line, and leave 'winbar' empty where there is no container to show.
+-- 'winbar' showing the container breadcrumb under the cursor is set up below,
+-- in the Autocommands section: it needs `CursorMoved` to refresh, not a
+-- fixed value, so it does not belong among the plain `vim.o.xxx` lines here.
 
 -- Folds (see `:h fold-commands`, `:h zM`, `:h zR`, `:h zA`, `:h zj`)
 vim.o.foldlevel   = 10       -- Fold nothing by default; set to 0 or 1 to fold
@@ -76,7 +85,6 @@ vim.o.foldnestmax = 10       -- Limit number of fold levels
 vim.o.foldtext    = ''       -- Show text under fold with its highlighting
 
 -- Editing ====================================================================
-vim.o.autoindent    = true    -- Use auto indent
 vim.o.expandtab     = true    -- Convert tabs to spaces
 vim.o.formatoptions = 'rqnl1j'-- Improve comment editing
 vim.o.shiftwidth    = 2       -- Use this number of spaces for indentation
@@ -99,8 +107,98 @@ vim.o.completetimeout = 100                             -- Limit sources delay
 
 -- Don't auto-wrap comments and don't insert comment leader after hitting 'o'.
 -- Do on `FileType` to always override these changes from filetype plugins.
-local f = function() vim.cmd('setlocal formatoptions-=c formatoptions-=o') end
-Config.new_autocmd('FileType', nil, f, "Proper 'formatoptions'")
+Config.new_autocmd('FileType', nil, function()
+  vim.cmd('setlocal formatoptions-=c formatoptions-=o')
+end, "Proper 'formatoptions'")
+
+-- Container breadcrumb in 'winbar' (`:h 'winbar'`), e.g. `Outer > method`,
+-- naming the tree-sitter containers (function/method/class/struct/module
+-- definitions) enclosing the cursor. Per-language node type names, verified
+-- against a real buffer of each installed language with
+-- `:lua print(vim.treesitter.get_parser(0,ft):parse()[1]:root():sexpr())`.
+local winbar_containers = {
+  lua = { function_declaration = true },
+  rust = { function_item = true, impl_item = true, mod_item = true, struct_item = true },
+  java = { method_declaration = true, class_declaration = true, interface_declaration = true },
+  gdscript = { function_definition = true, class_definition = true },
+  typescript = { function_declaration = true, method_definition = true, class_declaration = true },
+  javascript = { function_declaration = true, method_definition = true, class_declaration = true },
+  c = { function_definition = true, struct_specifier = true },
+  cpp = { function_definition = true, class_specifier = true, struct_specifier = true, namespace_definition = true },
+}
+
+-- Most grammars name a container's identifier through a `name` field
+-- (`function_declaration name: (identifier)`); Rust's `impl` block uses
+-- `type` instead (`impl_item type: (type_identifier)`); C/C++'s
+-- `function_definition` has neither - the name sits at the bottom of a
+-- `declarator` chain (`function_declarator declarator: (identifier)`),
+-- unwrapped by walking `field('declarator')` until it stops nesting.
+local function container_label(node, bufnr)
+  local target = node:field('name')[1] or node:field('type')[1]
+  if target == nil then
+    local d = node:field('declarator')[1]
+    while d ~= nil and d:field('declarator')[1] ~= nil do
+      d = d:field('declarator')[1]
+    end
+    target = d
+  end
+  if target == nil then return nil end
+  return vim.treesitter.get_node_text(target, bufnr)
+end
+
+local function compute_winbar(bufnr, containers)
+  -- `get_node()` answers nil against a buffer whose parser was never asked
+  -- to parse yet - normally not an issue, since nvim-treesitter's own
+  -- `FileType` highlighting attach (`plugin/40_plugins.lua`) parses first,
+  -- but the very first `CursorMoved` can race it. Forcing the parse here is
+  -- cheap: `TSParser:parse()` is itself cached and reparses only the edited
+  -- range (`:h vim.treesitter.LanguageTree:parse()`).
+  local lang = vim.treesitter.language.get_lang(vim.bo[bufnr].filetype)
+  local ok_parser, parser = pcall(vim.treesitter.get_parser, bufnr, lang)
+  if not ok_parser then return '' end
+  parser:parse()
+  local ok, node = pcall(vim.treesitter.get_node, { bufnr = bufnr })
+  if not ok or node == nil then return '' end
+  local parts = {}
+  while node ~= nil do
+    if containers[node:type()] then
+      local label = container_label(node, bufnr)
+      if label ~= nil then table.insert(parts, 1, label) end
+    end
+    node = node:parent()
+  end
+  return table.concat(parts, ' > ')
+end
+
+-- The "per-redraw caching budget" this used to be a TODO about: `'winbar'`'s
+-- `%{...}` expression is evaluated on every screen redraw, far too often to
+-- walk the syntax tree in. Instead `CursorMoved`/`CursorMovedI` refresh a
+-- window-local cache, and only when the cursor's LINE actually changed;
+-- `'winbar'` itself only ever reads the cache, never recomputes.
+local winbar_cache = {} ---@type table<integer, { line: integer, text: string }>
+Config.new_autocmd({ 'CursorMoved', 'CursorMovedI' }, nil, function(args)
+  local containers = winbar_containers[vim.bo[args.buf].filetype]
+  if containers == nil then return end
+  local line = vim.api.nvim_win_get_cursor(0)[1]
+  local cache = winbar_cache[args.buf]
+  if cache ~= nil and cache.line == line then return end
+  winbar_cache[args.buf] = { line = line, text = compute_winbar(args.buf, containers) }
+end, 'Cache the winbar breadcrumb on cursor line change')
+
+Config.winbar = function()
+  local cache = winbar_cache[vim.api.nvim_get_current_buf()]
+  return cache ~= nil and cache.text or ''
+end
+
+-- Only for normal file buffers - not the quickfix window, a `nofile` scratch
+-- buffer, a terminal, … `vim.wo[0][0]` (not plain `vim.wo`) keeps the write
+-- window-local only (`:h vim.wo`), the same reason 'after/ftplugin/java.lua'
+-- uses it for `foldmethod`. `%{%...%}` is `'winbar'`'s "stateful" form
+-- (`:h 'statusline'`), needed to call into Lua through `v:lua`.
+Config.new_autocmd({ 'BufWinEnter', 'FileType' }, nil, function(args)
+  if vim.bo[args.buf].buftype ~= '' then return end
+  vim.wo[0][0].winbar = '%{%v:lua.Config.winbar()%}'
+end, "Show the container breadcrumb in 'winbar'")
 
 -- `:make`/`:lmake` run synchronously and leave the result to be read off the
 -- (location) list - useful once inside it, silent the moment the command
@@ -109,30 +207,27 @@ Config.new_autocmd('FileType', nil, f, "Proper 'formatoptions'")
 -- populates the same two lists the same way, so one autocommand answers for
 -- all of them instead of each ftplugin reporting for itself.
 --
--- NOTE: `v:shell_error` is NOT the ground truth on this machine, the
--- opposite of what `:h v:shell_error` suggests. `'shellpipe'` here is
--- `2>&1| tee %s` (`cmd.exe`, so the compiler's exit code is piped into
--- `tee`, and cmd's pipeline exit code is `tee`'s - always 0. Measured:
--- `:make` on a command that exits 1 still leaves `v:shell_error` at 0.
--- Counting only the `E`-type entries `errorformat` recognized is the
--- reliable half of the signal, and the one already proven on Maven (the
--- case that asked for this). It still reads a build as green when the
--- `errorformat` matches nothing at all on a real failure - measured on
--- Gradle, 'after/ftplugin/java.lua''s own TODO - the same gap `v:shell_error`
--- would have closed anywhere else.
+-- NOTE: `v:shell_error` became trustworthy again once the shell switched to
+-- `pwsh` above (`2>&1 | Tee-Object %s; exit $LastExitCode` correctly carries
+-- the compiled program's real exit code, unlike `cmd.exe`'s `2>&1| tee %s`,
+-- whose pipeline exit code was always `tee`'s - always 0). Measured:
+-- `:make` on `pwsh -Command exit 1` now reports "shell returned 1", where it
+-- used to leave `v:shell_error` at 0. Still not relied on here, on purpose:
+-- it answers "did the shell's own pipeline fail", not "did the build fail" -
+-- a `:compiler` plugin whose `errorformat` matches nothing on a real failure
+-- (measured on Gradle, 'after/ftplugin/java.lua''s own TODO) exits non-zero
+-- from the correct step and would still need this counting to notice an
+-- empty quickfix list is not the same thing as a clean build. Counting only
+-- the `E`-type entries `errorformat` recognized stays the one signal that
+-- covers both failure shapes, and the one already proven on Maven.
 Config.new_autocmd('QuickFixCmdPost', { 'make', 'lmake' }, function(args)
   local list = args.match == 'lmake' and vim.fn.getloclist(0) or vim.fn.getqflist()
-  local errors, warnings = 0, 0
-  for _, item in ipairs(list) do
-    if item.valid == 1 then
-      local t = item.type:upper()
-      if t == 'E' then
-        errors = errors + 1
-      elseif t == 'W' then
-        warnings = warnings + 1
-      end
-    end
+  local typed = function(t)
+    return #vim.tbl_filter(function(item)
+      return item.valid == 1 and item.type:upper() == t
+    end, list)
   end
+  local errors, warnings = typed('E'), typed('W')
   if errors > 0 then
     vim.notify(
       ('Build failed: %d error%s'):format(errors, errors == 1 and '' or 's'),
@@ -146,6 +241,74 @@ Config.new_autocmd('QuickFixCmdPost', { 'make', 'lmake' }, function(args)
     vim.notify(message, vim.log.levels.INFO)
   end
 end, 'Report the outcome of :make/:lmake')
+
+-- `:Make`/`:LMake`: the same `'makeprg'`/`'errorformat'` contract as
+-- `:make`/`:lmake`, run asynchronously through `vim.system()` instead of
+-- blocking Neovim for the length of the build. Reuses the `QuickFixCmdPost`
+-- autocommand above for the success/failure report instead of repeating it -
+-- `doautocmd` fires it exactly as `:make` itself would.
+--
+-- `vim.fn.expandcmd()` expands the same `%`/`#`/environment-variable forms
+-- `:make` expands in `'makeprg'` (`:h 'makeprg'`, `:h expandcmd()`); `$*` is
+-- NOT one of them, so it is substituted by hand, the same convention
+-- `'makeprg'` itself documents: replaced if present, appended otherwise.
+local function build_make_cmd(args)
+  local prg = vim.fn.expandcmd(vim.o.makeprg)
+  local extra = table.concat(args, ' ')
+  if prg:find('$*', 1, true) then
+    prg = prg:gsub('%$%*', (extra:gsub('%%', '%%%%')))
+  elseif extra ~= '' then
+    prg = prg .. ' ' .. extra
+  end
+  return prg
+end
+
+-- Run the built command through the CONFIGURED shell (`'shell'`/
+-- `'shellcmdflag'`, `pwsh` above) exactly like `:make` does, rather than
+-- assuming a POSIX-style split - `vim.system()` takes an argv list and never
+-- goes through `:h 'shell'` itself.
+local function shell_argv(cmd)
+  local argv = { vim.o.shell }
+  vim.list_extend(argv, vim.split(vim.o.shellcmdflag, ' ', { plain = true }))
+  table.insert(argv, cmd)
+  return argv
+end
+
+-- One run at a time: a second `:Make` while one is in flight WARNS and
+-- refuses rather than cancelling and restarting, on purpose - a build that
+-- gets killed halfway writes a partial object file just as often as it
+-- writes nothing, and "wait for the first one" is the simpler contract to
+-- reason about from a mapping.
+local make_job = nil
+local function run_make(args, is_loc)
+  if make_job ~= nil then
+    return vim.notify('A `:Make`/`:LMake` run is already in progress', vim.log.levels.WARN)
+  end
+  local cmd = build_make_cmd(args)
+  vim.notify('Build started: ' .. cmd, vim.log.levels.INFO)
+  make_job = vim.system(shell_argv(cmd), { cwd = vim.fn.getcwd(), text = true }, function(out)
+    make_job = nil
+    vim.schedule(function()
+      local lines =
+        vim.split((out.stdout or '') .. (out.stderr or ''), '\n', { trimempty = true })
+      local opts = { lines = lines, efm = vim.o.errorformat, title = 'Make' }
+      if is_loc then
+        vim.fn.setloclist(0, {}, ' ', opts)
+      else
+        vim.fn.setqflist({}, ' ', opts)
+      end
+      vim.cmd('doautocmd <nomodeline> QuickFixCmdPost ' .. (is_loc and 'lmake' or 'make'))
+    end)
+  end)
+end
+
+vim.api.nvim_create_user_command('Make', function(cmdopts)
+  run_make(cmdopts.fargs, false)
+end, { nargs = '*', desc = 'Async :make - same makeprg/errorformat, non-blocking' })
+
+vim.api.nvim_create_user_command('LMake', function(cmdopts)
+  run_make(cmdopts.fargs, true)
+end, { nargs = '*', desc = 'Async :lmake - same makeprg/errorformat, non-blocking' })
 
 -- There are other autocommands created by 'mini.basics'. See 'plugin/30_mini.lua'.
 
@@ -162,14 +325,10 @@ local diagnostic_opts = {
   underline = { severity = { min = 'HINT', max = 'ERROR' } },
 
   -- Show more details immediately for errors on the current line
-  virtual_lines = false,
   virtual_text = {
     current_line = true,
     severity = { min = 'ERROR', max = 'ERROR' },
   },
-
-  -- Don't update diagnostics when typing
-  update_in_insert = false,
 }
 
 -- Use `later()` to avoid sourcing `vim.diagnostic` on startup

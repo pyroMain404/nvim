@@ -76,7 +76,6 @@ after/ftplugin/          Per filetype behavior
 after/lsp/               Language server configurations
 after/queries/           Tree-sitter query overrides
 after/snippets/          Snippet files that override plugin provided ones
-colors/purplehue.lua     Color scheme — generated, never edited by hand
 .omp/                    Skills and project-environment reference docs
 docs/                    Frozen pre-implementation records
 ```
@@ -87,10 +86,9 @@ docs/                    Frozen pre-implementation records
 
 ### Generated files
 
-Two files in the config are output, not source. They are read to know the current state and regenerated to change it — never edited by hand:
+One file in the config is output, not source. It is read to know the current state and regenerated to change it — never edited by hand:
 
 - `nvim-pack-lock.json` is maintained by `vim.pack`. It changes as a *result* of installing, updating or removing plugins (`:h vim.pack-lockfile`).
-- `colors/purplehue.lua` was written by 'mini.colors' (see its first line) from a palette produced by `MiniHues.make_palette()`. To change a color, regenerate the scheme from the palette — do not patch the 800 lines of `nvim_set_hl()` calls it contains.
 
 ## Where a change goes
 
@@ -302,7 +300,7 @@ This config targets the Neovim installed on this machine (currently 0.12), which
 
 - Becoming a distribution: no auto-update mechanism, no plugin abstraction layer, no config of the config.
 - A `lua/` module tree used to modularize startup behaviour. `lua/config/` is allowed only for code that is required by name at a later moment; see the load-order rule above.
-- Editing generated files by hand: `nvim-pack-lock.json`, `colors/purplehue.lua`.
+- Editing generated files by hand: `nvim-pack-lock.json`.
 - Keeping `configs/nvim-0.10`, `nvim-0.11` and `nvim-0.13` in sync with the config actually in use.
 - Silencing warnings to make output look clean.
 - **Filetype or language specific logic in the shared `plugin/` files, except one case.** Concretely, none of these belong in `plugin/`:

@@ -122,19 +122,9 @@ end, { detach = true })
 -- `Debug with External Editor` enabled in the Script view it is Godot that
 -- brings the external editor onto that line.
 
--- TODO: read a '.tscn' as the tree it is, not as the INI it is written as. The
--- node hierarchy with the type of each node is the structure one reasons about
--- in Godot, and a section list is not the same thing. Deferred because half of
--- what it would be used for - *which* scene do I open - is already a picker,
--- and the other half costs code to maintain.
--- First step: a scratch buffer (`:h scratch-buffer`: `buftype=nofile`,
--- `bufhidden=wipe`, not modifiable) built from the parse of the current
--- '.tscn' - the `godot_resource` parser is installed, so the sections can be
--- read from the tree rather than with a regex - one line per node, indented by
--- the depth of its `parent=` path, with the type after the name, and `<CR>`
--- jumping to the section of that node in the file. It belongs to a
--- 'after/ftplugin/gdresource.lua', not here: it is a property of the resource
--- file, not of GDScript.
+-- Reading a '.tscn' as the tree it is, not as the INI it is written as, is a
+-- property of the resource file and not of GDScript - see
+-- 'after/ftplugin/gdresource.lua' for the `:GodotTree` command that does it.
 
 -- The documentation of the word under the cursor, in the browser. The LSP hover
 -- gives it too, and better - but only with Godot open on the project, which is

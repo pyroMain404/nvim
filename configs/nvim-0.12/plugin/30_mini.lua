@@ -28,9 +28,9 @@ local now, now_if_args, later = Config.now, Config.now_if_args, Config.later
 
 -- Step one ===================================================================
 -- 'miniwinter' is a documented alternative color scheme, currently disabled:
--- this config loads its own 'purplehue' in 'plugin/40_plugins.lua'. Uncomment
--- the line below to switch - 'miniwinter' comes with 'mini.nvim' and uses
--- 'mini.hues'. Use only one of the two.
+-- this config loads 'ayu' in 'plugin/40_plugins.lua'. Uncomment the line below
+-- to switch - 'miniwinter' comes with 'mini.nvim' and uses 'mini.hues'. Use
+-- only one of the two.
 --
 -- See also:
 -- - `:h mini.nvim-color-schemes` - list of other color schemes
@@ -73,16 +73,17 @@ end)
 -- 'mini.pick', 'mini.files', 'mini.statusline', and others.
 now(function()
   -- Set up to not prefer extension-based icon for some extensions
-  local ext3_blocklist = { scm = true, txt = true, yml = true }
-  local ext4_blocklist = { json = true, yaml = true }
+  local blocklist = { scm = true, txt = true, yml = true, json = true, yaml = true }
   require('mini.icons').setup({
     use_file_extension = function(ext, _)
-      return not (ext3_blocklist[ext:sub(-3)] or ext4_blocklist[ext:sub(-4)])
+      return not blocklist[ext:sub(-3)] and not blocklist[ext:sub(-4)]
     end,
   })
 
   -- Mock 'nvim-tree/nvim-web-devicons' for plugins without 'mini.icons' support.
-  -- Not needed for 'mini.nvim' or MiniMax, but might be useful for others.
+  -- NOTE: no plugin installed here needs this mock today; it is kept as
+  -- a precaution so that a future devicons-dependent plugin does not silently
+  -- lose its icons. Do not remove this line.
   later(MiniIcons.mock_nvim_web_devicons)
 
   -- Add LSP kind icons. Useful for 'mini.completion'.
@@ -546,27 +547,24 @@ later(function() require('mini.git').setup() end)
 -- Highlight patterns in text. Like `TODO`/`NOTE` or color hex codes.
 -- Example usage:
 -- - `:Pick hipatterns` - pick among all highlighted patterns
+-- - `<Leader>ft` - `:HipatternsLoc`, the markers of the current buffer, as a
+--   location list (persists, navigated with `]q`/`[q`, unlike the picker)
+-- - `<Leader>fT` - `:HipatternsGrep`, the same markers project-wide, as a
+--   quickfix list, through `:grep`
 --
 -- See also:
 -- - `:h MiniHipatterns-examples` - examples of common setups
---
--- TODO: collect these markers into a quickfix or location list, not only into
--- the picker. `:Pick hipatterns` is already there and is the right tool for
--- "jump to one of them now"; a list is the right tool for working through them,
--- because it persists, survives editing, and is navigated with `]q` / `[q`
--- without reopening anything.
---
--- Two sources, and they answer different questions:
--- - `:h MiniHipatterns.get_matches()` returns the matches of a single buffer,
---   already parsed, so a location list of the current file costs a few lines
---   (`:h setloclist()`). Per window, which is what a per file list should be.
--- - The whole project needs a search instead: `:h :grep` fills the quickfix list,
---   and the pattern is just the alternation of the words highlighted below.
---   Nothing to set up for it: since 0.11 Neovim defaults `:h 'grepprg'` to
---   `rg --vimgrep -uu` when ripgrep is on the PATH (verified with `-u NONE`).
---
--- Keep the word list in one place when doing it: the highlighters here and the
--- search pattern must not drift apart.
+
+-- The one place the four markers and their case variants are written down -
+-- the highlighters below and the two commands after `hipatterns.setup()`
+-- both build from this table, so they cannot drift apart the way a second,
+-- hand-copied word list would.
+local hipatterns_words = {
+  fixme = { 'FIXME', 'Fixme', 'fixme' },
+  hack = { 'HACK', 'Hack', 'hack' },
+  todo = { 'TODO', 'Todo', 'todo' },
+  note = { 'NOTE', 'Note', 'note' },
+}
 later(function()
   local hipatterns = require('mini.hipatterns')
   local hi_words = MiniExtra.gen_highlighter.words
@@ -574,14 +572,104 @@ later(function()
     highlighters = {
       -- Highlight a fixed set of common words. Will be highlighted in any place,
       -- not like "only in comments".
-      fixme = hi_words({ 'FIXME', 'Fixme', 'fixme' }, 'MiniHipatternsFixme'),
-      hack = hi_words({ 'HACK', 'Hack', 'hack' }, 'MiniHipatternsHack'),
-      todo = hi_words({ 'TODO', 'Todo', 'todo' }, 'MiniHipatternsTodo'),
-      note = hi_words({ 'NOTE', 'Note', 'note' }, 'MiniHipatternsNote'),
+      fixme = hi_words(hipatterns_words.fixme, 'MiniHipatternsFixme'),
+      hack = hi_words(hipatterns_words.hack, 'MiniHipatternsHack'),
+      todo = hi_words(hipatterns_words.todo, 'MiniHipatternsTodo'),
+      note = hi_words(hipatterns_words.note, 'MiniHipatternsNote'),
 
       -- Highlight hex color string (#aabbcc) with that color as a background
       hex_color = hipatterns.gen_highlighter.hex_color(),
     },
+  })
+
+  -- Current buffer, as a per-window location list. NOT built from
+  -- `:h MiniHipatterns.get_matches()`, despite it looking like the free
+  -- answer: that reads the module's own extmarks, which are set by a
+  -- debounced background process (`:h uv.new_timer()`, chained through
+  -- several `vim.schedule()` hops) - measured repeatedly stale or empty for
+  -- a buffer opened and acted on in the same breath, because the timer had
+  -- not fired yet. A synchronous scan of the SAME word table the
+  -- highlighters above use answers immediately and needs nothing from
+  -- `mini.hipatterns`'s internal state. The picker (`:Pick hipatterns`)
+  -- answers "jump to one now"; this answers "work through all of them",
+  -- because a location list persists and is navigated with `]q`/`[q`
+  -- without reopening anything.
+  vim.api.nvim_create_user_command('HipatternsLoc', function()
+    local bufnr = vim.api.nvim_get_current_buf()
+    local words = {}
+    for _, variants in pairs(hipatterns_words) do
+      vim.list_extend(words, variants)
+    end
+    local items = {}
+    for lnum, line in ipairs(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)) do
+      for _, word in ipairs(words) do
+        local col = line:find(word, 1, true)
+        if col ~= nil then
+          table.insert(
+            items,
+            { bufnr = bufnr, lnum = lnum, col = col, text = vim.trim(line) }
+          )
+          break
+        end
+      end
+    end
+    if #items == 0 then
+      return vim.notify(
+        'No FIXME/HACK/TODO/NOTE markers in this buffer',
+        vim.log.levels.INFO
+      )
+    end
+    vim.fn.setloclist(0, {}, ' ', { items = items, title = 'Hipatterns (buffer)' })
+    vim.cmd('lopen')
+  end, {
+    desc = 'FIXME/HACK/TODO/NOTE markers of the current buffer, in the location list',
+  })
+
+  -- The whole project, as a quickfix list. Calls `rg` directly through
+  -- `vim.system()` (async, same shape as `:Make` in 'plugin/10_options.lua')
+  -- rather than going through `:h :grep`/`'shellpipe'`: MEASURED that the
+  -- pattern's own `\b(...)` alternation, round-tripped through the
+  -- configured shell's own quoting (`pwsh`'s `-Command` string), came back
+  -- as `Can't open errorfile` - `rg`'s own argv, called directly, needs no
+  -- shell at all and sidesteps that entirely. `'grepformat'` (default
+  -- `%f:%l:%c:%m`, matching `rg --vimgrep`'s own output) parses it into the
+  -- quickfix list the same way `:grep` would have.
+  vim.api.nvim_create_user_command('HipatternsGrep', function()
+    if vim.fn.executable('rg') == 0 then
+      return vim.notify(
+        '`rg` not found on PATH: required for :HipatternsGrep',
+        vim.log.levels.ERROR
+      )
+    end
+    local words = {}
+    for _, variants in pairs(hipatterns_words) do
+      vim.list_extend(words, variants)
+    end
+    local pattern = '\\b(' .. table.concat(words, '|') .. ')\\b'
+    vim.system(
+      { 'rg', '--vimgrep', '-uu', pattern },
+      { text = true, cwd = vim.fn.getcwd() },
+      function(out)
+        vim.schedule(function()
+          local lines = vim.split(out.stdout or '', '\n', { trimempty = true })
+          vim.fn.setqflist(
+            {},
+            ' ',
+            { lines = lines, efm = vim.o.grepformat, title = 'Hipatterns (project)' }
+          )
+          if #vim.fn.getqflist() > 0 then
+            vim.cmd('copen')
+          else
+            vim.notify(
+              'No FIXME/HACK/TODO/NOTE markers found in the project',
+              vim.log.levels.INFO
+            )
+          end
+        end)
+      end
+    )
+  end, {
+    desc = 'FIXME/HACK/TODO/NOTE markers of the whole project, in the quickfix list',
   })
 end)
 

@@ -80,16 +80,27 @@ local has_formatter = function(conform)
   return false
 end
 
+-- All three entry points below refuse the same way when 'conform.nvim' is not
+-- loaded yet - which happens when it is dropped from the `vim.pack.add()` list
+-- of 'plugin/40_plugins.lua', as it is not required at startup. The message is
+-- part of the API to the user, so it is written once. Returning the module, or
+-- nil, keeps the refusal out of `error()`: an unloaded plugin degrades the
+-- feature, it does not abort the caller (`AGENTS.md`, "Reporting problems").
+local conform_or_notify = function()
+  local ok, conform = pcall(require, 'conform')
+  if ok then return conform end
+  vim.notify("'conform.nvim' is not loaded yet", vim.log.levels.ERROR)
+  return nil
+end
+
 --- Format the lines that differ from the diff reference.
 ---
 --- Order matters: hunks are formatted from the bottom of the buffer upwards,
 --- because formatting one changes the line numbers of everything below it and
 --- would leave the ranges computed before it pointing at the wrong lines.
 Config.format.changed = function()
-  local ok, conform = pcall(require, 'conform')
-  if not ok then
-    return vim.notify("'conform.nvim' is not loaded yet", vim.log.levels.ERROR)
-  end
+  local conform = conform_or_notify()
+  if not conform then return end
   if not has_formatter(conform) then return end
 
   -- Without a reference text nothing here is "unchanged", so the whole buffer
@@ -147,10 +158,8 @@ end
 --- Format the whole buffer, for the rare time that is the intent: a file being
 --- adopted into the config, or one whose reference is not worth trusting.
 Config.format.buffer = function()
-  local ok, conform = pcall(require, 'conform')
-  if not ok then
-    return vim.notify("'conform.nvim' is not loaded yet", vim.log.levels.ERROR)
-  end
+  local conform = conform_or_notify()
+  if not conform then return end
   conform.format()
 end
 
@@ -172,10 +181,8 @@ end
 -- the line span to `format_range()` - already used by `changed()`, and already
 -- correct about the end column (`#last`, not `#last - 1`).
 Config.format.selection = function()
-  local ok, conform = pcall(require, 'conform')
-  if not ok then
-    return vim.notify("'conform.nvim' is not loaded yet", vim.log.levels.ERROR)
-  end
+  local conform = conform_or_notify()
+  if not conform then return end
   if not has_formatter(conform) then return end
   local from, to = vim.fn.getpos('v')[2], vim.fn.getpos('.')[2]
   if from > to then

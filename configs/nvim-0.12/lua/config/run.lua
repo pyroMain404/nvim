@@ -112,13 +112,13 @@ M.command = function(resolve, opts)
     cwd = cwd or vim.fs.dirname(vim.api.nvim_buf_get_name(0))
 
     if detach then
-      local limit = 2000
       local tail = { stdout = '', stderr = '' }
       local function keep(stream)
         return function(_, data)
           if data == nil then return end
-          local text = tail[stream] .. data
-          tail[stream] = #text > limit and text:sub(-limit) or text
+          -- No length test needed: `sub(-2000)` of a shorter string is the
+          -- string itself
+          tail[stream] = (tail[stream] .. data):sub(-2000)
         end
       end
       local started, err = pcall(vim.system, cmd, {
@@ -246,14 +246,13 @@ M.make_root = function(markers)
   })
 end
 
--- Shared Maven/Ant run resolution. `after/ftplugin/java.lua` uses this when
--- walking up from an arbitrary '.java' buffer to the project's `pom.xml`/
--- `build.xml`; `after/ftplugin/xml.lua` uses the same table when the buffer
--- opened IS that manifest - the case that used to have no `:Run` at all,
--- because `:h ft-xml-plugin` never loads `java.lua`. Only the *run* half is
--- shared: which compiler plugin `:make` selects, and the rest of Java's
--- buffer-local settings, stay in `java.lua` and are never pulled into a
--- plain XML buffer.
+-- Shared Maven run resolution. `after/ftplugin/java.lua` uses this when walking
+-- up from an arbitrary '.java' buffer to the project's `pom.xml`;
+-- `after/ftplugin/xml.lua` uses the same table when the buffer opened IS that
+-- manifest - the case that used to have no `:Run` at all, because
+-- `:h ft-xml-plugin` never loads `java.lua`. Only the *run* half is shared:
+-- which compiler plugin `:make` selects, and the rest of Java's buffer-local
+-- settings, stay in `java.lua` and are never pulled into a plain XML buffer.
 --
 -- `goal(args, default)` turns the arguments `:Run` was called with into the
 -- goal/task handed to the build tool, or the project's own default when
@@ -278,12 +277,6 @@ M.java_builds = {
       local task = boot and 'spring-boot:run' or 'exec:java'
       return vim.list_extend({ 'mvn' }, goal(args, task))
     end,
-  },
-  ['build.xml'] = {
-    -- NOTE: `run` is a convention among Ant builds, not a target Ant
-    -- defines, so this one is a guess in a way the Maven goal above is not.
-    -- Unproven: there is no Ant project on this machine to check it against.
-    run = function(args, _) return vim.list_extend({ 'ant' }, goal(args, 'run')) end,
   },
 }
 

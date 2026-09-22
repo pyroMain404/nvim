@@ -13,18 +13,14 @@
 
 local M = {}
 
--- Cache per tool for the Neovim session. `vim.lsp.enable()` resolves every
--- enabled server config once at startup, and two of them (`ts_ls` and `jdtls`)
--- both ask `mise`: this avoids paying the blocking `vim.system():wait()` cost
--- twice for the same tool.
-local cache = {}
-
 -- Return the installed versions of `tool` that `mise ls <tool> --json`
 -- reports, newest first, as `{ version, path }`. Returns `nil` when `mise` is
 -- missing, the query fails, or the output is not valid JSON.
+--
+-- NOTE: one process per call, with no cache. Each of its three callers asks
+-- about a different tool (`node`, `npm:typescript`, `java`) from a file read
+-- once per session, so a cache keyed by tool could never answer twice.
 function M.installed(tool)
-  if cache[tool] ~= nil then return cache[tool] end
-
   local ok, out = pcall(
     function() return vim.system({ 'mise', 'ls', tool, '--json' }):wait() end
   )
@@ -44,10 +40,7 @@ function M.installed(tool)
   end
 
   -- `mise` reports oldest first; reverse so the newest release is at index 1.
-  installed = vim.fn.reverse(installed)
-
-  cache[tool] = installed
-  return installed
+  return vim.fn.reverse(installed)
 end
 
 return M

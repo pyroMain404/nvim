@@ -279,10 +279,8 @@ local git_changed = function(diff_args, root, pathspec, label, on_open)
 
   local on_done = function(out)
     if out.code ~= 0 then
-      local msg = vim.trim(out.stderr)
-      if msg == '' then msg = 'exited with code ' .. out.code end
-      local run = vim.trim('git diff ' .. args)
-      return vim.notify(run .. ': ' .. msg, vim.log.levels.ERROR)
+      local cmd_desc = vim.trim('git diff ' .. args)
+      return vim.notify(Config.git.fail(out, cmd_desc), vim.log.levels.ERROR)
     end
     local dir, paths = vim.fs.normalize(root), {}
     for _, line in
@@ -292,7 +290,7 @@ local git_changed = function(diff_args, root, pathspec, label, on_open)
     end
     Config.review.open(paths, label, on_open)
   end
-  vim.system(cmd, { cwd = root, text = true }, vim.schedule_wrap(on_done))
+  Config.git.run(cmd, { cwd = root }, on_done)
 end
 
 -- Root of the repository to review, `nil` outside one - `Config.git`'s own
@@ -342,8 +340,7 @@ Config.review.git = function(rev, pathspec)
   end
   if rev ~= nil then return since(rev) end
 
-  local choose = function(item) since(item:match('^%S+')) end
-  MiniExtra.pickers.git_commits({}, { source = { choose = choose } })
+  Config.git.pick_commit(nil, since)
 end
 
 -- Review the files a commit changed by itself - what `<Leader>gp` shows as a
@@ -376,8 +373,7 @@ Config.review.commit_only = function(rev, pathspec)
   end
   if rev ~= nil then return only(rev) end
 
-  local choose = function(item) only(item:match('^%S+')) end
-  MiniExtra.pickers.git_commits({}, { source = { choose = choose } })
+  Config.git.pick_commit(nil, only)
 end
 
 -- The two sets which need no revision to name them, and the ones read most

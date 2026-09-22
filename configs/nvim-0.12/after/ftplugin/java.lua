@@ -45,7 +45,6 @@ vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 --   text. Discarding the framework frames with `%-G` does not fix it: `%-G`
 --   ends the pending multi-line message, and the useful frame is then dropped
 --   too. Verified against 'compiler/maven.vim' of Neovim 0.12.4;
--- - `ant` for the older builds driven by a 'build.xml';
 -- - `javac` (`:h compiler-javac`, `:h errorformat-javac`) for a file that
 --   belongs to no build at all, where `:make %` compiles just this one.
 --
@@ -84,23 +83,17 @@ vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- Every `run` takes the same two arguments, the build file included where it
 -- is not read: two of them with different arities is what turns a correct call
 -- into a `redundant-parameter` warning from the server.
--- The `run` half of each build tool - the Maven goal, the Ant task - is
--- shared with 'after/ftplugin/xml.lua' through 'lua/config/run.lua''s
--- `java_builds`: that file registers `:Run` on a `pom.xml`/`build.xml`
--- buffer opened directly, which this ftplugin never loads for (Neovim
--- detects those as `xml`, not `java`). Only `compiler`, which selects what
--- `:make` parses, stays here: it is Java-specific and has no meaning on a
--- plain XML buffer.
+-- The `run` half of that tool - the Maven goal - is shared with
+-- 'after/ftplugin/xml.lua' through 'lua/config/run.lua''s `java_builds`: that
+-- file registers `:Run` on a `pom.xml` buffer opened directly, which this
+-- ftplugin never loads for (Neovim detects it as `xml`, not `java`). Only
+-- `compiler`, which selects what `:make` parses, stays here: it is
+-- Java-specific and has no meaning on a plain XML buffer.
 local builds = {
   ['pom.xml'] = vim.tbl_extend(
     'force',
     { compiler = 'maven' },
     require('config.run').java_builds['pom.xml']
-  ),
-  ['build.xml'] = vim.tbl_extend(
-    'force',
-    { compiler = 'ant' },
-    require('config.run').java_builds['build.xml']
   ),
 }
 
@@ -114,11 +107,7 @@ local loose = {
   end,
 }
 
--- Explicit order, not `vim.tbl_keys(builds)`: `vim.fs.find()` tests names in
--- list order (`:h vim.fs.find()`), and a table's key order is unspecified, so
--- a checkout holding both a `pom.xml` and a leftover `build.xml` would pick
--- between them by hash order instead of by precedence.
-local found = vim.fs.find({ 'pom.xml', 'build.xml' }, {
+local found = vim.fs.find('pom.xml', {
   upward = true,
   path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
 })[1]
@@ -129,14 +118,13 @@ local root = found and vim.fs.dirname(found) or nil
 -- while sourcing, so it has no Lua API and `vim.cmd()` is the only way here.
 if build.compiler then vim.cmd('compiler ' .. build.compiler) end
 
--- `mvn`/`ant` print paths relative to the project, while Neovim resolves
+-- `mvn` prints paths relative to the project, while Neovim resolves
 -- quickfix `%f` entries against its own directory - kept at the repository
 -- root by 'setup_auto_root()' in 'plugin/30_mini.lua', not necessarily the
--- POM's or the build file's own directory in a multi-module checkout. Same
--- remedy the GDScript ftplugin needed first, shared through
--- 'lua/config/run.lua''s `make_root()`. A loose file (no build found) has
--- nothing to root against.
-if found ~= nil then require('config.run').make_root({ 'pom.xml', 'build.xml' }) end
+-- POM's own directory in a multi-module checkout. Same remedy the GDScript
+-- ftplugin needed first, shared through 'lua/config/run.lua''s `make_root()`.
+-- A loose file (no build found) has nothing to root against.
+if found ~= nil then require('config.run').make_root({ 'pom.xml' }) end
 
 -- Running the application is not what `:make` does, and the two are worth
 -- keeping apart. `:make` asks a question that ends - does it compile, do the

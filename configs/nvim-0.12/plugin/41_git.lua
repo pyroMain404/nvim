@@ -19,20 +19,23 @@
 -- integration apart from the rest of the config, both while reading it here and
 -- while typing `:lua Config.git.` in the command line:
 --
--- - `Config.git.root()` - root of the repository the current directory belongs
---   to, `nil` outside one.
 -- - `Config.git.require_root(buf_id)` - a root, preferring the buffer's own
 --   when it has one, with the "not inside a repository" warning included.
 -- - `Config.git.parent(rev)` / `Config.git.only(rev)` - the revision right
 --   before `rev`, or `rev` excluding its parents.
+-- - `Config.git.run(args, opts, on_done)` - Git command run asynchronously.
+-- - `Config.git.fail(out, cmd_desc)` - why a command which had to succeed did
+--   not, in the one message every failure is reported with.
+-- - `Config.git.pick_commit(path, apply)` - pick a commit from the Git log of
+--   `path` and hand its hash to `apply`.
 -- - `Config.git.diff_ref` - revision used as 'mini.diff' reference text in every
 --   buffer, `nil` for the Git index. Per buffer it is `vim.b.diff_ref`.
 -- - `Config.git.set_diff_ref(buf_id, rev)` - reference `rev` in every buffer, or
 --   in a single one.
 -- - `Config.git.toggle_diff_ref(buf_id, rev)` - reference a revision, or restore
 --   the Git index when one is already referenced.
--- - `Config.git.toggle_overlay(buf_id)` - turn the in-buffer overlay of the
---   reference text on and off, guarded against a buffer where it does not apply.
+-- - `Config.git.toggle_overlay()` - turn the in-buffer overlay of the reference
+--   text on and off, guarded against a buffer where it does not apply.
 -- - `Config.git.blame` - whether the line under the cursor is blamed.
 -- - `Config.git.toggle_blame()` - turn that annotation on and off.
 -- - `Config.git.log(buf_id)` - Git log of the repository or of one file.
@@ -64,7 +67,7 @@
 -- What is not here is the reading of the files a change touched, which is
 -- 'plugin/43_review.lua': opening files to read them is the same work whatever
 -- named them, so it takes Git as one source among others and asks this file
--- only for `Config.git.root()`.
+-- only for `Config.git.require_root()`.
 --
 -- The functions are defined as this file is sourced, and only the autocommands
 -- of the last section wait for `later()`: an API that appears once a deferred
@@ -84,17 +87,53 @@ Config.git = {}
 Config.git.parent = function(rev) return rev .. '~' end
 Config.git.only = function(rev) return rev .. '^!' end
 
+-- Command plumbing ===========================================================
+
+-- The three pieces every Git call of this file and of 'plugin/43_review.lua' is
+-- assembled from. They are not a feature of their own, and they are not
+-- private: writing them once is what keeps a command that cannot run reported
+-- the same way wherever it was started from, and a commit picked the same way
+-- whichever of the four pickers picked it.
+
+-- Run a Git command asynchronously (`:h vim.system()`) and hand its output back
+-- on the main loop. The `vim.schedule_wrap()` is not a nicety: without it the
+-- callback runs on the process watcher, where `nvim_open_win()` is refused -
+-- and opening a window is what the callbacks of `show_patch()` and
+-- `git_changed()` do. `text = true` is forced instead of repeated at every call
+-- site, as every command here reads its answer as a string. Example usage:
+-- - `:lua Config.git.run({ 'git', 'status' }, nil, vim.notify)`
+Config.git.run = function(args, opts, on_done)
+  local sys_opts = vim.tbl_extend('force', { text = true }, opts or {})
+  vim.system(args, sys_opts, vim.schedule_wrap(on_done))
+end
+
+-- Why a Git command which had to succeed did not: the reason Git wrote, or its
+-- exit code when it wrote none, under the command as it was run, so that
+-- a mapping running several commands says which of them spoke. Every failure
+-- message of the two files is this string, written once.
+Config.git.fail = function(out, cmd_desc)
+  local msg = vim.trim(out.stderr)
+  if msg == '' then msg = 'exited with code ' .. out.code end
+  return cmd_desc .. ': ' .. msg
+end
+
+-- Pick a commit from the Git log of `path` - `nil` for the whole repository -
+-- and hand its hash, not the line it was read from, to `apply`. What `apply`
+-- does with it is what tells the pickers apart: `set_diff_ref()` for the
+-- reference toggle, a patch or a review opener for the rest. Example usage:
+-- - `:lua Config.git.pick_commit(nil, vim.notify)`
+Config.git.pick_commit = function(path, apply)
+  local choose = function(item) apply(item:match('^%S+')) end
+  MiniExtra.pickers.git_commits({ path = path }, { source = { choose = choose } })
+end
+
 -- Repository =================================================================
 
 -- Root of the repository the current directory belongs to, `nil` outside one.
 -- Every part of this file needs it, as every path Git reports - in the output of
 -- a command and in the name of the buffers holding a file state at some commit
 -- - is relative to it, while Neovim runs below it (`:h vim.fs.root()`).
--- It is part of the API because 'plugin/43_review.lua' resolves the paths of
--- a review against it: where a repository begins is a fact about Git, and
--- answering it in two places is how the two answers start to differ.
 local repo_root = function() return vim.fs.root(vim.fn.getcwd(), '.git') end
-Config.git.root = repo_root
 
 -- `repo_root()`, and the one "Not inside a Git repository" warning written
 -- once instead of at every call site that needs a root before it can do
@@ -222,26 +261,18 @@ local diff_sources_at = function(rev)
     -- supply it. `MiniDiff.set_ref_text()` is what hands the content back on
     -- mini.diff's own schedule, matching the shape its own git source uses.
     local cmd = { 'git', 'show', rev .. ':./' .. loc.path }
-    vim.system(
-      cmd,
-      { cwd = loc.cwd, text = true },
-      vim.schedule_wrap(function(out)
-        if out.code ~= 0 then
-          -- A real Git failure, not "the path is absent from this revision"
-          -- - that question was already answered by `ls_tree` above. Report
-          -- it as what it is, naming the command as it was run.
-          local why = vim.trim(out.stderr) ~= '' and vim.trim(out.stderr)
-            or ('exited with code ' .. out.code)
-          vim.notify(
-            ('`git show %s:./%s` failed: %s'):format(rev, loc.path, why),
-            vim.log.levels.ERROR
-          )
-          return
-        end
-        -- Account for possible 'crlf' end of line in Git object
-        MiniDiff.set_ref_text(buf_id, (out.stdout:gsub('\r\n', '\n')))
-      end)
-    )
+    Config.git.run(cmd, { cwd = loc.cwd }, function(out)
+      if out.code ~= 0 then
+        -- A real Git failure, not "the path is absent from this revision"
+        -- - that question was already answered by `ls_tree` above. Report
+        -- it as what it is, naming the command as it was run.
+        local cmd_desc = ('`git show %s:./%s` failed'):format(rev, loc.path)
+        vim.notify(Config.git.fail(out, cmd_desc), vim.log.levels.ERROR)
+        return
+      end
+      -- Account for possible 'crlf' end of line in Git object
+      MiniDiff.set_ref_text(buf_id, (out.stdout:gsub('\r\n', '\n')))
+    end)
   end
   -- NOTE: `error()`, not `vim.notify()`, is correct HERE and only here: this
   -- is called by 'mini.diff' itself when `gh` stages a hunk, and it does so
@@ -321,7 +352,7 @@ end
 -- - `:lua Config.git.toggle_diff_ref()` - what `<Leader>gr` does
 -- - `:lua Config.git.toggle_diff_ref(0)` - what `<Leader>gR` does
 -- - `:lua Config.git.toggle_diff_ref(nil, 'HEAD~3')` - skip the picker
--- NOTE: `choose` runs while the picker is still the current buffer, which is
+-- NOTE: `apply` runs while the picker is still the current buffer, which is
 -- why `0` is resolved to a real identifier before starting it: by the time the
 -- commit is chosen, the current buffer is the picker.
 Config.git.toggle_diff_ref = function(buf_id, rev)
@@ -338,8 +369,8 @@ Config.git.toggle_diff_ref = function(buf_id, rev)
     path = buf_path(buf_id)
     if path == nil then return end
   end
-  local choose = function(item) Config.git.set_diff_ref(buf_id, item:match('^%S+')) end
-  MiniExtra.pickers.git_commits({ path = path }, { source = { choose = choose } })
+  local apply = function(commit) Config.git.set_diff_ref(buf_id, commit) end
+  Config.git.pick_commit(path, apply)
 end
 
 -- Turn the in-buffer overlay of the reference text on and off, guarded
@@ -348,8 +379,8 @@ end
 -- buffer, a `minigit://` patch buffer, or a file outside a repository, all
 -- reachable from `<Leader>go`. Example usage:
 -- - `:lua Config.git.toggle_overlay()` - what `<Leader>go` does
-Config.git.toggle_overlay = function(buf_id)
-  buf_id = buf_id == nil and vim.api.nvim_get_current_buf() or buf_id
+Config.git.toggle_overlay = function()
+  local buf_id = vim.api.nvim_get_current_buf()
   if MiniDiff.get_buf_data(buf_id) == nil then
     return vim.notify('mini.diff is not enabled here', vim.log.levels.WARN)
   end
@@ -627,7 +658,7 @@ Config.git.log = function(buf_id)
     end
     vim.cmd(git_log_cmd .. postfix)
   end
-  vim.system(probe, { cwd = root, text = true }, vim.schedule_wrap(on_done))
+  Config.git.run(probe, { cwd = root }, on_done)
 end
 
 -- Patches ====================================================================
@@ -673,14 +704,12 @@ local show_patch = function(buf_id, diff_args, label)
       return vim.notify('No change to show ' .. label, vim.log.levels.WARN)
     end
     if out.code ~= 1 then
-      local msg = vim.trim(out.stderr)
-      if msg == '' then msg = 'exited with code ' .. out.code end
-      local run = vim.trim('git diff ' .. args)
-      return vim.notify(run .. ': ' .. msg, vim.log.levels.ERROR)
+      local cmd_desc = vim.trim('git diff ' .. args)
+      return vim.notify(Config.git.fail(out, cmd_desc), vim.log.levels.ERROR)
     end
     vim.cmd(vim.trim('Git diff ' .. args) .. postfix)
   end
-  vim.system(cmd, { cwd = root, text = true }, vim.schedule_wrap(on_done))
+  Config.git.run(cmd, { cwd = root }, on_done)
 end
 
 -- The changes not staged yet, and the ones already staged: the working tree
@@ -712,9 +741,8 @@ local pick_commit_patch = function(buf_id, rev, patch_of)
   local show = function(commit) patch_of(buf_id, commit) end
   if rev ~= nil then return show(rev) end
 
-  local choose = function(item) show(item:match('^%S+')) end
   local path = buf_id ~= nil and vim.api.nvim_buf_get_name(buf_id) or nil
-  MiniExtra.pickers.git_commits({ path = path }, { source = { choose = choose } })
+  Config.git.pick_commit(path, show)
 end
 
 -- Patch of everything changed since a commit, of the repository or of one file.
@@ -807,7 +835,7 @@ local blame_show = function(buf_id, lnum)
     }
     pcall(vim.api.nvim_buf_set_extmark, buf_id, blame_ns, lnum - 1, 0, opts)
   end
-  vim.system(cmd, { cwd = root, text = true }, vim.schedule_wrap(on_done))
+  Config.git.run(cmd, { cwd = root }, on_done)
 end
 
 -- Blame a line only once the cursor rests on it, as holding `j` would
@@ -930,7 +958,7 @@ Config.git.update_config = function()
   -- matter the current directory
   local git = function(args, on_done)
     local cmd = vim.list_extend({ 'git', '-C', vim.fn.stdpath('config') }, args)
-    vim.system(cmd, { text = true }, vim.schedule_wrap(on_done))
+    Config.git.run(cmd, nil, on_done)
   end
   -- Which stream carries the reason depends on the subcommand ('merge' reports
   -- a conflict on stdout), so report whichever one spoke

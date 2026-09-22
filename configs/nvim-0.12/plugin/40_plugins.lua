@@ -12,6 +12,18 @@
 local add = vim.pack.add
 local now_if_args, later = Config.now_if_args, Config.later
 
+-- Whether a plugin that `add()` was just asked for is missing from
+-- 'runtimepath' anyway - an install that failed leaves it off disk, and
+-- `require()` would then abort the rest of this file. Report once and let the
+-- caller skip that plugin's setup. `module_name` is its `lua/<name>/` entry.
+local plugin_missing = function(name, module_name)
+  local module_path = 'lua/' .. module_name .. '/init.lua'
+  if #vim.api.nvim_get_runtime_file(module_path, false) > 0 then return false end
+  local message = name .. ' is unavailable; run :checkhealth config'
+  vim.notify_once(message, vim.log.levels.ERROR)
+  return true
+end
+
 -- Tree-sitter ================================================================
 
 -- Tree-sitter is a tool for fast incremental parsing. It converts text into
@@ -124,9 +136,7 @@ now_if_args(function()
   -- Enable tree-sitter after opening a file for a target language
   local filetypes = {}
   for _, lang in ipairs(languages) do
-    for _, ft in ipairs(vim.treesitter.language.get_filetypes(lang)) do
-      table.insert(filetypes, ft)
-    end
+    vim.list_extend(filetypes, vim.treesitter.language.get_filetypes(lang))
   end
   local ts_start = function(ev) vim.treesitter.start(ev.buf) end
   Config.new_autocmd('FileType', filetypes, ts_start, 'Start tree-sitter')
@@ -311,13 +321,7 @@ end)
 now_if_args(function()
   add({ 'https://github.com/MeanderingProgrammer/render-markdown.nvim' })
 
-  if #vim.api.nvim_get_runtime_file('lua/render-markdown/init.lua', false) == 0 then
-    vim.notify_once(
-      'render-markdown.nvim is unavailable; run :checkhealth config',
-      vim.log.levels.ERROR
-    )
-    return
-  end
+  if plugin_missing('render-markdown.nvim', 'render-markdown') then return end
 
   local get_buf_var = function(buf, name)
     local ok, value = pcall(vim.api.nvim_buf_get_var, buf, name)
@@ -370,14 +374,7 @@ end)
 
 -- Keep obsidian.nvim out of unrelated buffers. A vault is identified by the
 -- nearest ancestor directory containing the standard '.obsidian/' marker.
--- `MiniMisc.find_root()` (`:h MiniMisc.find_root()`) already walks a buffer's
--- path upward for a marker name and caches the result per directory; the only
--- thing it does not narrow on is the marker being a directory rather than a
--- file, which Obsidian never creates as a plain file.
-local find_obsidian_root = function(buf)
-  return require('mini.misc').find_root(buf, { '.obsidian' })
-end
-
+--
 -- Package setup is intentionally one-shot: resolve the root from the first
 -- matching buffer and keep that concrete workspace for obsidian.nvim. The
 -- event gate is registered through now_if_args so an initial note is covered
@@ -387,17 +384,15 @@ local obsidian_setup = false
 local setup_obsidian = function(ev)
   if obsidian_setup then return end
 
-  local root = find_obsidian_root(ev.buf)
+  -- `MiniMisc.find_root()` (`:h MiniMisc.find_root()`) walks a buffer's path
+  -- upward for a marker name and caches the result per directory; the only
+  -- thing it does not narrow on is the marker being a directory rather than a
+  -- file, which Obsidian never creates as a plain file.
+  local root = require('mini.misc').find_root(ev.buf, { '.obsidian' })
   if not root then return end
 
   add({ 'https://github.com/obsidian-nvim/obsidian.nvim' })
-  if #vim.api.nvim_get_runtime_file('lua/obsidian/init.lua', false) == 0 then
-    vim.notify_once(
-      'obsidian.nvim is unavailable; run :checkhealth config',
-      vim.log.levels.ERROR
-    )
-    return
-  end
+  if plugin_missing('obsidian.nvim', 'obsidian') then return end
   require('obsidian').setup({
     legacy_commands = false,
     picker = { name = 'mini.pick' },
@@ -532,37 +527,7 @@ later(function() add({ 'https://github.com/rafamadriz/friendly-snippets' }) end)
 --   require('mason').setup()
 -- end)
 
--- NOTE: Neovim ships a debugger of its own, and it is easy to miss because it is
--- not a plugin to install: 'Termdebug' is an optional pack in the runtime,
--- loaded with `:packadd termdebug` (`:h terminal-debug`).
---
--- It is a front end for `gdb`, not a DAP client, and that decides what it covers:
--- anything gdb can debug, which is far more than C - C++, Rust (also through
--- `rust-gdb`), Go, Fortran, Ada, Zig. It does not reach the languages whose
--- ecosystem uses its own adapter (Python, Node, Java, .NET); those still need
--- 'nvim-dap' plus that adapter.
---
--- What it gives: a gdb window, a separate window for the program's own input and
--- output, breakpoint signs in the source, and the cursor following execution.
--- Commands are `:Termdebug` / `:TermdebugCommand` to start, then `:Break`,
--- `:Step`, `:Over`, `:Finish`, `:Continue`, `:Evaluate`.
---
--- Worth trying before installing anything for a compiled language. Uncomment to
--- test (use `gcc`), and note that on Windows gdb always runs in prompt mode
--- (`:h termdebug-prompt`), so the gdb window starts in Insert mode:
--- later(function()
---   -- Start from an empty dictionary, as `:h g:termdebug_config` asks. Setting
---   -- `command` is needed when gdb is not on `PATH` under that name.
---   vim.g.termdebug_config = {
---     -- `wide` splits vertically when there is room, which reads better than
---     -- three stacked windows
---     wide = 1,
---     -- Termdebug maps `K` to `:Evaluate` during a session and restores it at
---     -- the end. Set to 0 to keep LSP hover on `K` throughout.
---     map_K = 1,
---   }
---   vim.cmd('packadd termdebug')
--- end)
+-- NOTE: see `:h terminal-debug` to enable Termdebug.
 
 -- Beautiful, usable, well maintained color schemes outside of 'mini.nvim' and
 -- have full support of its highlight groups. Use if you don't like the
@@ -571,14 +536,16 @@ later(function() add({ 'https://github.com/rafamadriz/friendly-snippets' }) end)
 Config.now(function()
   -- Install only those that you need
   add({
+    'https://github.com/Shatur/neovim-ayu',
     -- 'https://github.com/catppuccin/nvim'
     -- 'https://github.com/sainnhe/everforest',
-    -- 'https://github.com/Shatur/neovim-ayu',
   })
 
-  -- Enable only one. 'purplehue' is this config's own scheme, generated by
-  -- 'mini.colors' into 'colors/purplehue.lua'; the names above are alternatives
-  -- that must be installed first. Picking a scheme by a name Neovim happens to
-  -- ship - `catppuccin` is one - silently loads the runtime copy instead.
-  vim.cmd('color purplehue')
+  -- Enable only one. 'ayu-mirage' is the active scheme - one of the three
+  -- variants 'Shatur/neovim-ayu' registers under `colors/` (the others are
+  -- `ayu-dark`/`ayu-light`; `ayu` alone follows `:h 'background'` instead of
+  -- naming one). The names above are alternatives that must be installed
+  -- first: picking a scheme by a name Neovim happens to ship - `catppuccin`
+  -- is one - silently loads the runtime copy instead.
+  vim.cmd('color ayu-mirage')
 end)

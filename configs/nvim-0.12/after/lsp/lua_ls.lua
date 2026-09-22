@@ -36,13 +36,10 @@ local library = {
 vim.list_extend(library, vim.api.nvim_get_runtime_file('lua/mini', true))
 
 return {
-  on_attach = function(client, buf_id)
+  on_attach = function(client)
     -- Reduce very long list of triggers for better 'mini.completion' experience
     client.server_capabilities.completionProvider.triggerCharacters =
       { '.', ':', '#', '(' }
-
-    -- Use this function to define buffer-local mappings and behavior that depend
-    -- on attached client or only makes sense if there is language server attached.
   end,
   settings = {
     Lua = {
