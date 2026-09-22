@@ -550,9 +550,12 @@ Config.now(function()
   vim.cmd('color ayu-mirage')
 
   -- ayu-mirage's own 'WinBar'/'WinBarNC' background is nearly black
-  -- (`#07080d`), almost indistinguishable from an empty bar. Link to
-  -- 'Title' instead of hardcoding a color (`:h highlight-groups`), matching
-  -- what the breadcrumb actually is: the enclosing definitions' names.
-  vim.api.nvim_set_hl(0, 'WinBar', { link = 'Title' })
-  vim.api.nvim_set_hl(0, 'WinBarNC', { link = 'Title' })
+  -- (`#07080d`), almost indistinguishable from an empty bar. 'Title' (tried
+  -- first) gave a bright, saturated foreground with no background of its
+  -- own - too close in tone to the syntax highlighting of the code below it
+  -- and too strong for a line that is only ever chrome. 'StatusLineNC' gives
+  -- the breadcrumb its own muted background, distinct from 'Normal' without
+  -- competing with it (`:h highlight-groups`).
+  vim.api.nvim_set_hl(0, 'WinBar', { link = 'StatusLineNC' })
+  vim.api.nvim_set_hl(0, 'WinBarNC', { link = 'StatusLineNC' })
 end)
