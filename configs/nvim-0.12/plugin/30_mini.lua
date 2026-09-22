@@ -483,6 +483,18 @@ later(function() require('mini.cmdline').setup() end)
 -- still enabled as it provides more customization opportunities.
 later(function() require('mini.comment').setup() end)
 
+-- Let `gq` reflow a "second-level" comment (this file's own `----`, above
+-- a nested one-off note inside a `--` block) without merging it into the
+-- surrounding `--` paragraph. `:h MiniMisc.use_nested_comments()` derives the
+-- nested leader from `:h 'commentstring'`, so it has to run per buffer, after
+-- the filetype sets that option.
+Config.new_autocmd(
+  'BufEnter',
+  nil,
+  function(ev) require('mini.misc').use_nested_comments(ev.buf) end,
+  'Reflow nested comments with gq'
+)
+
 -- Autohighlight word under cursor with a customizable delay.
 -- Word boundaries are defined based on `:h 'iskeyword'` option.
 --
