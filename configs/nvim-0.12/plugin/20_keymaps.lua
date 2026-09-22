@@ -129,19 +129,16 @@ end
 -- being edited. Matching that convention here instead of dropping the read
 -- history into whatever window happened to be current.
 local show_notification_history = function()
-  vim.cmd('tabnew')
-  -- `:h :tabnew` opens the new tab on a fresh, empty, LISTED buffer of its
-  -- own; `show_history()` below then swaps the window to its own reused
-  -- buffer (`:h MiniNotify.show_history()`) and leaves that empty one
-  -- behind, orphaned but still listed - what showed up as a buffer that
-  -- "stays open, empty" after `q`.
-  local empty_buf = vim.api.nvim_get_current_buf()
+  -- `:h :tab` on `:split` reuses the CURRENT buffer in the new tab's window
+  -- instead of `:tabnew`'s fresh empty one, so `show_history()` below has
+  -- nothing orphaned to leave behind once it swaps the window to its own
+  -- reused buffer (`:h MiniNotify.show_history()`).
+  vim.cmd('tab split')
   MiniNotify.show_history()
-  -- The scratch buffer `show_history()` swapped in is itself created
-  -- LISTED (`nvim_create_buf(true, true)`); unlist it too, since it is
-  -- meant to be closed with `q`, not kept around like a regular file.
+  -- That buffer is itself created LISTED (`nvim_create_buf(true, true)`);
+  -- unlist it, since it is meant to be closed with `q`, not kept around
+  -- like a regular file.
   vim.bo.buflisted = false
-  vim.api.nvim_buf_delete(empty_buf, { force = true })
   vim.keymap.set('n', 'q', '<Cmd>silent! close<CR>', { buffer = 0, desc = 'Close notification history' })
 end
 
