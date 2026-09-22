@@ -121,12 +121,25 @@ local explore_locations = function()
   vim.cmd(vim.fn.getloclist(0, { winid = true }).winid ~= 0 and 'lclose' or 'lopen')
 end
 
+-- Notification history reuses one scratch buffer across calls
+-- (`:h MiniNotify.show_history()`) and, left as it is, replaces the CURRENT
+-- window's buffer in place - unlike every `<Leader>g` output buffer
+-- ('plugin/41_git.lua'), which opens in its own tabpage (`:h MiniGit-examples`,
+-- `command.split = 'auto'`) and closes with `q` without touching what was
+-- being edited. Matching that convention here instead of dropping the read
+-- history into whatever window happened to be current.
+local show_notification_history = function()
+  vim.cmd('tabnew')
+  MiniNotify.show_history()
+  vim.keymap.set('n', 'q', '<Cmd>silent! close<CR>', { buffer = 0, desc = 'Close notification history' })
+end
+
 nmap_leader('ed', '<Cmd>lua MiniFiles.open()<CR>',                             'Directory')
 nmap_leader('ef', '<Cmd>lua MiniFiles.open(vim.api.nvim_buf_get_name(0))<CR>', 'File directory')
 nmap_leader('ei', config_file('init.lua'),                                     'init.lua')
 nmap_leader('ek', edit_plugin_file('20_keymaps.lua'),                          'Keymaps config')
 nmap_leader('em', edit_plugin_file('30_mini.lua'),                             'MINI config')
-nmap_leader('en', '<Cmd>lua MiniNotify.show_history()<CR>',                    'Notifications')
+nmap_leader('en', show_notification_history,                                  'Notifications')
 nmap_leader('eo', edit_plugin_file('10_options.lua'),                          'Options config')
 nmap_leader('ep', edit_plugin_file('40_plugins.lua'),                          'Plugins config')
 nmap_leader('eq', explore_quickfix,                                            'Quickfix list')
