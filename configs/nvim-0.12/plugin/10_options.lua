@@ -116,15 +116,28 @@ end, "Proper 'formatoptions'")
 -- definitions) enclosing the cursor. Per-language node type names, verified
 -- against a real buffer of each installed language with
 -- `:lua print(vim.treesitter.get_parser(0,ft):parse()[1]:root():sexpr())`.
+-- Value of each entry is the `:h vim.lsp.protocol.SymbolKind` name closest
+-- to what the node stands for - the same vocabulary `MiniIcons.get('lsp', …)`
+-- indexes below, so no separate node-type-to-icon table is needed.
 local winbar_containers = {
-  lua = { function_declaration = true },
-  rust = { function_item = true, impl_item = true, mod_item = true, struct_item = true },
-  java = { method_declaration = true, class_declaration = true, interface_declaration = true },
-  gdscript = { function_definition = true, class_definition = true },
-  typescript = { function_declaration = true, method_definition = true, class_declaration = true },
-  javascript = { function_declaration = true, method_definition = true, class_declaration = true },
-  c = { function_definition = true, struct_specifier = true },
-  cpp = { function_definition = true, class_specifier = true, struct_specifier = true, namespace_definition = true },
+  lua = { function_declaration = 'Function', function_definition = 'Function' },
+  rust = {
+    function_item = 'Function',
+    impl_item = 'Interface',
+    mod_item = 'Module',
+    struct_item = 'Struct',
+  },
+  java = { method_declaration = 'Method', class_declaration = 'Class', interface_declaration = 'Interface' },
+  gdscript = { function_definition = 'Function', class_definition = 'Class' },
+  typescript = { function_declaration = 'Function', method_definition = 'Method', class_declaration = 'Class' },
+  javascript = { function_declaration = 'Function', method_definition = 'Method', class_declaration = 'Class' },
+  c = { function_definition = 'Function', struct_specifier = 'Struct' },
+  cpp = {
+    function_definition = 'Function',
+    class_specifier = 'Class',
+    struct_specifier = 'Struct',
+    namespace_definition = 'Namespace',
+  },
 }
 
 -- Most grammars name a container's identifier through a `name` field
@@ -141,6 +154,17 @@ local function container_label(node, bufnr)
       d = d:field('declarator')[1]
     end
     target = d
+  end
+  -- Lua's anonymous `function_definition` (`M.foo = function() end`, the
+  -- idiomatic way this very config assigns most of its own functions) has
+  -- none of the fields above: its name is the `=` left-hand side instead,
+  -- one level up through the `expression_list` the grammar wraps it in.
+  if target == nil and node:type() == 'function_definition' then
+    local assign = node:parent() and node:parent():parent()
+    if assign ~= nil and assign:type() == 'assignment_statement' then
+      local var_list = assign:named_child(0)
+      target = var_list ~= nil and var_list:field('name')[1]
+    end
   end
   if target == nil then return nil end
   return vim.treesitter.get_node_text(target, bufnr)
@@ -161,9 +185,12 @@ local function compute_winbar(bufnr, containers)
   if not ok or node == nil then return '' end
   local parts = {}
   while node ~= nil do
-    if containers[node:type()] then
+    local kind = containers[node:type()]
+    if kind ~= nil then
       local label = container_label(node, bufnr)
-      if label ~= nil then table.insert(parts, 1, label) end
+      -- `MiniIcons` is set up in 'plugin/30_mini.lua' `now()`, well before
+      -- this ever runs from a deferred autocommand.
+      if label ~= nil then table.insert(parts, 1, MiniIcons.get('lsp', kind) .. ' ' .. label) end
     end
     node = node:parent()
   end
