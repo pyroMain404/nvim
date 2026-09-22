@@ -74,10 +74,10 @@ end
 -- read, once per session, through `config.mise`.
 --
 -- NOTE: two JDKs of the same release collapse into one entry, and which of the
--- two wins is decided by comparing the version strings - arbitrary between
--- vendors, but stable across runs. They share a class library, so for
--- `runtimes` it makes no difference; it does decide which one the server runs
--- on when the newest release happens to be installed twice.
+-- two wins is whichever `mise` lists first - arbitrary between vendors, but
+-- stable across runs. They share a class library, so for `runtimes` it makes no
+-- difference; it does decide which one the server runs on when the newest
+-- release happens to be installed twice.
 --
 -- NOTE: `mise` absent makes `vim.system()` throw `ENOENT` rather than return a
 -- failing exit code, which at this point would abort the rest of the file and
@@ -87,16 +87,15 @@ end
 local installed_jdks = mise.installed('java')
 local jdks = {}
 if installed_jdks ~= nil then
-  -- `config.mise` returns newest first; iterate backwards to keep the original
-  -- oldest-first order and the duplicate-release tiebreaker this file had.
-  local by_release = {}
-  for i = #installed_jdks, 1, -1 do
-    local entry = installed_jdks[i]
+  -- `config.mise` returns newest first, so the first entry of a release is the
+  -- one to keep and every later one is dropped.
+  local seen = {}
+  for _, entry in ipairs(installed_jdks) do
     if entry.path ~= nil then
       local major = major_of(entry.version)
-      local known = major ~= nil and by_release[major] or nil
-      if major ~= nil and (known == nil or known.version < entry.version) then
-        by_release[major] = {
+      if major ~= nil and seen[major] == nil then
+        seen[major] = true
+        jdks[#jdks + 1] = {
           major = major,
           version = entry.version,
           path = entry.path,
@@ -104,7 +103,6 @@ if installed_jdks ~= nil then
       end
     end
   end
-  jdks = vim.tbl_values(by_release)
   table.sort(jdks, function(a, b) return a.major < b.major end)
 end
 
