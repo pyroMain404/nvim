@@ -122,9 +122,8 @@ local open_arglist = function(paths, label, on_open)
   )
 end
 
--- Open `paths` as the review, asking first when it is a big one. The question
--- is asked through `Config.confirm()`, as in `Config.git.update_config()`. This
--- is the whole contract a source has to meet: a list of paths and a label, plus
+-- Open `paths` as the review, asking first when it is a big one. This is the
+-- whole contract a source has to meet: a list of paths and a label, plus
 -- an `on_open` when producing them is not all it does - the Git source
 -- references the revision there, and a source with nothing to add passes
 -- nothing. Example usage:

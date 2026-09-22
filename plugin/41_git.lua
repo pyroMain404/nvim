@@ -47,7 +47,6 @@
 -- - `Config.git.diff_commit_only(buf_id, rev)` - patch of what a commit changed
 --   by itself.
 -- - `Config.git.lazygit()` - Git client in a floating window.
--- - `Config.git.update_config()` - merge upstream changes into this config.
 --
 -- Two arguments recur, and mean the same thing wherever they appear:
 -- - `buf_id` - which file the answer is about, written the way Neovim writes
@@ -60,9 +59,9 @@
 --   is one this config understands.
 --
 -- Mappings carry no logic of their own: 'plugin/20_keymaps.lua' only binds keys
--- to these functions, under the `<Leader>g` group plus `<Leader>tl` and
--- `<Leader>ou`. Read that file for what the workflow looks like from the
--- keyboard; read this one for how it is implemented.
+-- to these functions, under the `<Leader>g` group plus `<Leader>tl`. Read that
+-- file for what the workflow looks like from the keyboard; read this one for
+-- how it is implemented.
 --
 -- What is not here is the reading of the files a change touched, which is
 -- 'plugin/43_review.lua': opening files to read them is the same work whatever
@@ -936,57 +935,6 @@ Config.git.lazygit = function()
     return vim.notify('Could not start `lazygit`', vim.log.levels.ERROR)
   end
   vim.cmd('startinsert')
-end
-
--- Config repository ==========================================================
-
--- The one function here which does not look at the repository being edited but
--- at the one this config lives in: it is a fork of 'MiniMax', the `minimax`
--- remote is upstream and read only, so its work arrives here only through
--- a merge. Doing it from the editor keeps "am I behind upstream?" one keypress
--- away instead of a shell session. Example usage:
--- - `:lua Config.git.update_config()` - what `<Leader>ou` does
---
--- Everything is left to Git itself, called asynchronously (`:h vim.system()`)
--- so the editor stays usable while fetching: Git already refuses to merge on a
--- dirty work tree and stops on conflicts, and its own message says more than
--- a reimplemented check would. The confirmation exists because the files being
--- rewritten are the ones this Neovim is running from.
--- NOTE: plugins are a separate matter, updated with `:h vim.pack.update()`.
-Config.git.update_config = function()
-  -- `stdpath('config')` is inside the fork's repository, so `-C` finds it no
-  -- matter the current directory
-  local git = function(args, on_done)
-    local cmd = vim.list_extend({ 'git', '-C', vim.fn.stdpath('config') }, args)
-    Config.git.run(cmd, nil, on_done)
-  end
-  -- Which stream carries the reason depends on the subcommand ('merge' reports
-  -- a conflict on stdout), so report whichever one spoke
-  local is_ok = function(out)
-    if out.code == 0 then return true end
-    local msg = vim.trim(out.stderr) ~= '' and out.stderr or out.stdout
-    vim.notify(vim.trim(msg), vim.log.levels.ERROR)
-  end
-
-  vim.notify('Fetching `minimax`...')
-  git({ 'fetch', 'minimax' }, function(fetched)
-    if not is_ok(fetched) then return end
-    git({ 'rev-list', '--count', 'HEAD..minimax/main' }, function(counted)
-      if not is_ok(counted) then return end
-
-      local n = tonumber(vim.trim(counted.stdout))
-      if n == 0 then return vim.notify('Already up to date with `minimax/main`') end
-
-      Config.confirm(n .. ' new commit(s) upstream. Merge?', function()
-        git({ 'merge', '--no-edit', 'minimax/main' }, function(merged)
-          if not is_ok(merged) then return end
-          -- Reload the config files the merge changed on disk
-          vim.cmd('checktime')
-          vim.notify('Merged ' .. n .. ' commit(s) from `minimax/main`')
-        end)
-      end)
-    end)
-  end)
 end
 
 -- Autocommands ===============================================================

@@ -277,18 +277,9 @@ nmap_leader('mt', '<Cmd>lua MiniMap.toggle()<CR>',       'Toggle')
 
 -- o is for 'Other'. Common usage:
 -- - `<Leader>oz` - toggle between "zoomed" and regular view of current buffer
--- - `<Leader>ou` - bring upstream changes of this config into the local branch
---
--- This config is a fork of 'MiniMax': the `minimax` remote is upstream and is
--- read only, so its work arrives here only through a merge. Doing it from the
--- editor keeps "am I behind upstream?" one keypress away instead of a shell
--- session, and it is the first thing to answer when something misbehaves.
--- Being a Git operation like the others, it is written in 'plugin/41_git.lua'.
--- NOTE: plugins are a separate matter, updated with `:h vim.pack.update()`.
 
 nmap_leader('or', '<Cmd>lua MiniMisc.resize_window()<CR>',   'Resize to default width')
 nmap_leader('ot', '<Cmd>lua MiniTrailspace.trim()<CR>',      'Trim trailspace')
-nmap_leader('ou', '<Cmd>lua Config.git.update_config()<CR>', 'Update from upstream')
 nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',            'Zoom toggle')
 
 -- r is for 'Review'. Common usage:

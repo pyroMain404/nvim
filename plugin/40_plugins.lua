@@ -35,7 +35,7 @@ end
 -- - Language parsers: programs that convert text into trees. Some are built-in
 --   (like for Lua), 'nvim-treesitter' provides many others.
 --   NOTE: It requires third party software to build and install parsers.
---   See the link for more info in "Requirements" section of the MiniMax README.
+--   See the link for more info in "Requirements" section of this repo's README.
 -- - Query files: definitions of how to extract information from trees in
 --   a useful manner (see `:h treesitter-query`). 'nvim-treesitter' also provides
 --   these, while 'nvim-treesitter-textobjects' provides the ones for Neovim
@@ -48,7 +48,7 @@ end
 -- - In case of errors related to queries for Neovim bundled parsers (like `lua`,
 --   `vimdoc`, `markdown`, etc.), manually install them via 'nvim-treesitter'
 --   with `:TSInstall <language>`. Be sure to have necessary system dependencies
---   (see MiniMax README section for software requirements).
+--   (see README's "Requirements" section for software dependencies).
 now_if_args(function()
   -- Define hook to update tree-sitter parsers after plugin is updated
   local ts_update = function() vim.cmd('TSUpdate') end

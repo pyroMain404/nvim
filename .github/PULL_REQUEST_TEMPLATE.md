@@ -1,1 +1,0 @@
-- [ ] This PR does not suggest changes based on personal taste (enabling new or changing value of existing option, install new plugin)

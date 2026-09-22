@@ -1,11 +1,7 @@
--- WARNING: NEOVIM 0.13 IS STILL UNDER DEVELOPMENT AND NOT YET STABLE.
--- BE SURE YOU ARE COMFORTABLE WITH KEEPING UP TO DATE DEVELOPMENT VERSION.
--- THIS CONFIG IS VERIFIED FOR AT LEAST VERSION `v0.13.0-dev-29+g1bcf2d7f90`.
--- WHEN IN DOUBT - UPDATE TO THE LATEST DEVELOPMENT VERSION.
-
--- ┌────────────────────┐
--- │ Welcome to MiniMax │
--- └────────────────────┘
+-- ┌──────────────────────────┐
+-- │ Welcome to this Neovim   │
+-- │ config (born of MiniMax) │
+-- └──────────────────────────┘
 --
 -- This is a config designed to mostly use MINI. It provides out of the box
 -- a stable, polished, and feature rich Neovim experience. Its structure:
@@ -78,7 +74,7 @@ _G.Config = {}
 -- - `:h autocommand`
 -- - `:h nvim_create_augroup()`
 -- - `:h nvim_create_autocmd()`
-local gr = vim.api.nvim_create_augroup('custom-config', {})
+local gr = vim.api.nvim_create_augroup('custom-config', { clear = true })
 Config.new_autocmd = function(event, pattern, callback, desc)
   local opts = { group = gr, pattern = pattern, callback = callback, desc = desc }
   vim.api.nvim_create_autocmd(event, opts)
@@ -99,7 +95,7 @@ Config.on_packchanged = function(plugin_name, kinds, callback, desc)
   Config.new_autocmd('PackChanged', '*', f, desc)
 end
 
--- 'mini.nvim' - all-in-one plugin powering most MiniMax features.
+-- 'mini.nvim' - all-in-one plugin powering most of this config's features.
 -- See 'plugin/30_mini.lua' for how it is used.
 -- Load now to have 'mini.misc' available for custom loading helpers.
 vim.pack.add({ 'https://github.com/nvim-mini/mini.nvim' })
@@ -126,3 +122,44 @@ Config.later = function(f) misc.safely('later', f) end
 Config.now_if_args = vim.fn.argc(-1) > 0 and Config.now or Config.later
 Config.on_event = function(ev, f) misc.safely('event:' .. ev, f) end
 Config.on_filetype = function(ft, f) misc.safely('filetype:' .. ft, f) end
+
+-- HACK: a snapshot of the global default of `'path'`, taken before any
+-- buffer can write it. `plugin/41_git.lua` and `after/ftplugin/c.lua` both
+-- prepend project directories to it, and both need the value that was there
+-- BEFORE - but the FIRST write to a never-locally-set global-local string
+-- option like `'path'`, from ANY scope (`vim.bo`, `vim.opt_local`, even
+-- `:setlocal`), overwrites Neovim's own compiled-in GLOBAL default too
+-- (measured: `vim.o.path` reads the written value afterwards, in a buffer
+-- that never touched it). Reading `vim.o.path` a second time then reads
+-- back what the first write already corrupted it to, so the entries grow
+-- without bound across repeated `:setf`/buffer opens. Present in Neovim
+-- 0.12.5; remove if a future release stops promoting a local write into the
+-- global slot.
+Config.pristine_path = vim.o.path
+
+-- Ask a yes/no question and run `on_yes` only on a clear 'y'. Used by any
+-- part of the config that needs permission before acting, so the prompt shape
+-- and the predicate live in one place.
+Config.confirm = function(prompt, on_yes)
+  vim.ui.input({ prompt = prompt .. ' (y/n) ' }, function(answer)
+    if (answer or ''):lower() == 'y' then on_yes() end
+  end)
+end
+
+-- Report how many items of a batch operation succeeded and how many failed,
+-- picking the notification level from the failure count. Used by review close,
+-- review open and any future bulk operation that needs a single summary.
+-- The two labels are required, not defaulted: what is 1 item of the batch is a
+-- file when opening a review and a buffer when closing one, so a generic
+-- default would read as a wrong count rather than as a missing argument.
+Config.report = function(message, done, failed, done_label, failed_label)
+  local msg = message .. ': ' .. done .. ' ' .. done_label
+  local level = vim.log.levels.INFO
+  if failed > 0 then
+    msg = msg .. ', ' .. failed .. ' ' .. failed_label
+    level = vim.log.levels.WARN
+  end
+  vim.notify(msg, level)
+end
+
+vim.o.exrc = true
