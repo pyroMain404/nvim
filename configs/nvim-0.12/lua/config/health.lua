@@ -263,8 +263,6 @@ local function check_rust()
     'Install it with `rustup component add clippy`'
   )
 
-  -- The parser has to be installed, not merely available. This is the same
-  -- check 'plugin/40_plugins.lua' uses to decide what to install.
   -- `sql` is here because 'after/queries/rust/injections.scm' parses the SQL
   -- inside the `sqlx` macros with it, and stays inert while it is missing
   check_parsers({ 'rust', 'toml', 'sql' })
@@ -397,8 +395,8 @@ local function check_angular()
     end
   end
 
-  -- The parser has to be installed, not merely available. `angular` is the one
-  -- that reads a template; the rest are the other files a component is made of
+  -- `angular` is the one that reads a template; the rest are the other files a
+  -- component is made of
   check_parsers({ 'angular', 'typescript', 'html', 'css', 'scss', 'json' })
 end
 
@@ -572,8 +570,6 @@ local function check_java()
     )
   end
 
-  -- The parser has to be installed, not merely available. This is the same
-  -- check 'plugin/40_plugins.lua' uses to decide what to install.
   -- `xml` is here for 'pom.xml', which a Maven project is read from as often
   -- as its sources
   check_parsers({ 'java', 'xml' })
@@ -726,10 +722,8 @@ local function check_cpp()
     end
   end
 
-  -- The parser has to be installed, not merely available. This is the same
-  -- check 'plugin/40_plugins.lua' uses to decide what to install. `c` is there
-  -- because the `cpp` parser requires it, `cmake` and `make` because the files
-  -- a project is built from are read as often as its sources
+  -- `c` is there because the `cpp` parser requires it, `cmake` and `make`
+  -- because the files a project is built from are read as often as its sources
   check_parsers({ 'cpp', 'c', 'cmake', 'make' })
 end
 
@@ -737,16 +731,8 @@ end
 -- the reason is that its whole toolchain is a game's, not the machine's: a
 -- section saying "no Godot project here" is not a check, it is noise in every
 -- other report.
---
--- Searched from the buffer the reader came from and not from buffer 0, for the
--- reason `check_angular()` documents above: `:checkhealth` runs inside its own
--- nameless report buffer, so `vim.fs.root(0, …)` answers nil for every run.
 local function check_godot()
-  local source = vim.fn.bufnr('#')
-  if source == -1 or vim.api.nvim_buf_get_name(source) == '' then
-    source = vim.fn.getcwd()
-  end
-  local root = vim.fs.root(source, { 'project.godot' })
+  local root = source_root({ 'project.godot' })
   if root == nil then return end
 
   health.start('config: Godot')
