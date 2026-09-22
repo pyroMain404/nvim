@@ -1,3 +1,7 @@
+## 2026-09-22
+
+- Detach from 'MiniMax': flatten `configs/nvim-0.12` into the repository root, delete the `nvim-0.10`/`nvim-0.11`/`nvim-0.13` reference configs and `setup.lua`, remove the `minimax` remote, and drop `Config.git.update_config()` (`<Leader>ou`) along with it. This repository is now this config, standalone; see `AGENTS.md` for what that changes about the workflow and where entries below `# Fork changes` stand now.
+
 ## 2026-07-24
 
 - Stop explicitly enabling filetype plugins and syntax support because they are enabled by default on all supported Neovim versions.

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This repository is a personal fork of [MiniMax](https://github.com/nvim-mini/MiniMax) (remote `minimax`), the Neovim config generator built around ['mini.nvim'](https://github.com/nvim-mini/mini.nvim). Everything here — the config, its comments, its commits — follows the philosophy of 'mini.nvim'. When in doubt about anything not covered below, read how 'mini.nvim' itself does it (`README.md#general-principles`, `CONTRIBUTING.md`, `MAINTAINING.md` in its repository) and do the same.
+This repository is a personal Neovim configuration, built around ['mini.nvim'](https://github.com/nvim-mini/mini.nvim). It started as a fork of [MiniMax](https://github.com/nvim-mini/MiniMax), the Neovim config generator MiniMax's author built around the same plugin — the structure, the `Config` helpers, and much of the documentation style below trace back to it. As of 2026-09-22 this repository is standalone: it carries no upstream remote, no reference configs for other Neovim versions, and no generator script. It is this config, kept and read by its one user. Everything here — the config, its comments, its commits — still follows the philosophy of 'mini.nvim'. When in doubt about anything not covered below, read how 'mini.nvim' itself does it (`README.md#general-principles`, `CONTRIBUTING.md`, `MAINTAINING.md` in its repository) and do the same.
 
 Read this file before changing anything. It is short on purpose: it states the rules, not the reasons behind every line of config. The config files themselves are the documentation.
 
@@ -36,24 +36,6 @@ Adapted from `mini.nvim-general-principles` (`:h mini.nvim-general-principles`, 
 ## Repository structure
 
 ```
-setup.lua                 Generator script: copies a config into `stdpath('config')`
-.luarc.json               Workspace of `lua_ls` for this repository: it keeps
-                          the reference configs out, as they define the same
-                          `Config` helpers as the one in use
-configs/README.md         What each config directory is and how it is laid out
-configs/nvim-0.12         The config this machine runs — the only one to modify
-configs/nvim-0.10 … 0.13  Other reference configs, inherited from upstream
-CHANGELOG.md              User visible changes, newest first, dated;
-                          this fork's entries go in its bottom section
-.omp/                     Skills and project-environment reference docs
-docs/                     Frozen pre-implementation records
-.stylua.toml              StyLua formatter configuration
-.styluaignore             Files excluded from formatting
-```
-
-Inside `configs/nvim-0.12` (see `configs/README.md` for the full explanation):
-
-```
 init.lua                 First file executed; plugin manager and `Config` helpers
 nvim-pack-lock.json      `vim.pack` lockfile — generated, never edited by hand
 plugin/10_options.lua    Built-in Neovim behavior
@@ -76,11 +58,14 @@ after/ftplugin/          Per filetype behavior
 after/lsp/               Language server configurations
 after/queries/           Tree-sitter query overrides
 after/snippets/          Snippet files that override plugin provided ones
+CHANGELOG.md             User visible changes, newest first, dated
 .omp/                    Skills and project-environment reference docs
 docs/                    Frozen pre-implementation records
+.stylua.toml             StyLua formatter configuration
+.styluaignore            Files excluded from formatting
 ```
 
-- **Only `configs/nvim-0.12` is in use and only it gets modified.** It is what `%LOCALAPPDATA%\nvim` points at, so editing it changes the running config immediately. `nvim-0.10`, `nvim-0.11` and `nvim-0.13` are upstream leftovers: leave them alone, and do not try to keep a change in sync across them.
+- **This repository root is `%LOCALAPPDATA%\nvim`** (cloned there directly, see `pyro-resources/modules/editors/install.ps1`), so editing any file here changes the running config immediately. There is no other copy to keep in sync.
 - Files in `plugin/` are sourced automatically in alphabetical order. This is deliberate: it avoids occupying the shared `lua/` namespace and needs no `require()` calls in `init.lua`. Code required **by name** at an arbitrary later moment — from an ftplugin, an `after/lsp/` file, a health check, or another late-loaded site — lives in `lua/config/<area>.lua`. Behaviour that must exist from startup and is reached through `Config.<area>` lives in `plugin/NN_<area>.lua`. The file's own header says which mechanism it uses; do not move one to the other.
 - The number prefixes reserve room for insertion. A genuinely new area of config gets its own `NN_name.lua` file with a number that places it correctly in the load order; it does not get appended to an unrelated file.
 
@@ -228,7 +213,6 @@ Each document owns one kind of rule; cite the file and the heading, never a `§N
 | Document | What it owns |
 |---|---|
 | `AGENTS.md` | Repository rules, where changes go, commit style, external dependencies, and this citation rule. |
-| `configs/README.md` | The upstream layout of the reference configs and which one is live. |
 | `.omp/skills/nvim-config-testing/SKILL.md` | How to verify a change and the known traps of headless checks. |
 | `.omp/skills/nvim-project-environment/SKILL.md` | Project-level overrides through `.nvim.lua` and the project registry. |
 | `.omp/skills/nvim-language-support/SKILL.md` | The procedure for adding, extending or fixing support for a language. |
@@ -266,25 +250,18 @@ Signed-off-by: Gaetano Esposito <gaetanoesposito.exe@gmail.com>
 
 ## Typical workflow for adding change
 
-Adapted from `MAINTAINING.md#typical-workflow-for-adding-change`, minus everything that only makes sense for a shared project. This config has a single author working directly on `minimax-config`: no feature branches, no pull requests, no review.
+Adapted from `MAINTAINING.md#typical-workflow-for-adding-change`, minus everything that only makes sense for a shared project. This config has a single author working directly on `minimax-config`: no feature branches, no pull requests, no review, and — since 2026-09-22 — no upstream to keep separate from.
 
-1. Solve the problem, in `configs/nvim-0.12`. Keep the change as local as the problem is.
+1. Solve the problem, in the right file. Keep the change as local as the problem is.
 2. Make sure it still reads well: comments updated, `:h` references still correct, file structure and separators intact, formatting per `.stylua.toml`.
-3. If the change is worth being seen later (a notable or breaking feature or fix), add an entry to `CHANGELOG.md` — in the **"Fork changes" section at the bottom of the file**, never at the top. See below.
+3. If the change is worth being seen later (a notable or breaking feature or fix), add an entry to `CHANGELOG.md` — at the top of the file. See below.
 4. Verify, following the `nvim-config-testing` skill. Do it once, at the end.
 5. Commit on `minimax-config`, following the message rules above, and push to `origin`.
-6. Never force-push, and never push to the `minimax` remote — it is upstream, read only. A change worth sending upstream is a separate matter: MiniMax's pull request template rejects changes based on personal taste (enabling a new option, installing a new plugin), which is exactly what belongs in this fork, so keep the two apart.
+6. Never force-push.
 
 ### Changelog entries
 
-`CHANGELOG.md` holds two logs that must not be interleaved:
-
-- Everything above the `# Fork changes` heading is **upstream's**, newest first. It is not edited here.
-- Everything below it belongs to **this fork**, newest first within its own section.
-
-The split exists for one reason: upstream always adds its entries at the **top** of the file. An entry of this fork placed there touches the same lines as the next upstream release and turns every merge from `minimax` into a conflict over a file where conflicts carry no information. At the bottom, upstream never reaches, and the merge stays clean.
-
-Follow the formatting of the entries already in the section: a `## YYYY-MM-DD` heading, then one dash-prefixed sentence per change, blank line between entries.
+`CHANGELOG.md` newest first, one `## YYYY-MM-DD` heading with one dash-prefixed sentence per change, blank line between entries. Before 2026-09-22 the file held two logs — MiniMax's own history above a `# Fork changes` heading, this fork's entries below it, kept apart so this fork's additions would never conflict with upstream's own top-of-file entries on merge. That split is now historical: this repository carries no upstream remote to merge from, so new entries go at the top like any ordinary changelog. The old two-part history below `# Fork changes` is left as it was written; it is not backfilled or reformatted.
 
 ## Verifying a change
 
@@ -294,14 +271,13 @@ Nothing about *how* to verify is written here, or in any other document of this 
 
 ## Supported Neovim versions
 
-This config targets the Neovim installed on this machine (currently 0.12), which is what `configs/nvim-0.12` is for. Upstream 'mini.nvim' supports the current stable, Nightly and the two previous stable releases; this fork does not need to. A feature available only in a newer Neovim waits until that Neovim is installed here — it does not get wrapped in a `vim.fn.has()` branch, and it does not justify touching the other `configs/` directories.
+This config targets the Neovim installed on this machine (currently 0.12). Upstream 'mini.nvim' supports the current stable, Nightly and the two previous stable releases; this config does not need to. A feature available only in a newer Neovim waits until that Neovim is installed here — it does not get wrapped in a `vim.fn.has()` branch.
 
 ## Non-goals
 
 - Becoming a distribution: no auto-update mechanism, no plugin abstraction layer, no config of the config.
 - A `lua/` module tree used to modularize startup behaviour. `lua/config/` is allowed only for code that is required by name at a later moment; see the load-order rule above.
 - Editing generated files by hand: `nvim-pack-lock.json`.
-- Keeping `configs/nvim-0.10`, `nvim-0.11` and `nvim-0.13` in sync with the config actually in use.
 - Silencing warnings to make output look clean.
 - **Filetype or language specific logic in the shared `plugin/` files, except one case.** Concretely, none of these belong in `plugin/`:
     - a branch on the current filetype (`if vim.bo.filetype == 'python' then ...`) to set options, mappings or autocommands — that is `after/ftplugin/python.lua`;
@@ -312,12 +288,12 @@ This config targets the Neovim installed on this machine (currently 0.12), which
 
 ## Checklist before finishing
 
-- [ ] The change is in `configs/nvim-0.12`, in the right file, under the right separator and load step.
+- [ ] The change is in the right file, under the right separator and load step.
 - [ ] Comments explain why, in the style of their neighbors, with `:h` references.
 - [ ] `stylua --check` passes on the files touched (run from inside the repository; see the note about CRLF).
 - [ ] Problems are reported through `vim.notify` / `vim.notify_once` / a health check — never `error()`.
 - [ ] No generated file edited by hand.
-- [ ] `CHANGELOG.md` updated if the change is worth being seen later, in the "Fork changes" section at the bottom.
+- [ ] `CHANGELOG.md` updated if the change is worth being seen later, at the top of the file.
 - [ ] Verification done in one pass, as the `nvim-config-testing` skill prescribes.
 - [ ] One topic per commit; message has an allowed type, the Problem/Solution body, and `Signed-off-by`.
-- [ ] Committed on `minimax-config` and pushed to `origin`, never to `minimax`.
+- [ ] Committed on `minimax-config` and pushed to `origin`.
