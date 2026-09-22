@@ -370,17 +370,12 @@ end)
 
 -- Keep obsidian.nvim out of unrelated buffers. A vault is identified by the
 -- nearest ancestor directory containing the standard '.obsidian/' marker.
-
+-- `MiniMisc.find_root()` (`:h MiniMisc.find_root()`) already walks a buffer's
+-- path upward for a marker name and caches the result per directory; the only
+-- thing it does not narrow on is the marker being a directory rather than a
+-- file, which Obsidian never creates as a plain file.
 local find_obsidian_root = function(buf)
-  local name = vim.api.nvim_buf_get_name(buf)
-  if name == '' then return nil end
-
-  local marker = vim.fs.find('.obsidian', {
-    path = vim.fs.dirname(name),
-    upward = true,
-    type = 'directory',
-  })[1]
-  return marker and vim.fs.dirname(marker) or nil
+  return require('mini.misc').find_root(buf, { '.obsidian' })
 end
 
 -- Package setup is intentionally one-shot: resolve the root from the first
