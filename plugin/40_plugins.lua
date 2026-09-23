@@ -372,68 +372,105 @@ end)
 
 -- Obsidian vaults ============================================================
 
--- Keep obsidian.nvim out of unrelated buffers. A vault is identified by the
--- nearest ancestor directory containing the standard '.obsidian/' marker.
+-- Keep obsidian.nvim out of unrelated buffers, and support more than one
+-- vault open in the same session. A vault is identified by the nearest
+-- ancestor *directory* named '.obsidian/'.
 --
--- Package setup is intentionally one-shot: resolve the root from the first
--- matching buffer and keep that concrete workspace for obsidian.nvim. The
--- event gate is registered through now_if_args so an initial note is covered
--- during startup; when there is no initial argument, Config.later defers this
--- registration until the normal deferred configuration phase.
-local obsidian_setup = false
-local setup_obsidian = function(ev)
-  if obsidian_setup then return end
-
-  -- `MiniMisc.find_root()` (`:h MiniMisc.find_root()`) walks a buffer's path
-  -- upward for a marker name and caches the result per directory; the only
-  -- thing it does not narrow on is the marker being a directory rather than a
-  -- file, which Obsidian never creates as a plain file.
-  local root = require('mini.misc').find_root(ev.buf, { '.obsidian' })
-  if not root then return end
-
-  add({ 'https://github.com/obsidian-nvim/obsidian.nvim' })
-  if plugin_missing('obsidian.nvim', 'obsidian') then return end
-  require('obsidian').setup({
-    legacy_commands = false,
-    picker = { name = 'mini.pick' },
-    callbacks = {
-      -- Preserve 'mini.bracketed' on `[o` / `]o`. In a vault note,
-      -- `<Space>on` / `<Space>op` visit the next / previous valid link.
-      -- See 'docs/Keymaps.md' in the installed 'obsidian.nvim' package.
-      enter_note = function(note)
-        vim.keymap.del('n', '[o', { buf = note.bufnr })
-        vim.keymap.del('n', ']o', { buf = note.bufnr })
-        vim.keymap.set(
-          'n',
-          '<Leader>on',
-          function() require('obsidian.actions').nav_link('next') end,
-          { buf = note.bufnr, desc = 'Next Obsidian link' }
-        )
-        vim.keymap.set(
-          'n',
-          '<Leader>op',
-          function() require('obsidian.actions').nav_link('prev') end,
-          { buf = note.bufnr, desc = 'Previous Obsidian link' }
-        )
-      end,
-    },
-    workspaces = {
-      { name = 'vault', path = root },
-    },
-  })
-  obsidian_setup = true
+-- `MiniMisc.find_root()` cannot express "directory, not file" (`vim.fs.find()`
+-- accepts a `type` filter directly, but `find_root()` never forwards `opts` to
+-- it), and its cache is keyed by directory alone, shared with
+-- `MiniMisc.setup_auto_root()`'s different marker list above ('.git',
+-- lockfile, 'Makefile') - whichever of the two resolves a given directory
+-- first would silently decide the other's answer too. Call `vim.fs.find()`
+-- directly instead; it only runs on `BufReadPre`/`BufNewFile`, so there is
+-- no case worth a second cache for.
+local find_vault_root = function(buf_id)
+  local path = vim.api.nvim_buf_get_name(buf_id)
+  if path == '' then return nil end
+  local marker = vim.fs.find(
+    { '.obsidian' },
+    { path = vim.fs.dirname(path), upward = true, type = 'directory' }
+  )[1]
+  return marker and vim.fs.dirname(marker) or nil
 end
 
-now_if_args(
-  function()
-    Config.new_autocmd(
-      { 'BufReadPre', 'BufNewFile' },
-      { '*.md', '*.markdown', '*.qmd', '*.base' },
-      setup_obsidian,
-      'Setup obsidian.nvim for vault'
+-- Package install/setup happens once, on the first vault seen. Every vault
+-- seen afterwards (including a later re-entry into an already known one) is
+-- only registered as a workspace: 'obsidian.nvim' switches the active one by
+-- itself, from its own `FileType` autocommand which runs after this
+-- `BufReadPre` one (`bufenter_callback()` in 'obsidian/autocmds.lua' matches
+-- the buffer against `Obsidian.workspaces` and calls `Workspace.set()`).
+local obsidian_loaded = false
+local obsidian_roots = {}
+local setup_obsidian = function(ev)
+  local root = find_vault_root(ev.buf)
+  if not root or obsidian_roots[root] then return end
+
+  if not obsidian_loaded then
+    add({ 'https://github.com/obsidian-nvim/obsidian.nvim' })
+    if plugin_missing('obsidian.nvim', 'obsidian') then return end
+    require('obsidian').setup({
+      legacy_commands = false,
+      picker = { name = 'mini.pick' },
+      callbacks = {
+        -- Preserve 'mini.bracketed' on `[o` / `]o`. In a vault note,
+        -- `<Space>on` / `<Space>op` visit the next / previous valid link.
+        -- See 'docs/Keymaps.md' in the installed 'obsidian.nvim' package.
+        enter_note = function(note)
+          vim.keymap.del('n', '[o', { buf = note.bufnr })
+          vim.keymap.del('n', ']o', { buf = note.bufnr })
+          vim.keymap.set(
+            'n',
+            '<Leader>on',
+            function() require('obsidian.actions').nav_link('next') end,
+            { buf = note.bufnr, desc = 'Next Obsidian link' }
+          )
+          vim.keymap.set(
+            'n',
+            '<Leader>op',
+            function() require('obsidian.actions').nav_link('prev') end,
+            { buf = note.bufnr, desc = 'Previous Obsidian link' }
+          )
+        end,
+      },
+      workspaces = {
+        { name = root, path = root },
+      },
+    })
+    obsidian_loaded = true
+  else
+    table.insert(
+      Obsidian.workspaces,
+      require('obsidian.workspace').new({ name = root, path = root })
     )
   end
-)
+  obsidian_roots[root] = true
+end
+
+-- `'*.base'` was dropped from the pattern below: 'obsidian.nvim' only attaches
+-- to `FileType` 'markdown'/'quarto' (`autocmds.lua`), so a '.base' buffer can
+-- trigger this gate but never becomes an Obsidian buffer itself.
+now_if_args(function()
+  Config.new_autocmd(
+    { 'BufReadPre', 'BufNewFile' },
+    { '*.md', '*.markdown', '*.qmd' },
+    setup_obsidian,
+    'Setup obsidian.nvim for vault'
+  )
+
+  -- `now_if_args` only covers a file given as the startup argv; a buffer
+  -- opened at startup through `-c`, a session, or `--cmd` has already fired
+  -- `BufReadPre` before this autocommand existed and will not fire it again.
+  -- Sweep already-loaded buffers once, scheduled past the current event so
+  -- startup itself is not blocked on vim.fs.find().
+  vim.schedule(function()
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype == 'markdown' then
+        setup_obsidian({ buf = buf })
+      end
+    end
+  end)
+end)
 
 -- Notes (shiki) ==============================================================
 

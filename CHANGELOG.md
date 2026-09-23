@@ -1,6 +1,7 @@
 ## 2026-09-23
 
 - Try 'shiki.nvim' (own plugin, local working tree at `W:/repos/shiki.nvim`, not yet pushed to a remote) for note-taking: adds it to `plugin/40_plugins.lua` via `vim.pack.add` with a local `src` path, deferred with `later()`. Provides `:ShikiNew`/`:ShikiList`/`:ShikiSearch`/`:ShikiTasks`, all shelling out to the `shiki` CLI's `--json` output and opening the resulting note files with plain `:edit`.
+- Fix the obsidian.nvim vault gate in `plugin/40_plugins.lua`: replace `MiniMisc.find_root()` (accepted a `.obsidian` file as a vault marker, and shared its per-directory cache with `MiniMisc.setup_auto_root()`'s unrelated marker list) with a local `vim.fs.find()` search restricted to `type = 'directory'` and its own cache; drop the one-shot single-workspace limit so a second vault opened in the same session is registered instead of staying silently inert; sweep already-loaded buffers once at startup so a note opened via `-c`/a session (missed by `now_if_args`'s `argc(-1)` check) still gets picked up; drop the dead `*.base` pattern (obsidian.nvim never attaches to it). Also fix `check_markdown()` in `lua/config/health.lua` to report the lazily-loaded, not-yet-installed obsidian.nvim as `info`, not `warn`, when it is present in the lockfile.
 
 ## 2026-09-22
 

@@ -203,8 +203,20 @@ local function check_markdown()
     })
   end
 
+  -- 'obsidian.nvim' is an `opt` plugin loaded lazily by the gate in
+  -- 'plugin/40_plugins.lua': it is absent from the runtime path in any
+  -- session that has not yet opened a note inside a '.obsidian/' vault, which
+  -- is not a problem to report - only its absence from the lockfile is.
+  local obsidian_locked = false
+  for _, plugin in ipairs(vim.pack.get()) do
+    if plugin.spec.name == 'obsidian.nvim' then obsidian_locked = true end
+  end
   if #vim.api.nvim_get_runtime_file('lua/obsidian/init.lua', false) > 0 then
-    health.ok('obsidian.nvim: installed')
+    health.ok('obsidian.nvim: installed and loaded')
+  elseif obsidian_locked then
+    health.info(
+      'obsidian.nvim: locked, not yet loaded (opens on the first note inside a `.obsidian/` vault)'
+    )
   else
     health.warn('obsidian.nvim is not available', {
       'Start Neovim with network access so vim.pack can install the locked plugin',
