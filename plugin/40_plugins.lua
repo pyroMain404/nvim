@@ -435,6 +435,16 @@ now_if_args(
   end
 )
 
+-- Notes (shiki) ==============================================================
+
+-- 'shiki.nvim' — thin front-end for the `shiki` CLI (W:/repos/shiki), tried
+-- out here from its local working tree (not yet pushed to a remote) via a
+-- `src` path instead of a GitHub URL; `vim.pack.add` clones through `git`,
+-- which accepts a local path as a source same as any other. Swap `src` for
+-- the GitHub URL once the repo is pushed. No `setup()` call needed: the
+-- plugin's own defaults (`shiki` on 'PATH', no fixed notebook) are enough.
+later(function() add({ { src = 'W:/repos/shiki.nvim', name = 'shiki.nvim' } }) end)
+
 -- Formatting =================================================================
 
 -- Programs dedicated to text formatting (a.k.a. formatters) are very useful.

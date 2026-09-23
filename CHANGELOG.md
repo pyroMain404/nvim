@@ -1,3 +1,7 @@
+## 2026-09-23
+
+- Try 'shiki.nvim' (own plugin, local working tree at `W:/repos/shiki.nvim`, not yet pushed to a remote) for note-taking: adds it to `plugin/40_plugins.lua` via `vim.pack.add` with a local `src` path, deferred with `later()`. Provides `:ShikiNew`/`:ShikiList`/`:ShikiSearch`/`:ShikiTasks`, all shelling out to the `shiki` CLI's `--json` output and opening the resulting note files with plain `:edit`.
+
 ## 2026-09-22
 
 - Detach from 'MiniMax': flatten `configs/nvim-0.12` into the repository root, delete the `nvim-0.10`/`nvim-0.11`/`nvim-0.13` reference configs and `setup.lua`, remove the `minimax` remote, and drop `Config.git.update_config()` (`<Leader>ou`) along with it. This repository is now this config, standalone; see `AGENTS.md` for what that changes about the workflow and where entries below `# Fork changes` stand now.
