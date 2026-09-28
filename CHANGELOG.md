@@ -1,3 +1,7 @@
+## 2026-09-28
+
+- Shorten the directories of paths shown in 'mini.pick' (`:h pathshorten()`), except the last two, through a global `source.show` in `plugin/30_mini.lua`, so the file name and grep match of deep paths stay visible in every picker that lists files without losing where the file is. Only the display changes; choosing and preview get the full path.
+
 ## 2026-09-23
 
 - Try 'shiki.nvim' (own plugin, local working tree at `W:/repos/shiki.nvim`, not yet pushed to a remote) for note-taking: adds it to `plugin/40_plugins.lua` via `vim.pack.add` with a local `src` path, deferred with `later()`. Provides `:ShikiNew`/`:ShikiList`/`:ShikiSearch`/`:ShikiTasks`, all shelling out to the `shiki` CLI's `--json` output and opening the resulting note files with plain `:edit`.

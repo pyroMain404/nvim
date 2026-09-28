@@ -867,7 +867,36 @@ end)
 -- - `:h MiniPick.builtin` and `:h MiniExtra.pickers` - available pickers;
 --   Execute one either with Lua function, `:Pick <picker-name>` command, or
 --   one of `<Leader>f` mappings defined in 'plugin/20_keymaps.lua'
-later(function() require('mini.pick').setup() end)
+later(function()
+  -- Every picker listing files (files, grep, buffers, visits, LSP, ...) starts
+  -- its items with a path, and a deep one pushes the file name and the match
+  -- out of the window. Shorten its directories to one character
+  -- (`:h pathshorten()`) except the last two, which say where the file is,
+  -- only in what is displayed: the item itself is untouched, so choosing and
+  -- preview still get the full path. Items are
+  -- 'path<NUL>line<NUL>col<NUL>text' at most, so only the part before the first
+  -- NUL is shortened. Pickers with their own `show` are not affected.
+  local shorten_path = function(path)
+    local head, tail = path:match('^(.*[/\\])([^/\\]+[/\\][^/\\]+[/\\][^/\\]+)$')
+    if head == nil then return path end
+    return vim.fn.pathshorten(head .. 'x'):sub(1, -2) .. tail
+  end
+  local shorten = function(s) return (s:gsub('^[^%z]+', shorten_path, 1)) end
+  local show = function(buf_id, items, query)
+    local has_path = false
+    -- NOTE: the icon comes from `path` (preferred over `text`) and needs the
+    -- real file on disk, so it is kept alongside the shortened `text`.
+    local short = vim.tbl_map(function(item)
+      local text = type(item) == 'table' and item.text or item
+      if type(text) ~= 'string' then return item end
+      has_path = has_path or text:find('[/\\]') ~= nil
+      local path = type(item) == 'table' and item.path or text:match('^[^%z]+')
+      return { text = shorten(text), path = path }
+    end, items)
+    MiniPick.default_show(buf_id, short, query, { show_icons = has_path })
+  end
+  require('mini.pick').setup({ source = { show = show } })
+end)
 
 -- Manage and expand snippets (templates for a frequently used text).
 -- Typical workflow is to type snippet's (configurable) prefix and expand it
