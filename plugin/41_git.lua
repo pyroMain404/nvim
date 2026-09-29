@@ -638,9 +638,9 @@ local git_log_cmd =
 -- is empty (a path with no commits, `--follow` included), which reads
 -- exactly like a mapping that does not work.
 Config.git.log = function(buf_id)
-  local postfix, label = '', 'here'
+  local postfix, label, path = '', 'here', nil
   if buf_id ~= nil then
-    local path = buf_path(buf_id)
+    path = buf_path(buf_id)
     if path == nil then return end
     postfix = ' --follow -- ' .. vim.fn.fnameescape(path)
     label = vim.fn.fnamemodify(path, ':t')
@@ -648,9 +648,7 @@ Config.git.log = function(buf_id)
   local root = Config.git.require_root(buf_id)
   if root == nil then return end
   local probe = { 'git', 'log', '--oneline', '-1' }
-  if buf_id ~= nil then
-    vim.list_extend(probe, { '--follow', '--', buf_path(buf_id) })
-  end
+  if path ~= nil then vim.list_extend(probe, { '--follow', '--', path }) end
   local on_done = function(out)
     if out.code ~= 0 or vim.trim(out.stdout) == '' then
       return vim.notify('No commits for ' .. label, vim.log.levels.WARN)

@@ -52,11 +52,6 @@ vim.b.markdown_om = 'source'
 
 local function restore()
   local saved = vim.b.markdown_om_original
-  if not saved then
-    vim.bo.readonly = false
-    vim.bo.modifiable = true
-    return
-  end
   vim.bo.readonly = saved.readonly
   vim.bo.modifiable = saved.modifiable
   for win, options in pairs(saved.windows) do
