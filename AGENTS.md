@@ -213,8 +213,10 @@ Each document owns one kind of rule; cite the file and the heading, never a `§N
 | Document | What it owns |
 |---|---|
 | `AGENTS.md` | Repository rules, where changes go, commit style, external dependencies, and this citation rule. |
-| `.omp/skills/nvim-config-testing/SKILL.md` | What to verify, when, and what to hand back to the user instead of simulating it. |
-| `.omp/skills/nvim-headless-probes/SKILL.md` | The headless probes, the known traps of headless checks, and the antipatterns already paid for. |
+| `.omp/skills/nvim-config-testing/SKILL.md` | What to verify, when, what to hand back to the user instead of simulating it, and the antipatterns already paid for. |
+| `.omp/skills/nvim-headless-probes/SKILL.md` | The headless probes and the traps of the probe bench itself. |
+| `.omp/skills/nvim-shell-traps/SKILL.md` | Traps of the Windows shell and tools met while verifying or editing the config. |
+| `.omp/skills/nvim-runtime-traps/SKILL.md` | Neovim and plugin behaviours that make a check lie. |
 | `.omp/skills/nvim-project-environment/SKILL.md` | Project-level overrides through `.nvim.lua` and the project registry. |
 | `.omp/skills/nvim-language-support/SKILL.md` | The procedure for adding or extending support for a language: scope, contracts, implementation. |
 | `.omp/skills/nvim-language-inventory/SKILL.md` | Phases 1-2 of that procedure: what the runtime and installed plugins already cover, and whether it is enough. |
@@ -269,9 +271,9 @@ Adapted from `MAINTAINING.md#typical-workflow-for-adding-change`, minus everythi
 
 ## Verifying a change
 
-There is no test suite in this repository. Verification is manual, deliberate, and described in **two skills that do not overlap**: `nvim-config-testing` holds the rules (what is worth checking, when to check it, what to hand back to the user instead of simulating it), and `nvim-headless-probes` holds a parameterised probe for every common operation, the known traps of headless checks on this config, and the antipatterns already paid for.
+There is no test suite in this repository. Verification is manual, deliberate, and described in **four skills that do not overlap**: `nvim-config-testing` holds the rules (what is worth checking, when to check it, what to hand back to the user instead of simulating it) and the antipatterns already paid for; `nvim-headless-probes` holds a parameterised probe for every common operation and the traps of the probe bench itself; `nvim-shell-traps` holds the Windows shell and tool traps; and `nvim-runtime-traps` holds the Neovim and plugin behaviours that make a check lie.
 
-Nothing about *how* to verify is written here, or in any other document of this repository: a rule kept in two places diverges at the first update, and from then on neither copy can be trusted. Read both skills before the final pass, and record in the one that owns it whatever that pass taught you.
+Nothing about *how* to verify is written here, or in any other document of this repository: a rule kept in two places diverges at the first update, and from then on neither copy can be trusted. Read these skills before the final pass, and record in the one that owns it whatever that pass taught you.
 
 ## Supported Neovim versions
 
