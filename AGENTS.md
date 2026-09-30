@@ -213,9 +213,13 @@ Each document owns one kind of rule; cite the file and the heading, never a `§N
 | Document | What it owns |
 |---|---|
 | `AGENTS.md` | Repository rules, where changes go, commit style, external dependencies, and this citation rule. |
-| `.omp/skills/nvim-config-testing/SKILL.md` | How to verify a change and the known traps of headless checks. |
+| `.omp/skills/nvim-config-testing/SKILL.md` | What to verify, when, and what to hand back to the user instead of simulating it. |
+| `.omp/skills/nvim-headless-probes/SKILL.md` | The headless probes, the known traps of headless checks, and the antipatterns already paid for. |
 | `.omp/skills/nvim-project-environment/SKILL.md` | Project-level overrides through `.nvim.lua` and the project registry. |
-| `.omp/skills/nvim-language-support/SKILL.md` | The procedure for adding, extending or fixing support for a language. |
+| `.omp/skills/nvim-language-support/SKILL.md` | The procedure for adding or extending support for a language: scope, contracts, implementation. |
+| `.omp/skills/nvim-language-inventory/SKILL.md` | Phases 1-2 of that procedure: what the runtime and installed plugins already cover, and whether it is enough. |
+| `.omp/skills/nvim-mise-toolchain/SKILL.md` | Phase 4 of that procedure: declaring and installing a language's programs with `mise`. |
+| `.omp/skills/nvim-language-troubleshooting/SKILL.md` | Symptom to layer to command, for a language already configured that misbehaves. |
 | `.omp/skills/nvim-language-support/references/capabilities.md` | The catalogue of axes a language can cover and the mechanisms behind each. |
 | `.omp/skills/nvim-language-support/references/<lang>.md` | The per-language outcome of phases 1, 2 and 4-5, the daily cycle, and language-specific verification. |
 | `.omp/skills/nvim-language-support/references/language-declaration.md` | The anatomy shared by every language declaration: what file declares what, the contract, what breaks when it is missing, and the skeleton in `assets/`. |
@@ -265,9 +269,9 @@ Adapted from `MAINTAINING.md#typical-workflow-for-adding-change`, minus everythi
 
 ## Verifying a change
 
-There is no test suite in this repository. Verification is manual, deliberate, and described in **one place only**: the `nvim-config-testing` skill (`.omp/skills/nvim-config-testing/`). It holds the rules (what is worth checking, when to check it, what to hand back to the user instead of simulating it), the known traps of headless checks on this config, the antipatterns already paid for, and a parameterised probe for every common operation.
+There is no test suite in this repository. Verification is manual, deliberate, and described in **two skills that do not overlap**: `nvim-config-testing` holds the rules (what is worth checking, when to check it, what to hand back to the user instead of simulating it), and `nvim-headless-probes` holds a parameterised probe for every common operation, the known traps of headless checks on this config, and the antipatterns already paid for.
 
-Nothing about *how* to verify is written here, or in any other document of this repository: a rule kept in two places diverges at the first update, and from then on neither copy can be trusted. Read the skill before the final pass, and record there whatever that pass taught you.
+Nothing about *how* to verify is written here, or in any other document of this repository: a rule kept in two places diverges at the first update, and from then on neither copy can be trusted. Read both skills before the final pass, and record in the one that owns it whatever that pass taught you.
 
 ## Supported Neovim versions
 
