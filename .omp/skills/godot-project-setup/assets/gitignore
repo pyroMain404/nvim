@@ -1,0 +1,19 @@
+# Godot 4 — righe minime da aggiungere al .gitignore del gioco.
+#
+# Quello che NON sta qui, e che va committato, conta quanto quello che c'è:
+# - '*.gd.uid': da Godot 4.4 ogni script ne ha uno accanto, ed è la sua identità
+#   stabile attraverso rinomine e spostamenti. Ignorarlo rompe i riferimenti per
+#   chiunque cloni il progetto.
+# - 'export_presets.cfg': è configurazione di build, non un segreto. I segreti
+#   stanno in 'export_credentials.cfg', che è ignorato qui sotto.
+# - 'mise.toml': è ciò che dichiara la versione del motore, e deve seguire il
+#   checkout.
+
+# Cache di import, rigenerata dal motore a ogni apertura
+/.godot/
+
+# Credenziali di firma degli export
+export_credentials.cfg
+
+# Output delle build
+/build/

@@ -1,0 +1,28 @@
+{
+  "__comment__": [
+    "Skeleton for 'after/snippets/<lang>.json'. Rename after the language, as",
+    "'mini.snippets' loads it by language (:h MiniSnippets.gen_loader.from_lang()).",
+    "Being under 'after/', it overrides same-prefix snippets from",
+    "'friendly-snippets', which is already installed and covers most languages —",
+    "look at what already arrives before writing anything here.",
+    "",
+    "Body syntax is LSP snippet syntax: $1 $2 for stops, ${1:default} for a",
+    "placeholder, $0 for the final position, ${VAR} for a variable (see",
+    "'snippets/global.json' for date and time variables).",
+    "",
+    "A key with a prefix but no body REMOVES that prefix, which is how a snippet",
+    "provided by a plugin gets suppressed — 'after/snippets/lua.json' does this.",
+    "",
+    "This key is ignored by the loader and exists only to carry these notes: a",
+    "JSON file has nowhere else to put them. Delete it in a real file where the",
+    "snippets speak for themselves."
+  ],
+
+  "Example function": {
+    "prefix": "fn",
+    "body": "fn ${1:name}(${2}) {\n\t$0\n}",
+    "description": "Function definition"
+  },
+
+  "Remove prefixes provided by friendly-snippets": { "prefix": ["unwanted"] }
+}
