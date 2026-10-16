@@ -1,3 +1,7 @@
+## 2026-10-16
+
+- Add `<Leader>oy` in `plugin/20_keymaps.lua` to copy the current file's full absolute path to the system clipboard for pasting into Windows applications.
+
 ## 2026-09-28
 
 - Shorten the directories of paths shown in 'mini.pick' (`:h pathshorten()`), except the last two, through a global `source.show` in `plugin/30_mini.lua`, so the file name and grep match of deep paths stay visible in every picker that lists files without losing where the file is. Only the display changes; choosing and preview get the full path.
