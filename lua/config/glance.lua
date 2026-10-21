@@ -1,17 +1,19 @@
--- ┌─────────────────────────────┐
--- │ Glance and link resolution  │
--- └─────────────────────────────┘
+-- ┌────────┐
+-- │ Glance │
+-- └────────┘
 --
--- Required by name: 'after/ftplugin/markdown.lua' (`gf` on a link) and the
--- `<Leader>eg` mapping in 'plugin/20_keymaps.lua'.
+-- Required by name from the `<Leader>eg` mapping in 'plugin/20_keymaps.lua'.
 --
 -- "Glance" shows the file under the cursor in a floating window and nothing
 -- else: no buffer in the list, no change of the current window. It is the same
 -- float `vim.diagnostic.open_float()` uses (`:h vim.lsp.util.open_floating_preview()`),
 -- so it behaves the same way: it closes on the first cursor move, and pressing
 -- `<Leader>eg` again while it is open moves into it (`q` or `<C-w>c` closes it).
--- Example: cursor on `[Discovery](references/discovery.md)` or on a path in
--- any file, then `<Leader>eg`.
+-- The name is found the way `gf` finds it, through 'path' (`:h findfile()`), so
+-- both agree on what a name means. When no file or directory matches, the `:h`
+-- tag of the word is shown instead.
+-- Example: cursor on 'extensions/x.ts' or on `vim.diagnostic.open_float`, then
+-- `<Leader>eg`.
 
 local M = {}
 
@@ -19,46 +21,9 @@ local M = {}
 -- here and the last line says so.
 local max_lines = 60
 
--- Markdown `[label](target)` link covering the cursor, on label or path alike.
--- Returns the target without its `#anchor`, and the target as written.
--- `<...>` and a trailing title are handled; the cursor column is a byte column
--- in the source text, so it is right in the rendered (concealed) states too.
-M.link = function()
-  local line, col = vim.api.nvim_get_current_line(), vim.fn.col('.')
-  local init = 1
-  while true do
-    local s, e, target = line:find('%b[]%(%s*([^)]-)%s*%)', init)
-    if not s then return nil end
-    if col >= s and col <= e then
-      target = target:match('^<([^>]*)>') or target:match('^(%S+)')
-      return target and target:gsub('#.*$', '') or nil, target
-    end
-    init = e + 1
-  end
-end
-
--- First existing candidate for `path`: as is (absolute, or relative to the
--- working directory), then relative to the directory of the current file and to
--- every directory above it. Walking up covers the repository root and the case
--- of a document that names a file of its plugin ('extensions/x.ts' written in
--- 'skills/x/SKILL.md'), where the root of the project is not the git root.
-M.resolve = function(path)
-  path = vim.fs.normalize(path)
-  if vim.uv.fs_stat(path) then return path end
-  local base = vim.fs.dirname(vim.api.nvim_buf_get_name(0))
-  local dirs = { base }
-  for parent in vim.fs.parents(base) do
-    table.insert(dirs, parent)
-  end
-  for _, dir in ipairs(dirs) do
-    local candidate = vim.fs.joinpath(dir, path)
-    if vim.uv.fs_stat(candidate) then return candidate end
-  end
-end
-
--- Last resort: the `:h` tag that `tag` names, as lines starting at its
--- definition, and the help file they come from. Reads 'doc/tags' of every
--- runtime directory, which is what `:help` itself consults.
+-- The `:h` tag `tag` names, as lines starting at its definition, and the help
+-- file they come from. Reads 'doc/tags' of every runtime directory, which is
+-- what `:help` itself consults.
 local help_tag = function(tag)
   for _, tags in ipairs(vim.api.nvim_get_runtime_file('doc/tags', true)) do
     for line in io.lines(tags) do
@@ -79,16 +44,10 @@ end
 -- Show the file or directory under the cursor in a floating window; failing
 -- that, the help for the word under the cursor.
 M.open = function()
-  local path, raw
-  if vim.bo.filetype == 'markdown' then
-    path, raw = M.link()
-  end
-  if not raw then path = vim.fn.expand('<cfile>') end
-  if raw and raw:match('^%a[%w+.-]*://') then
-    return vim.notify('Glance shows files, not URLs: ' .. raw, vim.log.levels.WARN)
-  end
-
-  local file = path and path ~= '' and M.resolve(path)
+  local path = vim.fn.expand('<cfile>')
+  local file = path ~= '' and vim.fn.findfile(path) or ''
+  if file == '' and path ~= '' then file = vim.fn.finddir(path) end
+  if file == '' then file = nil end
   local lines, ft, title = {}, nil, nil
   if file then
     title = vim.fn.fnamemodify(file, ':~:.')
@@ -110,7 +69,7 @@ M.open = function()
     end
   else
     local word = vim.fn.expand('<cword>')
-    local name = (path or ''):gsub('%p+$', '')
+    local name = path:gsub('%p+$', '')
     -- A function is tagged with its parentheses (`vim.diagnostic.open_float()`),
     -- an option with its quotes. Punctuation alone (`.`) is a tag too: skip it.
     for _, tag in ipairs({
@@ -132,7 +91,7 @@ M.open = function()
     end
     if not title then
       return vim.notify(
-        'Glance found no file or help tag: ' .. (path or ''),
+        'Glance found no file or help tag: ' .. path,
         vim.log.levels.WARN
       )
     end

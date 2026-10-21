@@ -187,67 +187,6 @@ vim.keymap.set('n', '<Leader>om', function()
   set_state(next_state or 'source')
 end, { buffer = 0, desc = 'Toggle Markdown source/live/reading' })
 
--- `gf` on a `[label](target)` link, with the cursor anywhere in it: label or
--- path, in source, live and reading states alike (reading conceals the path,
--- but the cursor column still addresses the source text). Built-in `gf` only
--- knows the file name under the cursor, so a label finds nothing and "(" ends
--- the path. `target` may be absolute, relative to this file, or relative to the
--- repository root; the first that exists wins (see 'lua/config/glance.lua').
--- URLs go to `vim.ui.open()`. Off a link, the plain path under the cursor gets
--- the same lookup; what that does not find is left to the built-in. `gF` is the
--- same with the line that follows the name, as `path:12` or `path(12)`.
-local function follow(builtin)
-  local glance = require('config.glance')
-  local path, raw = glance.link()
-  if raw and raw:match('^%a[%w+.-]*://') then return vim.ui.open(raw) end
-  local found = path or vim.fn.expand('<cfile>')
-  local lnum
-  if builtin == 'gF' then
-    local name, n = found:match('^(.-):(%d+)$')
-    if name then
-      found, lnum = name, tonumber(n)
-    elseif not path then
-      local text, col = vim.api.nvim_get_current_line(), vim.fn.col('.')
-      local from = 1
-      while found ~= '' do
-        local s, e = text:find(found, from, true)
-        if not s then break end
-        if e >= col then
-          lnum = tonumber(text:match('^[:(](%d+)', e + 1))
-          break
-        end
-        from = e + 1
-      end
-    end
-  end
-  local file = found ~= '' and glance.resolve(found)
-  if file then
-    vim.cmd.edit(vim.fn.fnameescape(file))
-    if lnum then
-      local last = vim.api.nvim_buf_line_count(0)
-      vim.api.nvim_win_set_cursor(0, { math.min(lnum, last), 0 })
-    end
-    return
-  end
-  if raw then
-    return vim.notify('Link target not found: ' .. found, vim.log.levels.WARN)
-  end
-  vim.cmd.normal({ builtin, bang = true })
-end
-
-vim.keymap.set(
-  'n',
-  'gf',
-  function() follow('gf') end,
-  { buffer = 0, desc = 'Follow Markdown link' }
-)
-vim.keymap.set(
-  'n',
-  'gF',
-  function() follow('gF') end,
-  { buffer = 0, desc = 'Follow Markdown link at its line' }
-)
-
 vim.b.markdown_om_cleanup = function()
   vim.b.markdown_om = 'source'
   if renderer_available then
@@ -258,8 +197,6 @@ vim.b.markdown_om_cleanup = function()
   vim.keymap.del('n', '<Leader>om', { buffer = 0 })
   vim.keymap.del('n', 'j', { buffer = 0 })
   vim.keymap.del('n', 'k', { buffer = 0 })
-  vim.keymap.del('n', 'gf', { buffer = 0 })
-  vim.keymap.del('n', 'gF', { buffer = 0 })
   vim.b.markdown_om = nil
   vim.b.markdown_om_original = nil
   vim.b.markdown_om_cleanup = nil

@@ -1,10 +1,10 @@
 ## 2026-10-21
 
-- Add `<Leader>eg`, "glance": show the file or directory under the cursor (any buffer; in Markdown also a `[label](path)` link) in a floating popup with `vim.lsp.util.open_floating_preview()`, the window `vim.diagnostic.open_float()` uses, without opening a buffer. A relative path is looked up from the directory of the file and every directory above it, so a document naming `extensions/x.ts` of its own plugin finds it. When nothing on disk matches, the `:h` tag of the word (or of the path, as `name()`) is shown instead. Closes on cursor move; a second press enters it. The Markdown link resolution of `gf` moved to 'lua/config/glance.lua' to be shared, and `gf` gained the same upward lookup.
+- Add `<Leader>eg`, "glance": show the file or directory under the cursor in a floating popup with `vim.lsp.util.open_floating_preview()`, the window `vim.diagnostic.open_float()` uses, without opening a buffer. The name is found through 'path', like `gf`; when nothing on disk matches, the `:h` tag of the word is shown instead. Closes on cursor move; a second press enters it.
+
+- Set 'path' to `.;,,` in `plugin/10_options.lua`, so `gf`, `gF`, `<C-w>f` and `:find` look in the directory of the file and every directory above it, and a document naming `extensions/x.ts` of its own plugin finds it. The Markdown-only `gf`/`gF` overrides that followed `[label](path)` links are gone: links work only where the name under the cursor is a plain path.
 
 - Open Markdown buffers in the `reading` state of `<Leader>om` (rendered, nonmodifiable) instead of `source`, from `after/ftplugin/markdown.lua`. Without 'render-markdown.nvim' the buffer still starts in `source`, so it stays editable.
-
-- Make `gf` in Markdown buffers follow a `[label](target)` link with the cursor on the label or the path, in every `<Leader>om` state, from `after/ftplugin/markdown.lua`. The target may be absolute, relative to the file or relative to the repository root; URLs open with `vim.ui.open()`, and off a link `gf` behaves as before.
 
 ## 2026-10-16
 

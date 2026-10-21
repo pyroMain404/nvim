@@ -28,6 +28,13 @@ vim.g.mapleader = ' ' -- Use `<Space>` as <Leader> key
 vim.o.mousescroll = 'ver:25,hor:6' -- Customize mouse scroll
 vim.o.switchbuf   = 'usetab'       -- Use already opened buffers when switching
 
+-- `.;` makes 'path' search the directory of the current file and then every
+-- directory above it (`:h file-searching`), so `gf`, `gF`, `<C-w>f`, `:find` and
+-- the glance popup (`<Leader>eg`) resolve a name written relative to a parent
+-- directory, like 'extensions/x.ts' in 'skills/x/SKILL.md'. The trailing `,,`
+-- keeps the working directory, as in the default `.,,`.
+vim.o.path = '.;,,'
+
 vim.o.shada = "'100,<50,s10,:1000,/100,@100,h" -- Limit ShaDa file (for startup)
 
 -- Use PowerShell 7, not the Windows default `cmd.exe`, for `:!`, `:make`,
