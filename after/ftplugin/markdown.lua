@@ -160,6 +160,21 @@ local function set_state(state)
   end
 end
 
+-- Open in the reading state: rendered and nonmodifiable, the state that the
+-- `<Leader>om` cycle reaches after two presses from source. Without the
+-- renderer, stay in source so the buffer remains editable.
+-- NOTE: 'render-markdown.nvim' attaches to the buffer in its own `FileType`
+-- autocmd, which runs after this ftplugin, and `set_buf()` ignores buffers not
+-- yet attached. So the switch is scheduled, and runs in the buffer it was for.
+if renderer_available then
+  local buf = vim.api.nvim_get_current_buf()
+  vim.schedule(function()
+    if vim.api.nvim_buf_is_valid(buf) then
+      vim.api.nvim_buf_call(buf, function() set_state('reading') end)
+    end
+  end)
+end
+
 vim.keymap.set('n', '<Leader>om', function()
   if not renderer_available then
     vim.notify(

@@ -1,8 +1,8 @@
 # Markdown
 
 Markdown is already recognized by Neovim as the `markdown` filetype. This config
-keeps ordinary editing in the runtime ftplugin and adds an opt-in rendered view;
-opening a Markdown file remains source view.
+keeps ordinary editing in the runtime ftplugin and adds a rendered view. Opening
+a Markdown file starts in `reading`, the rendered read-only state, when the renderer is available.
 
 ## 1. Runtime and existing support
 
@@ -52,15 +52,16 @@ modes preserve their ordinary motions.
 
 ## 4. Manual verification
 
-Open any `.md` file and press `<Leader>om` three times. Confirm in order:
+Open any `.md` file. It must start in `reading`: rendered, `modifiable` off. Press
+`<Leader>om` in order and confirm:
 
-1. `live` renders headings, lists and other Markdown while source markup appears at
+1. The first press enters `source`: the original unrendered view and the buffer's
+original editability return.
+2. The second press enters `live`: Markdown renders while source markup appears at
 the cursor and over a Visual selection; insert text on that line.
-2. `reading` rejects edits, keeps source markup concealed when moving the cursor
-or making a Visual selection, makes `j`/`k` skip concealed non-table lines, and
-visits every pipe-table source row.
-3. The following `source` press restores the original unrendered view and the
-buffer's original editability.
+3. The third press enters `reading` again: edits are rejected, source markup stays
+concealed when moving the cursor or making a Visual selection, `j`/`k` skip
+concealed non-table lines, and every pipe-table source row is visited.
 
 Repeat the live/reading transitions with the Markdown buffer visible in two splits;
 both windows must retain the active mode after cursor movement.
