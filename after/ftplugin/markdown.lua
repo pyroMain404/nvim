@@ -187,6 +187,42 @@ vim.keymap.set('n', '<Leader>om', function()
   set_state(next_state or 'source')
 end, { buffer = 0, desc = 'Toggle Markdown source/live/reading' })
 
+-- `gf` on a `[label](target)` link, with the cursor anywhere in it: label or
+-- path, in source, live and reading states alike (reading conceals the path,
+-- but the cursor column still addresses the source text). Built-in `gf` only
+-- knows the file name under the cursor, so a label finds nothing and "(" ends
+-- the path. `target` may be absolute, relative to this file, or relative to the
+-- repository root; the first that exists wins. URLs go to `vim.ui.open()`.
+-- Off a link, plain `gf` runs.
+local function link_target()
+  local line, col = vim.api.nvim_get_current_line(), vim.fn.col('.')
+  local init = 1
+  while true do
+    local s, e, target = line:find('%b[]%(%s*([^)]-)%s*%)', init)
+    if not s then return nil end
+    if col >= s and col <= e then
+      target = target:match('^<([^>]*)>') or target:match('^(%S+)')
+      return target and target:gsub('#.*$', '') or nil, target
+    end
+    init = e + 1
+  end
+end
+
+vim.keymap.set('n', 'gf', function()
+  local path, raw = link_target()
+  if raw and raw:match('^%a[%w+.-]*://') then return vim.ui.open(raw) end
+  if not path or path == '' then return vim.cmd.normal({ 'gf', bang = true }) end
+  path = vim.fs.normalize(path)
+  local root = vim.fs.root(0, '.git')
+  local base = vim.fs.dirname(vim.api.nvim_buf_get_name(0))
+  local candidates = { path, vim.fs.joinpath(base, path) }
+  if root then table.insert(candidates, vim.fs.joinpath(root, path)) end
+  for _, c in ipairs(candidates) do
+    if vim.uv.fs_stat(c) then return vim.cmd.edit(vim.fn.fnameescape(c)) end
+  end
+  vim.notify('Link target not found: ' .. path, vim.log.levels.WARN)
+end, { buffer = 0, desc = 'Follow Markdown link' })
+
 vim.b.markdown_om_cleanup = function()
   vim.b.markdown_om = 'source'
   if renderer_available then
@@ -197,6 +233,7 @@ vim.b.markdown_om_cleanup = function()
   vim.keymap.del('n', '<Leader>om', { buffer = 0 })
   vim.keymap.del('n', 'j', { buffer = 0 })
   vim.keymap.del('n', 'k', { buffer = 0 })
+  vim.keymap.del('n', 'gf', { buffer = 0 })
   vim.b.markdown_om = nil
   vim.b.markdown_om_original = nil
   vim.b.markdown_om_cleanup = nil

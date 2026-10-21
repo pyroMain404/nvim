@@ -2,6 +2,8 @@
 
 - Open Markdown buffers in the `reading` state of `<Leader>om` (rendered, nonmodifiable) instead of `source`, from `after/ftplugin/markdown.lua`. Without 'render-markdown.nvim' the buffer still starts in `source`, so it stays editable.
 
+- Make `gf` in Markdown buffers follow a `[label](target)` link with the cursor on the label or the path, in every `<Leader>om` state, from `after/ftplugin/markdown.lua`. The target may be absolute, relative to the file or relative to the repository root; URLs open with `vim.ui.open()`, and off a link `gf` behaves as before.
+
 ## 2026-10-16
 
 - Add `<Leader>oy` in `plugin/20_keymaps.lua` to copy the current file's full absolute path to the system clipboard for pasting into Windows applications.
