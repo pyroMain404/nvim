@@ -38,19 +38,46 @@ M.link = function()
 end
 
 -- First existing candidate for `path`: as is (absolute, or relative to the
--- working directory), relative to the current file, relative to the repository.
+-- working directory), then relative to the directory of the current file and to
+-- every directory above it. Walking up covers the repository root and the case
+-- of a document that names a file of its plugin ('extensions/x.ts' written in
+-- 'skills/x/SKILL.md'), where the root of the project is not the git root.
 M.resolve = function(path)
   path = vim.fs.normalize(path)
-  local root = vim.fs.root(0, '.git')
+  if vim.uv.fs_stat(path) then return path end
   local base = vim.fs.dirname(vim.api.nvim_buf_get_name(0))
-  local candidates = { path, vim.fs.joinpath(base, path) }
-  if root then table.insert(candidates, vim.fs.joinpath(root, path)) end
-  for _, c in ipairs(candidates) do
-    if vim.uv.fs_stat(c) then return c end
+  local dirs = { base }
+  for parent in vim.fs.parents(base) do
+    table.insert(dirs, parent)
+  end
+  for _, dir in ipairs(dirs) do
+    local candidate = vim.fs.joinpath(dir, path)
+    if vim.uv.fs_stat(candidate) then return candidate end
   end
 end
 
--- Show the file or directory under the cursor in a floating window.
+-- Last resort: the `:h` tag that `tag` names, as lines starting at its
+-- definition, and the help file they come from. Reads 'doc/tags' of every
+-- runtime directory, which is what `:help` itself consults.
+local help_tag = function(tag)
+  for _, tags in ipairs(vim.api.nvim_get_runtime_file('doc/tags', true)) do
+    for line in io.lines(tags) do
+      local name, file = line:match('^([^\t]+)\t([^\t]+)\t')
+      if name == tag then
+        local doc = vim.fs.joinpath(vim.fs.dirname(tags), file)
+        local all = vim.fn.readfile(doc)
+        for i, text in ipairs(all) do
+          if text:find('*' .. tag .. '*', 1, true) then
+            return vim.list_slice(all, i, i + max_lines - 1), doc
+          end
+        end
+      end
+    end
+  end
+end
+
+-- Show the file or directory under the cursor in a floating window; failing
+-- that, the help for the word under the cursor.
 M.open = function()
   local path, raw
   if vim.bo.filetype == 'markdown' then
@@ -60,36 +87,61 @@ M.open = function()
   if raw and raw:match('^%a[%w+.-]*://') then
     return vim.notify('Glance shows files, not URLs: ' .. raw, vim.log.levels.WARN)
   end
-  if path == nil or path == '' then
-    return vim.notify('Nothing to glance at under the cursor', vim.log.levels.WARN)
-  end
-  local file = M.resolve(path)
-  if not file then
-    return vim.notify('Glance target not found: ' .. path, vim.log.levels.WARN)
-  end
 
-  local lines, ft = {}, nil
-  if vim.uv.fs_stat(file).type == 'directory' then
-    for name, type in vim.fs.dir(file) do
-      table.insert(lines, type == 'directory' and name .. '/' or name)
+  local file = path and path ~= '' and M.resolve(path)
+  local lines, ft, title = {}, nil, nil
+  if file then
+    title = vim.fn.fnamemodify(file, ':~:.')
+    if vim.uv.fs_stat(file).type == 'directory' then
+      for name, type in vim.fs.dir(file) do
+        table.insert(lines, type == 'directory' and name .. '/' or name)
+      end
+    else
+      local ok, read = pcall(vim.fn.readfile, file, '', max_lines + 1)
+      if not ok or table.concat(read):find('%z') then
+        return vim.notify(
+          'Glance cannot show ' .. file .. ' (binary?)',
+          vim.log.levels.WARN
+        )
+      end
+      lines = read
+      if #lines > max_lines then lines[max_lines + 1] = '…' end
+      ft = vim.filetype.match({ filename = file })
     end
   else
-    local ok, read = pcall(vim.fn.readfile, file, '', max_lines + 1)
-    if not ok or table.concat(read):find('%z') then
+    local word = vim.fn.expand('<cword>')
+    local name = (path or ''):gsub('%p+$', '')
+    -- A function is tagged with its parentheses (`vim.diagnostic.open_float()`),
+    -- an option with its quotes. Punctuation alone (`.`) is a tag too: skip it.
+    for _, tag in ipairs({
+      name,
+      name .. '()',
+      word,
+      word .. '()',
+      "'" .. word .. "'",
+    }) do
+      local found, doc = nil, nil
+      if tag:find('%w') then
+        found, doc = help_tag(tag)
+      end
+      if found then
+        lines, ft, title =
+          found, 'help', ':h ' .. tag .. ' (' .. vim.fs.basename(doc) .. ')'
+        break
+      end
+    end
+    if not title then
       return vim.notify(
-        'Glance cannot show ' .. file .. ' (binary?)',
+        'Glance found no file or help tag: ' .. (path or ''),
         vim.log.levels.WARN
       )
     end
-    lines = read
-    if #lines > max_lines then lines[max_lines + 1] = '…' end
-    ft = vim.filetype.match({ filename = file })
   end
   if #lines == 0 then lines = { '(empty)' } end
 
   vim.lsp.util.open_floating_preview(lines, ft or '', {
     focus_id = 'glance',
-    title = ' ' .. vim.fn.fnamemodify(file, ':~:.') .. ' ',
+    title = ' ' .. title .. ' ',
     max_height = 25,
     max_width = 100,
   })
