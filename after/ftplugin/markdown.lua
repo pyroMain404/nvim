@@ -71,7 +71,7 @@ local renderer_available = #vim.api.nvim_get_runtime_file(
   'lua/render-markdown/init.lua',
   false
 ) > 0
--- HACK: render-markdown.nvim 640a3ec6 exposes hidden lines only through its
+-- HACK: render-markdown.nvim 8e87953 exposes hidden lines only through its
 -- private extmark namespace, without identifying which feature concealed them.
 -- Reading needs `j`/`k` to skip concealed fence delimiters, but must visit every
 -- pipe-table source row. Delete this when it offers a visible-line motion.
@@ -156,7 +156,7 @@ vim.api.nvim_create_autocmd('CursorMoved', {
 
 local function renderer_set(enabled) require('render-markdown').set_buf(enabled) end
 
--- HACK: render-markdown.nvim 640a3ec6 caches `anti_conceal` per buffer but has
+-- HACK: render-markdown.nvim 8e87953 caches `anti_conceal` per buffer but has
 -- no public per-buffer override. Reading alone must keep its extmarks on the
 -- cursor line, so change that cache before the renderer refreshes. Delete this
 -- when the plugin exposes a per-buffer anti-conceal API.
