@@ -1,5 +1,7 @@
 ## 2026-10-21
 
+- Stop 'render-markdown.nvim' from wrapping the cells of a Markdown table wider than the window (`pipe_table.wrap = false` in `plugin/40_plugins.lua`). A wrapped row is drawn as virtual lines, which the cursor cannot enter and Visual mode cannot highlight, so moving through and selecting such rows was broken; with real text every row can be navigated and selected. The `live` state still shows the source of the row under the cursor.
+
 - Make the cursor skip every concealed run of the line in the `reading` state, not only the `](target)` of a link: the backticks and `*` of inline markup and the `[` of links too, read from the `(#set! conceal "")` captures of the 'markdown_inline' `highlights` query in `skip_hidden()` ('lua/config/mdlink.lua'). Before, the cursor looked stuck while it crossed them.
 
 - Keep the pipes and delimiter row of a Markdown table drawn on the cursor line in the `live` state, with `anti_conceal.ignore.table_border` in `plugin/40_plugins.lua`.

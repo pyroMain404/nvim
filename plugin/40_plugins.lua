@@ -340,6 +340,11 @@ now_if_args(function()
     -- Table pipes and the delimiter row are drawn over the source, so hiding
     -- them on the cursor line would show the raw row (`:h render-markdown-setup`).
     anti_conceal = { enabled = true, ignore = { table_border = true } },
+    -- Wrapped table cells are virtual lines, which the cursor cannot enter and
+    -- Visual mode cannot highlight, so navigating and selecting in a table with
+    -- a wrapped row is broken (upstream render-markdown.nvim#692, #689, #711).
+    -- Without wrapping every row stays real text (`:h render-markdown-setup`).
+    pipe_table = { wrap = false },
     on = {
       -- The plugin reapplies `win_options` on every refresh. Reapply the
       -- state-specific conceal settings from this documented post-render hook
