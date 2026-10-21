@@ -34,6 +34,10 @@ vim.o.switchbuf   = 'usetab'       -- Use already opened buffers when switching
 -- directory, like 'extensions/x.ts' in 'skills/x/SKILL.md'. The trailing `,,`
 -- keeps the working directory, as in the default `.,,`.
 vim.o.path = '.;,,'
+-- NOTE: 'init.lua' snapshots 'path' as `Config.pristine_path` before this file
+-- runs, and 'after/ftplugin/c.lua' and 'plugin/41_git.lua' build their local
+-- value from that snapshot. Refresh it, or they would drop the upward search.
+Config.pristine_path = vim.o.path
 
 vim.o.shada = "'100,<50,s10,:1000,/100,@100,h" -- Limit ShaDa file (for startup)
 
