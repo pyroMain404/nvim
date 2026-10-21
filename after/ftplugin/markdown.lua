@@ -193,15 +193,19 @@ end, { buffer = 0, desc = 'Toggle Markdown source/live/reading' })
 -- knows the file name under the cursor, so a label finds nothing and "(" ends
 -- the path. `target` may be absolute, relative to this file, or relative to the
 -- repository root; the first that exists wins (see 'lua/config/glance.lua').
--- URLs go to `vim.ui.open()`. Off a link, plain `gf` runs.
+-- URLs go to `vim.ui.open()`. Off a link, the plain path under the cursor gets
+-- the same lookup; what that does not find is left to built-in `gf`.
 vim.keymap.set('n', 'gf', function()
   local glance = require('config.glance')
   local path, raw = glance.link()
   if raw and raw:match('^%a[%w+.-]*://') then return vim.ui.open(raw) end
-  if not path or path == '' then return vim.cmd.normal({ 'gf', bang = true }) end
-  local file = glance.resolve(path)
+  local found = path or vim.fn.expand('<cfile>')
+  local file = found ~= '' and glance.resolve(found)
   if file then return vim.cmd.edit(vim.fn.fnameescape(file)) end
-  vim.notify('Link target not found: ' .. path, vim.log.levels.WARN)
+  if raw then
+    return vim.notify('Link target not found: ' .. found, vim.log.levels.WARN)
+  end
+  vim.cmd.normal({ 'gf', bang = true })
 end, { buffer = 0, desc = 'Follow Markdown link' })
 
 vim.b.markdown_om_cleanup = function()
