@@ -1,5 +1,7 @@
 ## 2026-10-21
 
+- Add `<Leader>eg`, "glance": show the file or directory under the cursor (any buffer; in Markdown also a `[label](path)` link) in a floating popup with `vim.lsp.util.open_floating_preview()`, the window `vim.diagnostic.open_float()` uses, without opening a buffer. Closes on cursor move; a second press enters it. The Markdown link resolution of `gf` moved to 'lua/config/glance.lua' to be shared.
+
 - Open Markdown buffers in the `reading` state of `<Leader>om` (rendered, nonmodifiable) instead of `source`, from `after/ftplugin/markdown.lua`. Without 'render-markdown.nvim' the buffer still starts in `source`, so it stays editable.
 
 - Make `gf` in Markdown buffers follow a `[label](target)` link with the cursor on the label or the path, in every `<Leader>om` state, from `after/ftplugin/markdown.lua`. The target may be absolute, relative to the file or relative to the repository root; URLs open with `vim.ui.open()`, and off a link `gf` behaves as before.

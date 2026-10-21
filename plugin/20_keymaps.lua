@@ -98,6 +98,8 @@ nmap_leader('bW', '<Cmd>lua MiniBufremove.wipeout(0, true)<CR>', 'Wipeout!')
 -- e is for 'Explore' and 'Edit'. Common usage:
 -- - `<Leader>ed` - open explorer at current working directory
 -- - `<Leader>ef` - open directory of current file (needs to be present on disk)
+-- - `<Leader>eg` - glance at the file under cursor in a popup, like diagnostics
+--   (also a Markdown `[label](path)` link); see 'lua/config/glance.lua'
 -- - `<Leader>ei` - edit 'init.lua'
 -- - All mappings that use `edit_plugin_file` - edit 'plugin/' config files
 -- `:h stdpath()` answers with the directory Neovim was started from, which
@@ -144,6 +146,7 @@ end
 
 nmap_leader('ed', '<Cmd>lua MiniFiles.open()<CR>',                             'Directory')
 nmap_leader('ef', '<Cmd>lua MiniFiles.open(vim.api.nvim_buf_get_name(0))<CR>', 'File directory')
+nmap_leader('eg', function() require('config.glance').open() end,              'Glance at file')
 nmap_leader('ei', config_file('init.lua'),                                     'init.lua')
 nmap_leader('ek', edit_plugin_file('20_keymaps.lua'),                          'Keymaps config')
 nmap_leader('em', edit_plugin_file('30_mini.lua'),                             'MINI config')
