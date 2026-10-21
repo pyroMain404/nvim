@@ -34,34 +34,70 @@ M.target = function(fname)
   return (fname:gsub('#.*$', ''))
 end
 
--- Move the cursor off the concealed text of its line, so that the reading
--- state of `<Leader>om`, which keeps the cursor line concealed, never parks it
--- on characters that are not drawn: the backticks and `*` of inline markup and
--- the `[`, `](target)` of links. The ranges are the ones 'markdown_inline'
--- conceals with `(#set! conceal "")` in its 'highlights' query, so they agree
--- with what is drawn. Moving right lands after the concealed run (before it at
--- the end of the line), moving left before it. `prev` is the 1-based column
--- the cursor came from.
+-- Keep reading-state motions off hidden source text: renderer extmarks and
+-- Markdown highlight captures both conceal it, including multiline ranges.
+-- Merge their row-clipped runs before landing after a run when moving right,
+-- or before it when moving left / at end of line. A fully hidden line has one
+-- cursor anchor at column zero. `prev` is the previous 1-based byte column.
 M.skip_hidden = function(prev)
-  local ok, parser = pcall(vim.treesitter.get_parser, 0, 'markdown')
-  local query = vim.treesitter.query.get('markdown_inline', 'highlights')
-  if not ok or not query then return end
+  local level = vim.wo.conceallevel
+  if level < 2 then return end
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   row = row - 1
-  local len = #vim.api.nvim_get_current_line()
-  parser:parse(true)
-
+  local line = vim.api.nvim_get_current_line()
+  local len = #line
   local runs = {}
-  parser:for_each_tree(function(tree, ltree)
-    if ltree:lang() ~= 'markdown_inline' then return end
-    for id, node, md in query:iter_captures(tree:root(), 0, row, row + 1) do
-      local conceal = (md[id] or {}).conceal or md.conceal
-      local sr, sc, er, ec = node:range()
-      if conceal == '' and sr == row and er == row then
-        runs[#runs + 1] = { sc, ec }
+  local function add_range(sr, sc, er, ec)
+    if sr > row or er < row then return end
+    local s = sr == row and sc or 0
+    local e = er == row and ec or len
+    s, e = math.max(0, s), math.min(len, e)
+    if s < e then runs[#runs + 1] = { s, e } end
+  end
+  local function is_hidden(conceal)
+    return conceal == '' or (level == 3 and conceal ~= nil)
+  end
+
+  local renderer = package.loaded['render-markdown.core.ui']
+  if renderer then
+    local marks = vim.api.nvim_buf_get_extmarks(
+      0,
+      renderer.ns,
+      { row, 0 },
+      { row, -1 },
+      { details = true, overlap = true }
+    )
+    for _, mark in ipairs(marks) do
+      local details = mark[4]
+      local er = details.end_row or mark[2]
+      local ec = details.end_col or len
+      if details.conceal_lines ~= nil then
+        if mark[2] == row or er > row or (er == row and ec > 0) then
+          runs[#runs + 1] = { 0, len }
+        end
+      elseif is_hidden(details.conceal) then
+        add_range(mark[2], mark[3], er, ec == -1 and len or ec)
       end
     end
-  end)
+  end
+
+  local ok, parser = pcall(vim.treesitter.get_parser, 0, 'markdown')
+  if ok then
+    parser:parse(true)
+    parser:for_each_tree(function(tree, ltree)
+      local lang = ltree:lang()
+      if lang ~= 'markdown' and lang ~= 'markdown_inline' then return end
+      local query = vim.treesitter.query.get(lang, 'highlights')
+      if not query then return end
+      for id, node, md in query:iter_captures(tree:root(), 0, row, row + 1) do
+        local capture = md[id] or {}
+        if is_hidden(md.conceal or capture.conceal) then
+          local range = vim.treesitter.get_range(node, 0, capture)
+          add_range(range[1], range[2], range[4], range[5])
+        end
+      end
+    end)
+  end
   table.sort(runs, function(a, b) return a[1] < b[1] end)
 
   local s, e
@@ -77,6 +113,9 @@ M.skip_hidden = function(prev)
 
   local to = (col + 1 >= prev and e < len) and e or s - 1
   if to < 0 then to = e < len and e or 0 end
+  while to > 0 and line:byte(to + 1) >= 128 and line:byte(to + 1) < 192 do
+    to = to - 1
+  end
   vim.api.nvim_win_set_cursor(0, { row + 1, to })
 end
 
