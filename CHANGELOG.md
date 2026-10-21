@@ -1,5 +1,7 @@
 ## 2026-10-21
 
+- Make the cursor skip every concealed run of the line in the `reading` state, not only the `](target)` of a link: the backticks and `*` of inline markup and the `[` of links too, read from the `(#set! conceal "")` captures of the 'markdown_inline' `highlights` query in `skip_hidden()` ('lua/config/mdlink.lua'). Before, the cursor looked stuck while it crossed them.
+
 - Keep the pipes and delimiter row of a Markdown table drawn on the cursor line in the `live` state, with `anti_conceal.ignore.table_border` in `plugin/40_plugins.lua`.
 
 - Stop the cursor from landing on the concealed `](target)` of a Markdown link in the `reading` state, through a `CursorMoved` autocmd in `after/ftplugin/markdown.lua` backed by `skip_hidden()` in 'lua/config/mdlink.lua'.

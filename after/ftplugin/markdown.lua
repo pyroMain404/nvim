@@ -136,9 +136,9 @@ vim.keymap.set(
   { buffer = 0, desc = 'Previous visible Markdown line' }
 )
 
--- The reading state conceals `](target)` even on the cursor line, but the
--- cursor can still move onto it; `skip_hidden()` moves it back off. Live shows
--- the source on the cursor line, so nothing is hidden there.
+-- The reading state conceals the markup of the cursor line too, but the cursor
+-- can still move onto it; `skip_hidden()` moves it back off. Live shows the
+-- source on the cursor line, so nothing is hidden there.
 local cursor_group =
   vim.api.nvim_create_augroup('MarkdownReadingCursor', { clear = false })
 vim.api.nvim_clear_autocmds({ group = cursor_group, buffer = 0 })
