@@ -1,5 +1,7 @@
 ## 2026-10-21
 
+- Let 'render-markdown.nvim' wrap the cells of a Markdown table wider than the window again, in `live` and `reading` (removes `pipe_table.wrap = false` from `plugin/40_plugins.lua`). Without it Neovim split the overflowing rows and the tail of each row landed misaligned on the next line. Cost: Visual mode does not highlight wrapped rows and the cursor row is shown as source.
+
 - Stop reading-state cursor motions from stepping through hidden code fences and other renderer-concealed Markdown, while preserving visible UTF-8 character boundaries and source/live editing (`lua/config/mdlink.lua`).
 
 - Stop 'render-markdown.nvim' from wrapping the cells of a Markdown table wider than the window (`pipe_table.wrap = false` in `plugin/40_plugins.lua`). A wrapped row is drawn as virtual lines, which the cursor cannot enter and Visual mode cannot highlight, so moving through and selecting such rows was broken; with real text every row can be navigated and selected. The `live` state still shows the source of the row under the cursor.
