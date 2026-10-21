@@ -11,6 +11,11 @@ vim.wo[0][0].wrap = true
 vim.wo[0][0].foldmethod = 'expr'
 vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 
+-- Let the commands that look a name up through 'path' (`gf`, `gF`, `<C-w>f`,
+-- `:find`) follow a `[label](target)` link from its label as well as its
+-- target; see 'lua/config/mdlink.lua'.
+vim.bo.includeexpr = "v:lua.require'config.mdlink'.target(v:fname)"
+
 -- Disable built-in `gO` mapping in favor of 'mini.basics'
 vim.keymap.del('n', 'gO', { buf = 0 })
 
@@ -209,7 +214,7 @@ end
 vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
   .. '\n'
   .. table.concat({
-    'setlocal spell< wrap< foldmethod< foldexpr<',
+    'setlocal spell< wrap< foldmethod< foldexpr< includeexpr<',
     'unlet! b:minisurround_config',
     'lua vim.b.markdown_om_cleanup()',
   }, ' | ')
