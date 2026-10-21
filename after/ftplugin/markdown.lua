@@ -136,6 +136,24 @@ vim.keymap.set(
   { buffer = 0, desc = 'Previous visible Markdown line' }
 )
 
+-- The reading state conceals `](target)` even on the cursor line, but the
+-- cursor can still move onto it; `skip_hidden()` moves it back off. Live shows
+-- the source on the cursor line, so nothing is hidden there.
+local cursor_group =
+  vim.api.nvim_create_augroup('MarkdownReadingCursor', { clear = false })
+vim.api.nvim_clear_autocmds({ group = cursor_group, buffer = 0 })
+local prev_col = 0
+vim.api.nvim_create_autocmd('CursorMoved', {
+  group = cursor_group,
+  buffer = 0,
+  callback = function()
+    if vim.b.markdown_om == 'reading' then
+      require('config.mdlink').skip_hidden(prev_col)
+    end
+    prev_col = vim.fn.col('.')
+  end,
+})
+
 local function renderer_set(enabled) require('render-markdown').set_buf(enabled) end
 
 -- HACK: render-markdown.nvim 640a3ec6 caches `anti_conceal` per buffer but has

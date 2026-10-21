@@ -1,5 +1,7 @@
 ## 2026-10-21
 
+- Stop the cursor from landing on the concealed `](target)` of a Markdown link in the `reading` state, through a `CursorMoved` autocmd in `after/ftplugin/markdown.lua` backed by `skip_hidden()` in 'lua/config/mdlink.lua'.
+
 - Check Italian next to English when 'spell' is on ('spelllang' is `en,it`), and keep the words added with `zg` and `2zg` in 'spell/en.utf-8.add' and 'spell/it.utf-8.add' inside the config instead of the data directory. The compiled 'spell/*.spl' files are ignored.
 
 - Add `<Leader>eg`, "glance": show the file or directory under the cursor in a floating popup with `vim.lsp.util.open_floating_preview()`, the window `vim.diagnostic.open_float()` uses, without opening a buffer. The name is found through 'path', like `gf`; when nothing on disk matches, the `:h` tag of the word is shown instead. Closes on cursor move; a second press enters it.

@@ -34,4 +34,26 @@ M.target = function(fname)
   return (fname:gsub('#.*$', ''))
 end
 
+-- Move the cursor off the concealed `](target)` of the link it is in, so that
+-- the reading state of `<Leader>om`, which keeps the cursor line concealed,
+-- never parks it on text that is not drawn. Moving right lands after the link
+-- (or on its label when the link ends the line), moving left on its label.
+-- `prev` is the column the cursor came from.
+M.skip_hidden = function(prev)
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local line, init = vim.api.nvim_get_current_line(), 1
+  col = col + 1
+  while true do
+    local s, e = line:find('%b[]%(%s*[^)]-%s*%)', init)
+    if not s then return end
+    local close = s + #line:match('^%b[]', s) - 1
+    if col >= close and col <= e then
+      local to = (col >= prev and e < #line) and e + 1 or close - 1
+      vim.api.nvim_win_set_cursor(0, { row, to - 1 })
+      return
+    end
+    init = e + 1
+  end
+end
+
 return M
