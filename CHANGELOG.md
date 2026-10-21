@@ -1,5 +1,7 @@
 ## 2026-10-21
 
+- Check Italian next to English when 'spell' is on ('spelllang' is `en,it`), and keep the words added with `zg` and `2zg` in 'spell/en.utf-8.add' and 'spell/it.utf-8.add' inside the config instead of the data directory. The compiled 'spell/*.spl' files are ignored.
+
 - Add `<Leader>eg`, "glance": show the file or directory under the cursor in a floating popup with `vim.lsp.util.open_floating_preview()`, the window `vim.diagnostic.open_float()` uses, without opening a buffer. The name is found through 'path', like `gf`; when nothing on disk matches, the `:h` tag of the word is shown instead. Closes on cursor move; a second press enters it.
 
 - Set 'path' to `.;,,` in `plugin/10_options.lua`, so `gf`, `gF`, `<C-w>f` and `:find` look in the directory of the file and every directory above it, and a document naming `extensions/x.ts` of its own plugin finds it. `Config.pristine_path`, the snapshot the C ftplugin and the Git patch buffers extend, is refreshed with it, so they keep the upward search. The Markdown-only `gf`/`gF` overrides are gone.

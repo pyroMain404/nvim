@@ -102,6 +102,15 @@ vim.o.shiftwidth    = 2       -- Use this number of spaces for indentation
 vim.o.spelloptions  = 'camel' -- Treat camelCase word parts as separate words
 vim.o.tabstop       = 2       -- Show tab as this number of spaces
 
+-- Spell checking (see `:h 'spelllang'`, `:h 'spellfile'`, `:h zg`). Dictionaries
+-- are downloaded on first use. Custom words go to one file per language, kept in
+-- the config: `zg` adds to English, `2zg` to Italian (`:h spellfile-cleanup`).
+-- Add a language by appending it to both lists, e.g. 'de' and '<spell>/de.utf-8.add'.
+local spell_dir = vim.fn.stdpath('config') .. '/spell'
+vim.fn.mkdir(spell_dir, 'p')
+vim.o.spelllang = 'en,it'
+vim.o.spellfile = spell_dir .. '/en.utf-8.add,' .. spell_dir .. '/it.utf-8.add'
+
 vim.o.iskeyword = '@,48-57,_,192-255,-' -- Treat dash as `word` textobject part
 
 -- Pattern for a start of numbered list (used in `gw`). This reads as
