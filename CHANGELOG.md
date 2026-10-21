@@ -1,5 +1,7 @@
 ## 2026-10-21
 
+- Keep the pipes and delimiter row of a Markdown table drawn on the cursor line in the `live` state, with `anti_conceal.ignore.table_border` in `plugin/40_plugins.lua`.
+
 - Stop the cursor from landing on the concealed `](target)` of a Markdown link in the `reading` state, through a `CursorMoved` autocmd in `after/ftplugin/markdown.lua` backed by `skip_hidden()` in 'lua/config/mdlink.lua'.
 
 - Check Italian next to English when 'spell' is on ('spelllang' is `en,it`), and keep the words added with `zg` and `2zg` in 'spell/en.utf-8.add' and 'spell/it.utf-8.add' inside the config instead of the data directory. The compiled 'spell/*.spl' files are ignored.

@@ -337,7 +337,9 @@ now_if_args(function()
     -- Keep rendering active in Visual modes so reading mode remains concealed
     -- while a selection is made (`:h visual-mode`, `:h mode()`).
     render_modes = { 'n', 'v', 'V', '\22', 'i', 'c', 't' },
-    anti_conceal = { enabled = true },
+    -- Table pipes and the delimiter row are drawn over the source, so hiding
+    -- them on the cursor line would show the raw row (`:h render-markdown-setup`).
+    anti_conceal = { enabled = true, ignore = { table_border = true } },
     on = {
       -- The plugin reapplies `win_options` on every refresh. Reapply the
       -- state-specific conceal settings from this documented post-render hook
