@@ -349,6 +349,7 @@ now_if_args(function()
       -- state-specific conceal settings from this documented post-render hook
       -- (`:h render-markdown-setup`) rather than relying on a one-time change.
       render = function(args)
+        require('config.mdlink').anchor_footnotes(args.buf)
         local state = get_buf_var(args.buf, 'markdown_om')
         if state and state ~= 'source' then
           for _, win in ipairs(vim.fn.getbufinfo(args.buf)[1].windows or {}) do
@@ -360,6 +361,7 @@ now_if_args(function()
         end
       end,
       clear = function(args)
+        require('config.mdlink').clear_footnotes(args.buf)
         if get_buf_var(args.buf, 'markdown_om') == 'source' then
           local original = get_buf_var(args.buf, 'markdown_om_original')
           if original then

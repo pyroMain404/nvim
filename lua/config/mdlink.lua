@@ -34,6 +34,68 @@ M.target = function(fname)
   return (fname:gsub('#.*$', ''))
 end
 
+-- Whether the source text at byte `col` (0-based) opens a footnote `[^name]`.
+local starts_footnote = function(line, col) return line:sub(col + 1, col + 2) == '[^' end
+
+-- 'render-markdown.nvim' draws a footnote reference as inline virtual text
+-- anchored where the hidden source starts, so a cursor resting on that source
+-- is drawn after the mark and seems to jump over it. Anchor the text at the end
+-- of the hidden range instead: the cursor on its first byte is then drawn at
+-- the start of the mark. For the `on.render` and `on.clear` hooks of the plugin
+-- (`:h render-markdown-setup`). The plugin's extmark keeps only the conceal;
+-- the text is rebuilt from the source on every render, as the plugin does
+-- (`render/common/footnote.lua`: icon, prefix, name, suffix, `link.highlight`;
+-- `superscript` is off in 'plugin/40_plugins.lua' and not reproduced here), so
+-- nothing is keyed by extmark id: ids restart after each clear of the namespace.
+local footnote_ns = vim.api.nvim_create_namespace('config-footnote')
+
+M.anchor_footnotes = function(buf)
+  local ns = require('render-markdown.core.ui').ns
+  local link = require('render-markdown.state').get(buf).link
+  local footnote = link.footnote
+  vim.api.nvim_buf_clear_namespace(buf, footnote_ns, 0, -1)
+  for _, mark in
+    ipairs(vim.api.nvim_buf_get_extmarks(buf, ns, 0, -1, { details = true }))
+  do
+    local id, row, col, d = mark[1], mark[2], mark[3], mark[4]
+    local line = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+    if
+      d.conceal == ''
+      and d.end_row == row
+      and d.end_col
+      and starts_footnote(line, col)
+    then
+      if d.virt_text then
+        vim.api.nvim_buf_set_extmark(buf, ns, row, col, {
+          id = id,
+          end_row = row,
+          end_col = d.end_col,
+          conceal = '',
+          priority = d.priority,
+        })
+      end
+      local name = line:sub(col + 3, d.end_col - 1)
+      vim.api.nvim_buf_set_extmark(buf, footnote_ns, row, d.end_col, {
+        virt_text = {
+          {
+            footnote.icon .. footnote.prefix .. name .. footnote.suffix,
+            link.highlight,
+          },
+        },
+        virt_text_pos = 'inline',
+        right_gravity = false,
+        -- Rebuilt on every render. Undo restores a mark by id, and ids restart
+        -- after each clear, so a restored one would move another mark.
+        undo_restore = false,
+      })
+    end
+  end
+end
+
+M.clear_footnotes = function(buf)
+  vim.api.nvim_buf_clear_namespace(buf, footnote_ns, 0, -1)
+end
+
 -- Keep reading-state motions off hidden source text: renderer extmarks and
 -- Markdown highlight captures both conceal it, including multiline ranges.
 -- Merge their row-clipped runs before landing after a run when moving right,
@@ -46,7 +108,7 @@ M.skip_hidden = function(prev)
   row = row - 1
   local line = vim.api.nvim_get_current_line()
   local len = #line
-  local runs = {}
+  local runs, holes = {}, {}
   local function add_range(sr, sc, er, ec)
     if sr > row or er < row then return end
     local s = sr == row and sc or 0
@@ -77,6 +139,11 @@ M.skip_hidden = function(prev)
         end
       elseif is_hidden(details.conceal) then
         add_range(mark[2], mark[3], er, ec == -1 and len or ec)
+        -- A footnote reference is replaced by inline virtual text, so its first
+        -- byte stays reachable: the cursor has somewhere to land on it.
+        if mark[2] == row and starts_footnote(line, mark[3]) then
+          holes[#holes + 1] = mark[3]
+        end
       end
     end
   end
@@ -111,6 +178,20 @@ M.skip_hidden = function(prev)
         end
       end
     end)
+  end
+
+  -- Take each hole out of the runs, whichever source hid it.
+  for _, hole in ipairs(holes) do
+    local split = {}
+    for _, run in ipairs(runs) do
+      if run[1] <= hole and hole < run[2] then
+        if run[1] < hole then split[#split + 1] = { run[1], hole } end
+        if hole + 1 < run[2] then split[#split + 1] = { hole + 1, run[2] } end
+      else
+        split[#split + 1] = run
+      end
+    end
+    runs = split
   end
   table.sort(runs, function(a, b) return a[1] < b[1] end)
 
