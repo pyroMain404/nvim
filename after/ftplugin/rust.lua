@@ -36,11 +36,7 @@ vim.keymap.set('i', "'", "'", { buf = 0, desc = 'Insert a plain quote' })
 -- the duplication is deliberate: what is worth remembering is one name that
 -- works in every language of this config, not one name per build tool. `:Crun`
 -- keeps working for whoever types it.
-local manifest = vim.fs.find('Cargo.toml', {
-  upward = true,
-  path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
-})[1]
-local root = manifest and vim.fs.dirname(manifest) or nil
+local root = vim.fs.root(0, 'Cargo.toml')
 
 require('config.run').command(
   function(args) return vim.list_extend({ 'cargo', 'run' }, args), nil, root end
