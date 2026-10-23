@@ -439,6 +439,16 @@ local setup_obsidian = function(ev)
     require('obsidian').setup({
       legacy_commands = false,
       picker = { name = 'mini.pick' },
+      templates = {
+        substitutions = {
+          -- Alias of 'tmpl_persona', which Obsidian's Templates cannot compute;
+          -- the app leaves `{{first_word}}` unresolved.
+          first_word = function(ctx)
+            local title = ctx.partial_note and ctx.partial_note:display_name()
+            return title and title:match('%S+') or ''
+          end,
+        },
+      },
       callbacks = {
         -- `<Leader>j` opens the picker of `:Obsidian` commands that fit the
         -- context; in Visual mode it also lists those that take a selection.
