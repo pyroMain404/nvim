@@ -43,27 +43,18 @@ vim.list_extend(library, vim.api.nvim_get_runtime_file('lua/mini', true))
 -- starts a workspace scan of the whole profile (100000+ files, growing
 -- notification) instead of running in single-file mode. `root_dir`
 -- overrides `root_markers` (`:h lsp-root_dir()`), so the same markers are
--- repeated here (flattened - relative priority between them never matters
--- for this check) with that one directory excluded; not calling `on_dir()`
+-- flattened here (relative priority between them never matters for this
+-- check) with that one directory excluded; not calling `on_dir()`
 -- leaves `lua_ls` off for that buffer entirely, which is the same "outside
 -- any workspace" outcome `vim.fs.root()` would have given if $HOME had no
 -- '.git' at all.
 -- `vim.fs.normalize()` because `os_homedir()` answers with backslashes on
 -- Windows while `vim.fs.root()` always answers with forward slashes.
 local home = vim.fs.normalize(vim.uv.os_homedir())
-local root_markers = {
-  '.emmyrc.json',
-  '.luarc.json',
-  '.luarc.jsonc',
-  '.luacheckrc',
-  '.stylua.toml',
-  'stylua.toml',
-  'selene.toml',
-  'selene.yml',
-  '.git',
-}
 return {
   root_dir = function(bufnr, on_dir)
+    local root_markers =
+      vim.iter(vim.lsp.config.lua_ls.root_markers):flatten():totable()
     local root = vim.fs.root(bufnr, root_markers)
     if root ~= nil and root ~= home then on_dir(root) end
   end,
