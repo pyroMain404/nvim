@@ -55,10 +55,9 @@ vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- TODO: Gradle falls through to `javac`, which compiles the single file
 -- instead of running the build - silently, because a file that compiles on its
 -- own leaves the quickfix list empty, exactly like a build that succeeded. The
--- missing piece is only the `:make` half: an entry in `builds` below with a
--- `run` and no `compiler` already gives a Gradle project its `:Run`, while the
--- quickfix needs a 'compiler/gradle.lua' written from scratch, and an
--- `errorformat` that matches nothing is indistinguishable from a green build.
+-- missing piece is only the `:make` half: the quickfix needs a
+-- 'compiler/gradle.lua' written from scratch, and an `errorformat` that
+-- matches nothing is indistinguishable from a green build.
 -- Not now: there is no Gradle project on this machine to derive it from or
 -- check it against. First step is to make one fail on purpose and read the raw
 -- output - `gradlew compileJava` on a file with a type error - because the
@@ -72,51 +71,30 @@ vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- which is what the runtime does for `Cargo.toml`; nothing here reads a file
 -- until `:Run` is called.
 --
--- One table, two answers, and they are not the same answer: which compiler
--- plugin `:make` uses, and which command runs the project. Holding them in a
--- single field is what made a third build tool expensive, because the two do
--- not always both exist - Gradle has a `run` task and no compiler plugin in
--- the runtime, and `:compiler gradle` is not a no-op but `E666: Compiler not
--- supported`, raised while this ftplugin loads, on every Java file of that
--- project. So here `compiler` may be absent and only `run` is required.
---
--- Every `run` takes the same two arguments, the build file included where it
--- is not read: two of them with different arities is what turns a correct call
--- into a `redundant-parameter` warning from the server.
 -- The `run` half of that tool - the Maven goal - is shared with
 -- 'after/ftplugin/xml.lua' through 'lua/config/run.lua''s `java_builds`: that
 -- file registers `:Run` on a `pom.xml` buffer opened directly, which this
 -- ftplugin never loads for (Neovim detects it as `xml`, not `java`). Only
 -- `compiler`, which selects what `:make` parses, stays here: it is
 -- Java-specific and has no meaning on a plain XML buffer.
-local builds = {
-  ['pom.xml'] = vim.tbl_extend(
-    'force',
-    { compiler = 'maven' },
-    require('config.run').java_builds['pom.xml']
-  ),
-}
 
 -- A file that belongs to no build at all: `javac` (`:h compiler-javac`) so
 -- that `:make %` compiles just this one, and `java` on the file itself to run
 -- it, which since Java 11 needs no compilation step first.
-local loose = {
-  compiler = 'javac',
-  run = function(args, _)
-    return vim.list_extend({ 'java', vim.api.nvim_buf_get_name(0) }, args)
-  end,
-}
+local function single_file(args, _)
+  return vim.list_extend({ 'java', vim.api.nvim_buf_get_name(0) }, args)
+end
 
 local found = vim.fs.find('pom.xml', {
   upward = true,
   path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
 })[1]
-local build = found and builds[vim.fs.basename(found)] or loose
+local run = found and require('config.run').java_builds['pom.xml'].run or single_file
 local root = found and vim.fs.dirname(found) or nil
 
 -- `:compiler` defines its options through a command it creates and deletes
 -- while sourcing, so it has no Lua API and `vim.cmd()` is the only way here.
-if build.compiler then vim.cmd('compiler ' .. build.compiler) end
+vim.cmd('compiler ' .. (found and 'maven' or 'javac'))
 
 -- `mvn` prints paths relative to the project, while Neovim resolves
 -- quickfix `%f` entries against its own directory - kept at the repository
@@ -137,13 +115,11 @@ if found ~= nil then require('config.run').make_root({ 'pom.xml' }) end
 -- kept by every filetype that has something to run. What belongs to Java is
 -- only the resolver: which build tool answers, and which goal it is given.
 --
--- Anything more specific than the default of `run` above - a Spring profile, a
+-- Anything more specific than the default Maven goal - a Spring profile, a
 -- main class, JVM arguments - belongs to the project and not to the language,
 -- so it is passed as arguments here or it lives in the project's '.nvim.lua'
 -- (`:h 'exrc'`).
-require('config.run').command(
-  function(args) return build.run(args, found), nil, root end
-)
+require('config.run').command(function(args) return run(args, found), nil, root end)
 
 -- Undo what this file sets when the filetype changes away from `java`
 -- (`:h b:undo_ftplugin`). `:Run` undoes itself, registered inside
