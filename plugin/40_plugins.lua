@@ -344,6 +344,15 @@ now_if_args(function()
     -- Table pipes and the delimiter row are drawn over the source, so hiding
     -- them on the cursor line would show the raw row (`:h render-markdown-setup`).
     anti_conceal = { enabled = true, ignore = { table_border = true } },
+    -- A footnote `[^name]` is drawn as `(†name)` in plain letters. A superscript
+    -- name is made of tiny Unicode glyphs that the terminal draws in a whole
+    -- cell each, which looks small and widely spaced; plain letters also work
+    -- for every name. The dagger is in `prefix`, not `icon`, because the plugin
+    -- puts the icon before the prefix and it would land outside the
+    -- parenthesis (`:h render-markdown-setup`, `link.footnote`).
+    link = {
+      footnote = { superscript = false, icon = '', prefix = '(†', suffix = ')' },
+    },
     on = {
       -- The plugin reapplies `win_options` on every refresh. Reapply the
       -- state-specific conceal settings from this documented post-render hook

@@ -1,5 +1,7 @@
 ## 2026-10-23
 
+- Draw a Markdown footnote (`[^name]`) as `(†name)` in plain letters (`link.footnote = { superscript = false, icon = '', prefix = '(†', suffix = ')' }` in `plugin/40_plugins.lua`): a superscript name is made of tiny Unicode glyphs that the terminal draws in a whole cell each, which looked small and widely spaced, and every name renders in plain letters, including those with a letter that has no superscript form. The dagger is in `prefix` because the plugin puts `icon` before it, outside the parenthesis.
+
 - Let the cursor land on a footnote reference in the `reading` state, drawn at the start of the mark (`skip_hidden()`, `anchor_footnotes()` and `clear_footnotes()` in `lua/config/mdlink.lua`, called from the `on.render` and `on.clear` hooks in `plugin/40_plugins.lua`). The renderer hides all of `[^name]` and draws the mark and the name as inline virtual text anchored at its start, so there was no character to stop on, and a cursor on the hidden source was drawn after the mark and seemed to jump over it. The first byte of such a range now stays reachable and the virtual text is anchored at the end of the range, so the cursor sits on the mark; links, headings, checkboxes and callouts move as before.
 
 - Draw spelling errors, diagnostics and 'mini.jump' targets with a straight underline instead of a wavy one, keeping each group's color (`plugin/40_plugins.lua`): the wavy line looked broken up on one word.
