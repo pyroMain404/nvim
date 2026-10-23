@@ -1,5 +1,7 @@
 ## 2026-10-23
 
+- Stop auto-closing brackets and quotes in the command line and in Markdown buffers: 'mini.pairs' is set up for Insert mode only (drops `modes = { command = true }` in `plugin/30_mini.lua`) and `after/ftplugin/markdown.lua` sets `b:minipairs_disable`. Code buffers keep their pairs.
+
 - Show the block id of a Markdown note (`^blk-1`, at the end of a line or alone on one) as a comment, through a buffer-local 'mini.hipatterns' highlighter in `after/ftplugin/markdown.lua`. Tags and `==highlight==` are left as they are: the parser has no node for tags, and 'render-markdown.nvim' already colors `==highlight==`.
 
 - Open Markdown buffers in `live` instead of `reading`, make `<Leader>om` switch only between `source` and `live`, and add `<Leader>oM` to toggle `reading` (it and `<Leader>om` both leave `reading` for `live`), in `after/ftplugin/markdown.lua`. The glance popup still opens in `reading`, through `b:markdown_om_start` set in `lua/config/glance.lua`, so it stays nonmodifiable. The earlier entry about opening in `reading` is superseded.

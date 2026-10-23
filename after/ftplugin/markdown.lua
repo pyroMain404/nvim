@@ -49,6 +49,10 @@ vim.b.minihipatterns_config = {
   },
 }
 
+-- Prose uses `(`, `[`, `"` and `*` unpaired as often as paired, so the
+-- auto-closing of 'mini.pairs' gets in the way; `:h minipairs_disable`.
+vim.b.minipairs_disable = true
+
 local original = vim.b.markdown_om_original
 if not original then
   original = {
