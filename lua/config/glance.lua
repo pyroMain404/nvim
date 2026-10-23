@@ -109,12 +109,18 @@ M.open = function()
   end
   if #lines == 0 then lines = { '(empty)' } end
 
-  vim.lsp.util.open_floating_preview(lines, ft or '', {
-    focus_id = 'glance',
-    title = ' ' .. title .. ' ',
-    max_height = 25,
-    max_width = 100,
-  })
+  -- Syntax `'markdown'` makes the float rewrite the text (`---` becomes a
+  -- rule) and skip the ftplugin. Set the filetype in the float instead.
+  local buf, win =
+    vim.lsp.util.open_floating_preview(lines, ft ~= 'markdown' and ft or '', {
+      focus_id = 'glance',
+      title = ' ' .. title .. ' ',
+      max_height = 25,
+      max_width = 100,
+    })
+  if ft == 'markdown' then
+    vim.api.nvim_win_call(win, function() vim.bo[buf].filetype = 'markdown' end)
+  end
 end
 
 return M
