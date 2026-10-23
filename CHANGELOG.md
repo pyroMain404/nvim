@@ -1,5 +1,7 @@
 ## 2026-10-23
 
+- Make `<Leader>eg` (glance) ask 'includeexpr' when `<cfile>` names nothing, as `gf` does, so it follows a link whose name has spaces, like `[[Peppe Di Gennaro]]` (`lua/config/glance.lua`).
+
 - Highlight the frontmatter of a Markdown note as YAML (keys and values in their own colors) by installing the `yaml` tree-sitter parser, which the injection of the 'markdown' parser needs; before, the whole `---` block was one color. `:checkhealth config` checks it next to `markdown`.
 
 ## 2026-10-21

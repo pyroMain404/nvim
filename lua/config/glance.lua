@@ -44,10 +44,21 @@ end
 -- Show the file or directory under the cursor in a floating window; failing
 -- that, the help for the word under the cursor.
 M.open = function()
+  local find = function(name)
+    local found = name ~= '' and vim.fn.findfile(name) or ''
+    if found == '' and name ~= '' then found = vim.fn.finddir(name) end
+    return found ~= '' and found or nil
+  end
   local path = vim.fn.expand('<cfile>')
-  local file = path ~= '' and vim.fn.findfile(path) or ''
-  if file == '' and path ~= '' then file = vim.fn.finddir(path) end
-  if file == '' then file = nil end
+  local file = find(path)
+  -- Like `gf`, ask 'includeexpr' when `<cfile>` names nothing. `v:fname` is
+  -- empty, enough for an expression that reads the cursor (a link, with spaces).
+  if not file and vim.bo.includeexpr ~= '' then
+    local ok, name = pcall(vim.fn.eval, vim.bo.includeexpr)
+    if ok and type(name) == 'string' and name ~= '' then
+      path, file = name, find(name)
+    end
+  end
   local lines, ft, title = {}, nil, nil
   if file then
     title = vim.fn.fnamemodify(file, ':~:.')
