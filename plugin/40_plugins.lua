@@ -696,4 +696,13 @@ Config.now(function()
   -- competing with it (`:h highlight-groups`).
   vim.api.nvim_set_hl(0, 'WinBar', { link = 'StatusLineNC' })
   vim.api.nvim_set_hl(0, 'WinBarNC', { link = 'StatusLineNC' })
+
+  -- The scheme underlines every `@markup.link*` through 'Underlined', so a bare
+  -- `[text]` too. Empty groups end that fallback (Markdown-only, so help
+  -- `|tags|` and URLs stay underlined); 'after/queries/markdown_inline/
+  -- highlights.scm' gives `[label](url)` and `[[note]]` a group linked to
+  -- 'Underlined', as `@markup.underline` lacks its `sp`.
+  vim.api.nvim_set_hl(0, '@markup.link.label', { underline = false })
+  vim.api.nvim_set_hl(0, '@markup.link.markdown_inline', { underline = false })
+  vim.api.nvim_set_hl(0, '@markup.link.underlined', { link = 'Underlined' })
 end)

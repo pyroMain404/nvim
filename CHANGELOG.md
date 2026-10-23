@@ -1,5 +1,7 @@
 ## 2026-10-23
 
+- Underline `[label](url)` and `[[note]]` but not a bare `[text]`, in the color of 'Underlined' (`after/queries/markdown_inline/highlights.scm` and the `@markup.link.*` groups in `plugin/40_plugins.lua`): the scheme underlined everything the parser calls a link, including the brackets of `[text]`. The `@markup.underline` group of Neovim lacks the underline color, so a group linked to 'Underlined' is used instead.
+
 - Let the cursor skip the `#` marker of a heading, and the space after it, in the `reading` state (`skip_hidden()` in `lua/config/mdlink.lua`): the renderer draws an icon over it but conceals nothing, so the cursor could stop on a character that is not visible.
 
 - Stop auto-closing brackets and quotes in the command line and in Markdown buffers: 'mini.pairs' is set up for Insert mode only (drops `modes = { command = true }` in `plugin/30_mini.lua`) and `after/ftplugin/markdown.lua` sets `b:minipairs_disable`. Code buffers keep their pairs.
