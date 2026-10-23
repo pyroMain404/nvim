@@ -35,6 +35,20 @@ vim.b.minisurround_config = {
   },
 }
 
+-- A block id (`^blk-1`, at the end of a line or alone on one) names a block for
+-- links to it and is not text, so it reads as a comment. Buffer-local, so it
+-- adds to the highlighters of 'mini.hipatterns' in `plugin/30_mini.lua`; see
+-- `:h MiniHipatterns.config`. NOTE: no syntax awareness, so a `^word` ending a
+-- line in a code fence matches too.
+vim.b.minihipatterns_config = {
+  highlighters = {
+    block_id = {
+      pattern = { '^()%^[%w%-]+()%s*$', '%s()%^[%w%-]+()%s*$' },
+      group = 'Comment',
+    },
+  },
+}
+
 local original = vim.b.markdown_om_original
 if not original then
   original = {
