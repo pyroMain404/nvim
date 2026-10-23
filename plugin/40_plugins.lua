@@ -350,7 +350,12 @@ now_if_args(function()
     -- for every name. The dagger is in `prefix`, not `icon`, because the plugin
     -- puts the icon before the prefix and it would land outside the
     -- parenthesis (`:h render-markdown-setup`, `link.footnote`).
+    -- A link to a heading of the same note, `[[#Heading]]`, names no note, so it
+    -- gets no icon and reads `§Heading`: the `§` over its `#` is drawn by a
+    -- 'mini.hipatterns' highlighter in 'after/ftplugin/markdown.lua'. `custom`
+    -- picks the icon from the destination (`link.custom`).
     link = {
+      custom = { same_note = { pattern = '^#', icon = '' } },
       footnote = { superscript = false, icon = '', prefix = '(†', suffix = ')' },
     },
     on = {

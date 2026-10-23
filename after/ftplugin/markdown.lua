@@ -36,15 +36,29 @@ vim.b.minisurround_config = {
 }
 
 -- A block id (`^blk-1`, at the end of a line or alone on one) names a block for
--- links to it and is not text, so it reads as a comment. Buffer-local, so it
--- adds to the highlighters of 'mini.hipatterns' in `plugin/30_mini.lua`; see
--- `:h MiniHipatterns.config`. NOTE: no syntax awareness, so a `^word` ending a
--- line in a code fence matches too.
+-- links to it and is not text, so it reads as a comment. The `#` of a heading
+-- link (`[[Note#Heading]]`, `[[#Heading]]`) is drawn as `§` in the color of the
+-- link icon, laid over the character (`virt_text_pos = 'overlay'`, the way the
+-- censoring example of `:h MiniHipatterns.config` does) so nothing is concealed
+-- and the cursor still stops on it. Buffer-local, so they add to the
+-- highlighters of 'mini.hipatterns' in `plugin/30_mini.lua`. NOTE: no syntax
+-- awareness, so a `^word` ending a line in a code fence matches too, and the
+-- `§` also shows in `source`, in code and on the cursor line of `live`; only the
+-- first `#` of a link is drawn.
 vim.b.minihipatterns_config = {
   highlighters = {
     block_id = {
       pattern = { '^()%^[%w%-]+()%s*$', '%s()%^[%w%-]+()%s*$' },
       group = 'Comment',
+    },
+    section_sign = {
+      pattern = '%[%[[^%]|#]-()#()',
+      group = '',
+      extmark_opts = {
+        virt_text = { { '§', 'RenderMarkdownWikiLink' } },
+        virt_text_pos = 'overlay',
+        hl_mode = 'combine',
+      },
     },
   },
 }
