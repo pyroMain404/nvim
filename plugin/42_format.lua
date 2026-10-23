@@ -59,19 +59,13 @@ local format_range = function(from, to)
 end
 
 -- Whether a format pass has anything to run, warned about here because both
--- callers refuse the same way. `list_formatters()` only names AVAILABLE conform
--- formatters (a declared one whose binary is missing does not count), and never
--- counts the LSP fallback 'plugin/40_plugins.lua' configures (`lsp_format =
--- 'fallback'`). Refusing on the first alone left a Java buffer (no CLI
--- formatter declared, jdtls formats) and a Lua buffer without `stylua` warned
--- and untouched by `<Leader>lf`, while `<Leader>lF` formatted them through the
--- server - two entry points of one API disagreeing. Warn only when BOTH are
--- absent, and return false once warned so callers only have to `return`.
+-- callers refuse the same way. `:h conform.list_formatters_to_run()` accounts
+-- for available CLI formatters and the LSP fallback configured in
+-- 'plugin/40_plugins.lua'. Warn only when both are absent, and return false
+-- once warned so callers only have to `return`.
 local has_formatter = function(conform)
-  if #conform.list_formatters(0) > 0 then return true end
-  if #vim.lsp.get_clients({ bufnr = 0, method = 'textDocument/formatting' }) > 0 then
-    return true
-  end
+  local formatters, lsp = conform.list_formatters_to_run(0)
+  if #formatters > 0 or lsp then return true end
   local ft = vim.bo.filetype == '' and '<no filetype>' or vim.bo.filetype
   vim.notify(
     'No formatter for ' .. ft .. ', and no language server to format',
