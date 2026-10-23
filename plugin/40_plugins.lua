@@ -491,6 +491,39 @@ local setup_obsidian = function(ev)
         { name = root, path = root, overrides = vault_overrides(root) },
       },
     })
+
+    -- HACK: obsidian.nvim 4eec5b1 shows only `entry.text` when it is set, and
+    -- for the notes of an ambiguous link `text` is their first line, so the
+    -- picker offers rows that all read `---` (the frontmatter). Show the path
+    -- and, for an entry at the top of a file, its first line after the
+    -- frontmatter. Delete this when `make_display()` shows the path itself.
+    local first_body_line = function(path)
+      local ok, lines = pcall(vim.fn.readfile, path, '', 200)
+      if not ok then return nil end
+      local from = 1
+      if lines[1] == '---' then
+        from = vim.fn.index(lines, '---', 1) + 2
+        if from < 3 then return nil end
+      end
+      return vim
+        .iter(lines)
+        :skip(from - 1)
+        :find(function(line) return line:find('%S') end)
+    end
+    local picker_util = require('obsidian.picker.util')
+    local make_display = picker_util.make_display
+    picker_util.make_display = function(entry)
+      if type(entry) ~= 'table' or not entry.filename or not entry.text then
+        return make_display(entry)
+      end
+      local shown = vim.deepcopy(entry)
+      shown.text = nil
+      if entry.lnum == 1 then
+        shown.lnum, shown.col = nil, nil
+        entry = { text = first_body_line(entry.filename) or entry.text }
+      end
+      return make_display(shown) .. '  ' .. entry.text
+    end
     obsidian_loaded = true
   else
     table.insert(

@@ -1,5 +1,7 @@
 ## 2026-10-23
 
+- Show the path and the first line after the frontmatter in the rows of the picker 'obsidian.nvim' opens for an ambiguous link (a patched `make_display()` in `plugin/40_plugins.lua`, marked `HACK`): every row read `---`, the frontmatter, so two notes with the same name could not be told apart.
+
 - Add `{{first_word}}` as a template substitution of 'obsidian.nvim' (`templates.substitutions` in `plugin/40_plugins.lua`): the first word of the note title, for a template that aliases a person by first name. It only exists in Neovim; the Obsidian app leaves it unresolved.
 
 - Follow an Obsidian link with `gf` in a vault note, headings and `[[#heading]]` included, jump between links with `]x` / `[x`, and stop 'obsidian.nvim' from taking `<CR>`, `]o` and `[o` (`vim.g.obsidian_default_keymap = false` and the `enter_note` callback in `plugin/40_plugins.lua`): `gf` through 'includeexpr' could not land on a heading nor follow `[[#heading]]`, so on a link it now runs `:Obsidian follow_link`. `]x` / `[x` shadow the 'mini.bracketed' conflict-marker mappings in a vault note only.
