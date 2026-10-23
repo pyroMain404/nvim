@@ -1,5 +1,7 @@
 ## 2026-10-23
 
+- Open Markdown buffers in `live` instead of `reading`, make `<Leader>om` switch only between `source` and `live`, and add `<Leader>oM` to toggle `reading` (it and `<Leader>om` both leave `reading` for `live`), in `after/ftplugin/markdown.lua`. The glance popup still opens in `reading`, through `b:markdown_om_start` set in `lua/config/glance.lua`, so it stays nonmodifiable. The earlier entry about opening in `reading` is superseded.
+
 - Show the path and the first line after the frontmatter in the rows of the picker 'obsidian.nvim' opens for an ambiguous link (a patched `make_display()` in `plugin/40_plugins.lua`, marked `HACK`): every row read `---`, the frontmatter, so two notes with the same name could not be told apart.
 
 - Add `{{first_word}}` as a template substitution of 'obsidian.nvim' (`templates.substitutions` in `plugin/40_plugins.lua`): the first word of the note title, for a template that aliases a person by first name. It only exists in Neovim; the Obsidian app leaves it unresolved.

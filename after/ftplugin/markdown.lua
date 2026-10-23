@@ -3,8 +3,8 @@
 -- └─────────────────────────┘
 --
 -- This file keeps Markdown-only behavior out of the shared plugin files.
--- `render-markdown.nvim` is the renderer; `<Leader>om` selects its
--- source -> live -> reading -> source cycle.
+-- `render-markdown.nvim` is the renderer; a buffer opens in `live`,
+-- `<Leader>om` toggles source/live and `<Leader>oM` toggles reading.
 
 vim.wo[0][0].spell = true
 vim.wo[0][0].wrap = true
@@ -183,9 +183,9 @@ local function set_state(state)
   end
 end
 
--- Open in the reading state: rendered and nonmodifiable, the state that the
--- `<Leader>om` cycle reaches after two presses from source. Without the
--- renderer, stay in source so the buffer remains editable.
+-- Open in the live state, unless `b:markdown_om_start` asks for another (the
+-- glance popup asks for `reading`): rendered, editable, source revealed at the
+-- cursor. Without the renderer, stay in source so the buffer remains editable.
 -- NOTE: 'render-markdown.nvim' attaches to the buffer in its own `FileType`
 -- autocmd, which runs after this ftplugin, and `set_buf()` ignores buffers not
 -- yet attached. So the switch is scheduled, and runs in the buffer it was for.
@@ -193,22 +193,33 @@ if renderer_available then
   local buf = vim.api.nvim_get_current_buf()
   vim.schedule(function()
     if vim.api.nvim_buf_is_valid(buf) then
-      vim.api.nvim_buf_call(buf, function() set_state('reading') end)
+      vim.api.nvim_buf_call(
+        buf,
+        function() set_state(vim.b.markdown_om_start or 'live') end
+      )
     end
   end)
 end
 
+local function guard()
+  if renderer_available then return true end
+  vim.notify(
+    'render-markdown.nvim is unavailable; run :checkhealth config',
+    vim.log.levels.ERROR
+  )
+end
+
+-- `<Leader>om` switches between source and live, and leaves reading for live;
+-- `<Leader>oM` enters reading, and leaves it for live.
 vim.keymap.set('n', '<Leader>om', function()
-  if not renderer_available then
-    vim.notify(
-      'render-markdown.nvim is unavailable; run :checkhealth config',
-      vim.log.levels.ERROR
-    )
-    return
+  if guard() then set_state(vim.b.markdown_om == 'live' and 'source' or 'live') end
+end, { buffer = 0, desc = 'Toggle Markdown source/live' })
+
+vim.keymap.set('n', '<Leader>oM', function()
+  if guard() then
+    set_state(vim.b.markdown_om == 'reading' and 'live' or 'reading')
   end
-  local next_state = ({ source = 'live', live = 'reading', reading = 'source' })[vim.b.markdown_om]
-  set_state(next_state or 'source')
-end, { buffer = 0, desc = 'Toggle Markdown source/live/reading' })
+end, { buffer = 0, desc = 'Toggle Markdown reading' })
 
 vim.b.markdown_om_cleanup = function()
   vim.b.markdown_om = 'source'

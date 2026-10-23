@@ -31,7 +31,8 @@ renderer and also checks that the Markdown tree-sitter parser is installed.
 
 ## 3. Render modes
 
-`<Leader>om` exists only in Markdown buffers and cycles:
+`<Leader>om` and `<Leader>oM` exist only in Markdown buffers. A buffer opens in
+`live`; `<Leader>om` toggles `source`/`live` and `<Leader>oM` toggles `reading`:
 
 | Mode | Renderer | Editing | Conceal behavior |
 |---|---|---|---|
@@ -52,16 +53,19 @@ modes preserve their ordinary motions.
 
 ## 4. Manual verification
 
-Open any `.md` file. It must start in `reading`: rendered, `modifiable` off. Press
-`<Leader>om` in order and confirm:
+Open any `.md` file. It must start in `live`: rendered, editable. Press
+`<Leader>om` and `<Leader>oM` and confirm:
 
-1. The first press enters `source`: the original unrendered view and the buffer's
-original editability return.
-2. The second press enters `live`: Markdown renders while source markup appears at
-the cursor and over a Visual selection; insert text on that line.
-3. The third press enters `reading` again: edits are rejected, source markup stays
+1. `<Leader>om` enters `source`: the original unrendered view and the buffer's
+original editability return. Pressing it again returns to `live`: Markdown
+renders while source markup appears at the cursor and over a Visual selection;
+insert text on that line.
+2. `<Leader>oM` enters `reading`: edits are rejected, source markup stays
 concealed when moving the cursor or making a Visual selection, `j`/`k` skip
 concealed non-table lines, and every pipe-table source row is visited.
+Pressing it again, or `<Leader>om`, returns to `live`.
+3. The glance popup (`<Leader>eg`) on a note opens in `reading`
+(`b:markdown_om_start`), not modifiable.
 
 Repeat the live/reading transitions with the Markdown buffer visible in two splits;
 both windows must retain the active mode after cursor movement.
