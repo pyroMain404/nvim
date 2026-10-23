@@ -1,5 +1,9 @@
 ## 2026-10-23
 
+- Follow an Obsidian link with `gf` in a vault note, headings and `[[#heading]]` included, jump between links with `]x` / `[x`, and stop 'obsidian.nvim' from taking `<CR>`, `]o` and `[o` (`vim.g.obsidian_default_keymap = false` and the `enter_note` callback in `plugin/40_plugins.lua`): `gf` through 'includeexpr' could not land on a heading nor follow `[[#heading]]`, so on a link it now runs `:Obsidian follow_link`. `]x` / `[x` shadow the 'mini.bracketed' conflict-marker mappings in a vault note only.
+
+- Open the menu of `:Obsidian` commands with `<Leader>j` in a vault note (also in Visual mode, where it lists the commands that take a selection), and remove `<Leader>on` / `<Leader>op`. Settings of one vault, like where daily notes go, are read from '.obsidian/nvim.json' in that vault and merged over the ones in `plugin/40_plugins.lua` (see the comment above `vault_overrides()`).
+
 - Show a Markdown note in the glance popup (`<Leader>eg`) as it looks when opened, rendered in the `reading` state by the ftplugin and 'render-markdown.nvim' (`lua/config/glance.lua`).
 
 - Highlight the frontmatter of a Markdown note as YAML (keys and values in their own colors) by installing the `yaml` tree-sitter parser, which the injection of the 'markdown' parser needs; before, the whole `---` block was one color. `:checkhealth config` checks it next to `markdown`.

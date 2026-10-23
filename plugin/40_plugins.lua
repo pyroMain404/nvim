@@ -415,28 +415,49 @@ local setup_obsidian = function(ev)
   if not obsidian_loaded then
     add({ 'https://github.com/obsidian-nvim/obsidian.nvim' })
     if plugin_missing('obsidian.nvim', 'obsidian') then return end
+    -- The plugin maps `<CR>` (smart action), `]o` and `[o` in every vault
+    -- note; `<CR>` stays a plain Markdown `<CR>` here and `]o` / `[o` stay
+    -- with 'mini.bracketed'. It reads this flag once per note, so set it first.
+    vim.g.obsidian_default_keymap = false
     require('obsidian').setup({
       legacy_commands = false,
       picker = { name = 'mini.pick' },
       callbacks = {
-        -- Preserve 'mini.bracketed' on `[o` / `]o`. In a vault note,
-        -- `<Space>on` / `<Space>op` visit the next / previous valid link.
-        -- See 'docs/Keymaps.md' in the installed 'obsidian.nvim' package.
+        -- `<Leader>j` opens the picker of `:Obsidian` commands that fit the
+        -- context; in Visual mode it also lists those that take a selection.
         enter_note = function(note)
-          vim.keymap.del('n', '[o', { buf = note.bufnr })
-          vim.keymap.del('n', ']o', { buf = note.bufnr })
+          for mode, rhs in pairs({ n = '<Cmd>Obsidian<CR>', x = ':Obsidian<CR>' }) do
+            vim.keymap.set(
+              mode,
+              '<Leader>j',
+              rhs,
+              { buf = note.bufnr, desc = 'Obsidian commands' }
+            )
+          end
+          -- `gf` through 'includeexpr' cannot land on a heading nor follow
+          -- `[[#heading]]`, so on an Obsidian link it follows it like the
+          -- plugin's own `<CR>` would.
           vim.keymap.set(
             'n',
-            '<Leader>on',
-            function() require('obsidian.actions').nav_link('next') end,
-            { buf = note.bufnr, desc = 'Next Obsidian link' }
+            'gf',
+            function()
+              return require('obsidian.api').cursor_link()
+                  and '<Cmd>Obsidian follow_link<CR>'
+                or 'gf'
+            end,
+            { buf = note.bufnr, expr = true, desc = 'Follow Obsidian link or file' }
           )
-          vim.keymap.set(
-            'n',
-            '<Leader>op',
-            function() require('obsidian.actions').nav_link('prev') end,
-            { buf = note.bufnr, desc = 'Previous Obsidian link' }
-          )
+          -- `]x` / `[x` jump to the next / previous link of the note, which the
+          -- plugin's `]o` / `[o` did; they shadow 'mini.bracketed' conflict
+          -- markers in a vault note only.
+          for key, direction in pairs({ [']x'] = 'next', ['[x'] = 'prev' }) do
+            vim.keymap.set(
+              'n',
+              key,
+              function() require('obsidian.actions').nav_link(direction, true) end,
+              { buf = note.bufnr, desc = 'Obsidian ' .. direction .. ' link' }
+            )
+          end
         end,
       },
       workspaces = {
