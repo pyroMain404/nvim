@@ -374,9 +374,6 @@ local diagnostic_opts = {
   -- Show signs on top of any other sign, but only for warnings and errors
   signs = { priority = 9999, severity = { min = 'WARN', max = 'ERROR' } },
 
-  -- Show all diagnostics as underline (for their messages type `<Leader>ld`)
-  underline = { severity = { min = 'HINT', max = 'ERROR' } },
-
   -- Show more details immediately for errors on the current line
   virtual_text = {
     current_line = true,
