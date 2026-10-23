@@ -400,6 +400,23 @@ local find_vault_root = function(buf_id)
   return marker and vim.fs.dirname(marker) or nil
 end
 
+-- Settings of one vault live in its '.obsidian/nvim.json' and are merged over
+-- the ones of `setup()` below. Keys are those of `:Obsidian help`, paths are
+-- relative to the vault, e.g. `{ "daily_notes": { "folder": "diario" } }`. JSON
+-- is data, so a vault cannot run code here; functions go in `setup()`.
+-- NOTE: read once, when the vault is first seen; restart Neovim to apply it.
+local vault_overrides = function(root)
+  local path = root .. '/.obsidian/nvim.json'
+  if vim.fn.filereadable(path) == 0 then return nil end
+  local ok, overrides = pcall(
+    vim.json.decode,
+    table.concat(vim.fn.readfile(path), '\n'),
+    { luanil = { object = true, array = true } }
+  )
+  if ok and type(overrides) == 'table' then return overrides end
+  vim.notify(path .. ' is not a JSON object', vim.log.levels.WARN)
+end
+
 -- Package install/setup happens once, on the first vault seen. Every vault
 -- seen afterwards (including a later re-entry into an already known one) is
 -- only registered as a workspace: 'obsidian.nvim' switches the active one by
@@ -461,14 +478,18 @@ local setup_obsidian = function(ev)
         end,
       },
       workspaces = {
-        { name = root, path = root },
+        { name = root, path = root, overrides = vault_overrides(root) },
       },
     })
     obsidian_loaded = true
   else
     table.insert(
       Obsidian.workspaces,
-      require('obsidian.workspace').new({ name = root, path = root })
+      require('obsidian.workspace').new({
+        name = root,
+        path = root,
+        overrides = vault_overrides(root),
+      })
     )
   end
   obsidian_roots[root] = true
