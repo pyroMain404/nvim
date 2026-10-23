@@ -58,8 +58,6 @@ local now, now_if_args, later = Config.now, Config.now_if_args, Config.later
 -- - `:h MiniBasics.config.autocommands` - list of created autocommands
 now(function()
   require('mini.basics').setup({
-    -- Manage options in 'plugin/10_options.lua' for didactic purposes
-    options = { basic = true },
     mappings = {
       -- Create `<C-hjkl>` mappings for window navigation
       windows = true,
