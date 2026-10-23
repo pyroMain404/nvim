@@ -267,13 +267,9 @@ M.java_builds = {
     -- and letting the other fail loudly in the terminal beats picking one
     -- and doing nothing quietly.
     run = function(args, build_file)
-      local boot = false
-      for _, line in ipairs(vim.fn.readfile(build_file)) do
-        if line:find('spring%-boot%-maven%-plugin') then
-          boot = true
-          break
-        end
-      end
+      local boot = vim.iter(vim.fn.readfile(build_file)):any(
+        function(line) return line:find('spring%-boot%-maven%-plugin') ~= nil end
+      )
       local task = boot and 'spring-boot:run' or 'exec:java'
       return vim.list_extend({ 'mvn' }, goal(args, task))
     end,
