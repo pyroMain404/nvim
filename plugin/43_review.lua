@@ -56,20 +56,6 @@ Config.review = {}
 -- the repository, and loading that is an editor frozen for as long as it takes.
 Config.review.max_files = 50
 
--- Paths naming a file there is something to read in, normalized. A path the
--- change deleted, or the name it was renamed away from, is a line of the answer
--- with nothing to open behind it; every source produces some of them, so they
--- are dropped here instead of in each one.
-local readable_paths = function(paths)
-  local res = {}
-  for _, path in ipairs(paths) do
-    if vim.fn.filereadable(path) == 1 then
-      table.insert(res, vim.fs.normalize(path))
-    end
-  end
-  return res
-end
-
 -- Argument list of a new tabpage, holding the files to review. It is local to
 -- the window `:h :tabnew` opens (`:h :arglocal`) and defined in a single
 -- command, so it starts empty by construction and the global list - the files
@@ -129,7 +115,13 @@ end
 -- nothing. Example usage:
 -- - `:lua Config.review.open({ 'init.lua', 'plugin/10_options.lua' }, 'by hand')`
 Config.review.open = function(paths, label, on_open)
-  paths = readable_paths(paths)
+  -- Paths naming a file there is something to read in, normalized. A path the
+  -- change deleted, or the name it was renamed away from, is a line of the answer
+  -- with nothing to open behind it; every source produces some of them, so they
+  -- are dropped here instead of in each one.
+  -- See `:h filereadable()`, `:h vim.tbl_filter()` and `:h vim.fs.normalize()`.
+  paths = vim.tbl_filter(function(p) return vim.fn.filereadable(p) == 1 end, paths)
+  paths = vim.tbl_map(vim.fs.normalize, paths)
   if #paths == 0 then
     return vim.notify('No file to review ' .. label, vim.log.levels.WARN)
   end
