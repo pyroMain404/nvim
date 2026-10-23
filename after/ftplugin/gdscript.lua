@@ -150,13 +150,12 @@ end, { desc = 'Godot documentation for the word under the cursor' })
 -- without a client, nothing says so, and completion and diagnostics are simply
 -- mute from then on. What triggers the attach again is `:edit`, because it goes
 -- through `FileType` once more - there is no "retry" to call otherwise.
-vim.api.nvim_buf_create_user_command(0, 'GodotReconnect', function()
-  if vim.bo.modified then
-    local message = 'Write the buffer first: reattaching reloads it from disk'
-    return vim.notify(message, vim.log.levels.WARN)
-  end
-  vim.cmd.edit()
-end, { desc = 'Reattach the language server after restarting Godot' })
+vim.api.nvim_buf_create_user_command(
+  0,
+  'GodotReconnect',
+  function() vim.cmd.edit() end,
+  { desc = 'Reattach the language server after restarting Godot' }
+)
 
 -- Keys for the two commands above, in the `<Leader>o` group of
 -- 'plugin/20_keymaps.lua' - which already exists, so no clue entry is added
