@@ -1,5 +1,7 @@
 ## 2026-10-23
 
+- Let the cursor skip the `#` marker of a heading, and the space after it, in the `reading` state (`skip_hidden()` in `lua/config/mdlink.lua`): the renderer draws an icon over it but conceals nothing, so the cursor could stop on a character that is not visible.
+
 - Stop auto-closing brackets and quotes in the command line and in Markdown buffers: 'mini.pairs' is set up for Insert mode only (drops `modes = { command = true }` in `plugin/30_mini.lua`) and `after/ftplugin/markdown.lua` sets `b:minipairs_disable`. Code buffers keep their pairs.
 
 - Show the block id of a Markdown note (`^blk-1`, at the end of a line or alone on one) as a comment, through a buffer-local 'mini.hipatterns' highlighter in `after/ftplugin/markdown.lua`. Tags and `==highlight==` are left as they are: the parser has no node for tags, and 'render-markdown.nvim' already colors `==highlight==`.

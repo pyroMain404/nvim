@@ -87,6 +87,20 @@ M.skip_hidden = function(prev)
     parser:for_each_tree(function(tree, ltree)
       local lang = ltree:lang()
       if lang ~= 'markdown' and lang ~= 'markdown_inline' then return end
+      -- The renderer draws an icon over the `#` of a heading but conceals
+      -- nothing, so the marker and the space after it are added here.
+      if lang == 'markdown' then
+        local node = tree:root():descendant_for_range(row, 0, row, 0)
+        while node and node:type() ~= 'atx_heading' do
+          node = node:parent()
+        end
+        local marker = node and node:child(0)
+        if marker then
+          local _, sc, _, ec = marker:range()
+          local _, last = line:find('^[ \t]*', ec + 1)
+          add_range(row, sc, row, last)
+        end
+      end
       local query = vim.treesitter.query.get(lang, 'highlights')
       if not query then return end
       for id, node, md in query:iter_captures(tree:root(), 0, row, row + 1) do
