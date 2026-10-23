@@ -361,14 +361,8 @@ Config.review.commit_only = function(rev, pathspec)
   local root = review_root()
   if root == nil then return end
   local only = function(commit)
-    local reference = function() reference_rev(Config.git.parent(commit)) end
-    git_changed(
-      { Config.git.only(commit) },
-      root,
-      pathspec,
-      'in ' .. commit,
-      reference
-    )
+    local reference = function() reference_rev(commit .. '~') end
+    git_changed({ commit .. '^!' }, root, pathspec, 'in ' .. commit, reference)
   end
   if rev ~= nil then return only(rev) end
 

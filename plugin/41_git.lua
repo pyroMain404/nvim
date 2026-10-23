@@ -21,8 +21,6 @@
 --
 -- - `Config.git.require_root(buf_id)` - a root, preferring the buffer's own
 --   when it has one, with the "not inside a repository" warning included.
--- - `Config.git.parent(rev)` / `Config.git.only(rev)` - the revision right
---   before `rev`, or `rev` excluding its parents.
 -- - `Config.git.run(args, opts, on_done)` - Git command run asynchronously.
 -- - `Config.git.fail(out, cmd_desc)` - why a command which had to succeed did
 --   not, in the one message every failure is reported with.
@@ -76,15 +74,6 @@
 local later = Config.later
 
 Config.git = {}
-
--- Revision expressions Git understands, written once instead of at every
--- call site that names a commit's parent or excludes it. Example usage:
--- - `:lua Config.git.parent('abc1234')` - the commit right before it
--- - `:lua Config.git.only('abc1234')` - the commit EXCLUDING its parents
---   (`:h gitrevisions`, "rev^!"), which resolves against the empty tree for
---   the first commit of a repository, where `<rev>~..<rev>` has none to name
-Config.git.parent = function(rev) return rev .. '~' end
-Config.git.only = function(rev) return rev .. '^!' end
 
 -- Command plumbing ===========================================================
 
@@ -458,7 +447,7 @@ local diff_ref_at_parent = function(buf_id)
   local name = vim.api.nvim_buf_get_name(buf_id)
   local commit = name:match('^minigit://%d+/.*show (%x+~*):')
   if commit == nil then return end
-  Config.git.set_diff_ref(buf_id, Config.git.parent(commit))
+  Config.git.set_diff_ref(buf_id, commit .. '~')
 end
 
 -- Only the first file opened from a patch takes a full height column of its
@@ -764,7 +753,7 @@ end
 -- tree there, while the range is refused as an unknown revision.
 Config.git.diff_commit_only = function(buf_id, rev)
   local patch_of = function(id, commit)
-    show_patch(id, { Config.git.only(commit) }, 'in ' .. commit)
+    show_patch(id, { commit .. '^!' }, 'in ' .. commit)
   end
   pick_commit_patch(buf_id, rev, patch_of)
 end
