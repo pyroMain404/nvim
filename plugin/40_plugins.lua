@@ -67,6 +67,10 @@ now_if_args(function()
     'lua',
     'vimdoc',
     'markdown',
+    -- Only used through the injection of the 'markdown' parser, which parses
+    -- the frontmatter ('---' block) of a note as YAML. Without it the whole
+    -- block is one color.
+    'yaml',
     -- Add here more languages with which you want to use tree-sitter
     -- To see available languages:
     -- - Execute `:=require('nvim-treesitter').get_available()`

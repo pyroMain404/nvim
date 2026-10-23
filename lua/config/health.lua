@@ -222,7 +222,7 @@ local function check_markdown()
       'Obsidian vault integration is unavailable until obsidian.nvim is installed',
     })
   end
-  check_parsers({ 'markdown' })
+  check_parsers({ 'markdown', 'yaml' })
 end
 
 local function check_rust()

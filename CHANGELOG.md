@@ -1,3 +1,7 @@
+## 2026-10-23
+
+- Highlight the frontmatter of a Markdown note as YAML (keys and values in their own colors) by installing the `yaml` tree-sitter parser, which the injection of the 'markdown' parser needs; before, the whole `---` block was one color. `:checkhealth config` checks it next to `markdown`.
+
 ## 2026-10-21
 
 - Let 'render-markdown.nvim' wrap the cells of a Markdown table wider than the window again, in `live` and `reading` (removes `pipe_table.wrap = false` from `plugin/40_plugins.lua`). Without it Neovim split the overflowing rows and the tail of each row landed misaligned on the next line. Cost: Visual mode does not highlight wrapped rows and the cursor row is shown as source.
