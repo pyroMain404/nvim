@@ -1,5 +1,7 @@
 ## 2026-10-23
 
+- Draw spelling errors, diagnostics and 'mini.jump' targets with a straight underline instead of a wavy one, keeping each group's color (`plugin/40_plugins.lua`): the wavy line looked broken up on one word.
+
 - Underline `[label](url)` and `[[note]]` but not a bare `[text]`, in the color of 'Underlined' (`after/queries/markdown_inline/highlights.scm` and the `@markup.link.*` groups in `plugin/40_plugins.lua`): the scheme underlined everything the parser calls a link, including the brackets of `[text]`. The `@markup.underline` group of Neovim lacks the underline color, so a group linked to 'Underlined' is used instead.
 
 - Let the cursor skip the `#` marker of a heading, and the space after it, in the `reading` state (`skip_hidden()` in `lua/config/mdlink.lua`): the renderer draws an icon over it but conceals nothing, so the cursor could stop on a character that is not visible.

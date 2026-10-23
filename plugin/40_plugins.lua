@@ -705,4 +705,22 @@ Config.now(function()
   vim.api.nvim_set_hl(0, '@markup.link.label', { underline = false })
   vim.api.nvim_set_hl(0, '@markup.link.markdown_inline', { underline = false })
   vim.api.nvim_set_hl(0, '@markup.link.underlined', { link = 'Underlined' })
+
+  -- The scheme draws spelling, diagnostics and 'mini.jump' targets with
+  -- `undercurl`, which looks broken up on one word; keep each group's `sp` and
+  -- underline straight (`:h highlight-undercurl`).
+  for _, name in ipairs({
+    'SpellBad',
+    'SpellCap',
+    'SpellLocal',
+    'SpellRare',
+    'DiagnosticUnderlineError',
+    'DiagnosticUnderlineWarn',
+    'DiagnosticUnderlineInfo',
+    'DiagnosticUnderlineHint',
+    'MiniJump',
+  }) do
+    local hl = vim.api.nvim_get_hl(0, { name = name, link = false })
+    vim.api.nvim_set_hl(0, name, { underline = true, sp = hl.sp })
+  end
 end)
