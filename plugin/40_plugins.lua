@@ -327,11 +327,6 @@ now_if_args(function()
 
   if plugin_missing('render-markdown.nvim', 'render-markdown') then return end
 
-  local get_buf_var = function(buf, name)
-    local ok, value = pcall(vim.api.nvim_buf_get_var, buf, name)
-    return ok and value or nil
-  end
-
   require('render-markdown').setup({
     -- Keep the raw state as the buffer-local starting point; the ftplugin
     -- enables rendering explicitly for the live and reading states.
@@ -364,7 +359,7 @@ now_if_args(function()
       -- (`:h render-markdown-setup`) rather than relying on a one-time change.
       render = function(args)
         require('config.mdlink').anchor_footnotes(args.buf)
-        local state = get_buf_var(args.buf, 'markdown_om')
+        local state = vim.b[args.buf].markdown_om
         if state and state ~= 'source' then
           for _, win in ipairs(vim.fn.getbufinfo(args.buf)[1].windows or {}) do
             -- Both rendered modes keep syntax concealed; live relies on an
@@ -376,8 +371,8 @@ now_if_args(function()
       end,
       clear = function(args)
         require('config.mdlink').clear_footnotes(args.buf)
-        if get_buf_var(args.buf, 'markdown_om') == 'source' then
-          local original = get_buf_var(args.buf, 'markdown_om_original')
+        if vim.b[args.buf].markdown_om == 'source' then
+          local original = vim.b[args.buf].markdown_om_original
           if original then
             for win, options in pairs(original.windows) do
               if vim.api.nvim_win_is_valid(win) then
