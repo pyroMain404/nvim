@@ -446,8 +446,8 @@ local setup_obsidian = function(ev)
     -- attachment, instead of the element under the cursor, and has no way to
     -- keep a `title` or a first heading equal to the `id` in step with it. This
     -- branch of a fork fixes all of it (proposal:
-    -- obsidian-nvim/obsidian.nvim#1007; the rest is `frontmatter.sync_title`
-    -- and `note.sync_heading`). Go back to
+    -- obsidian-nvim/obsidian.nvim#1007; the rest is `frontmatter.sync_title`,
+    -- `note.sync_heading` and `note.sync_filename`). Go back to
     -- 'https://github.com/obsidian-nvim/obsidian.nvim' once they are merged.
     add({
       {
@@ -470,8 +470,9 @@ local setup_obsidian = function(ev)
       -- The first heading equal to the `id` is renamed with the note, and the
       -- links naming it (`[[Note#draft]]`, `[[#draft]]`) follow it. Off by
       -- default; see 'docs/Note.md' of the plugin, "Renaming the first heading
-      -- with the note".
-      note = { sync_heading = true },
+      -- with the note". Renaming the first heading when it equals the file name
+      -- renames the file too; see 'docs/Note.md' of the plugin.
+      note = { sync_heading = true, sync_filename = true },
       picker = { name = 'mini.pick' },
       templates = {
         substitutions = {

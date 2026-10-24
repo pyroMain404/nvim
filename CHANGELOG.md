@@ -1,5 +1,7 @@
 ## 2026-10-24
 
+- Set `note.sync_filename` for 'obsidian.nvim', so that `<Leader>lr` on the first heading of a note, when it equals the file name, also renames the file, with its backlinks, `id` and (through `frontmatter.sync_title`) `title`, in the same edit. Like the two options below it, it exists only on the fork branch `feat/frontmatter-sync-title`. On this machine Neovim 0.12's `vim.lsp.util.rename()` does not move the buffer of the renamed file (it matches the backslash path from `fs_realpath()` against a forward-slash buffer name), so the old note is recreated when the plugin updates the front matter of the stale buffer; `:Obsidian rename` does the same.
+
 - Set `note.sync_heading` for 'obsidian.nvim', so that the first heading of a note equal to its `id` is renamed with the note, and the links naming it are rewritten in the same edit. Like `frontmatter.sync_title`, the option exists only on the fork branch `feat/frontmatter-sync-title`.
 
 - Set `frontmatter.sync_title` for 'obsidian.nvim', so that a `title` equal to the `id` follows it when a note is renamed. The option exists only in the fork branch `feat/frontmatter-sync-title`, which the plugin is now installed from (the rename branch of the entry below, with this on top).
