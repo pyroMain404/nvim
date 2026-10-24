@@ -29,7 +29,7 @@
       "src": "https://github.com/nvim-treesitter/nvim-treesitter-textobjects"
     },
     "obsidian.nvim": {
-      "rev": "241964cca1419573c896c6d8f5769ab349ee9e37",
+      "rev": "2f11906acf109ef99ac1c6740f3c1a572b017324",
       "src": "https://github.com/pyroMain404/obsidian.nvim",
       "version": "'feat/lsp-rename-elements'"
     },
