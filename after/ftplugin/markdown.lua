@@ -77,7 +77,8 @@ if not original then
   for _, win in
     ipairs(vim.fn.getbufinfo(vim.api.nvim_get_current_buf())[1].windows or {})
   do
-    original.windows[win] = {
+    -- String keys: a table keyed by window id would be stored as a sparse list.
+    original.windows[tostring(win)] = {
       conceallevel = vim.wo[win][0].conceallevel,
       concealcursor = vim.wo[win][0].concealcursor,
     }
@@ -91,10 +92,12 @@ local function restore()
   local saved = vim.b.markdown_om_original
   vim.bo.readonly = saved.readonly
   vim.bo.modifiable = saved.modifiable
-  for win, options in pairs(saved.windows) do
+  -- `b:` variables store dictionary keys as strings, so window ids come back as such.
+  for key, options in pairs(saved.windows) do
+    local win = tonumber(key)
     if vim.api.nvim_win_is_valid(win) then
-      vim.wo[win][0].conceallevel = options.conceallevel
-      vim.wo[win][0].concealcursor = options.concealcursor
+      vim.wo[win].conceallevel = options.conceallevel
+      vim.wo[win].concealcursor = options.concealcursor
     end
   end
 end

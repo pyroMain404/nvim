@@ -374,7 +374,8 @@ now_if_args(function()
         if vim.b[args.buf].markdown_om == 'source' then
           local original = vim.b[args.buf].markdown_om_original
           if original then
-            for win, options in pairs(original.windows) do
+            for key, options in pairs(original.windows) do
+              local win = tonumber(key)
               if vim.api.nvim_win_is_valid(win) then
                 vim.wo[win][0].conceallevel = options.conceallevel
                 vim.wo[win][0].concealcursor = options.concealcursor
