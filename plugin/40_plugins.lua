@@ -462,10 +462,15 @@ local setup_obsidian = function(ev)
     vim.g.obsidian_default_keymap = false
     require('obsidian').setup({
       legacy_commands = false,
-      -- A `title` equal to the `id` follows it when the note is renamed.
+      -- A `title` property equal to the `id` is renamed along with it, e.g.
+      -- `:Obsidian rename final` turns `title: draft` into `title: final` when
+      -- the `id` was `draft`. Off by default; see 'docs/Frontmatter.md' of the
+      -- plugin, "Keeping `title` in step with `id`".
       frontmatter = { sync_title = true },
-      -- The first heading equal to the `id` follows it too, with the links
-      -- that name it.
+      -- The first heading equal to the `id` is renamed with the note, and the
+      -- links naming it (`[[Note#draft]]`, `[[#draft]]`) follow it. Off by
+      -- default; see 'docs/Note.md' of the plugin, "Renaming the first heading
+      -- with the note".
       note = { sync_heading = true },
       picker = { name = 'mini.pick' },
       templates = {
