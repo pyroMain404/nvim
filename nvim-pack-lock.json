@@ -29,9 +29,9 @@
       "src": "https://github.com/nvim-treesitter/nvim-treesitter-textobjects"
     },
     "obsidian.nvim": {
-      "rev": "2f11906acf109ef99ac1c6740f3c1a572b017324",
+      "rev": "dc521ce9d53dfc2331f335f612b9c76635d222e7",
       "src": "https://github.com/pyroMain404/obsidian.nvim",
-      "version": "'feat/lsp-rename-elements'"
+      "version": "'feat/frontmatter-sync-title'"
     },
     "render-markdown.nvim": {
       "rev": "8e8795368391036643b622875a6da6a51bcd33f4",
