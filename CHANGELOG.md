@@ -1,3 +1,7 @@
+## 2026-10-24
+
+- Install 'obsidian.nvim' from the `feat/lsp-rename-tags` branch of a fork (`plugin/40_plugins.lua`, marked `HACK`, `nvim-pack-lock.json` updated by `vim.pack`) so that `<Leader>lr` renames the element under the cursor in a vault note: a block id, heading, footnote, tag or attachment, besides a note link. Upstream renames the whole note from anywhere that is not a link, so `^blk-1` renamed the file and left the id alone. `:Obsidian rename` still renames the note of the buffer. Go back to the upstream repository once obsidian-nvim/obsidian.nvim#1007 is merged.
+
 ## 2026-10-23
 
 - Draw the `#` of a heading link (`[[Note#Heading]]`, `[[#Heading]]`) as `§` in the color of the link icon, through a buffer-local 'mini.hipatterns' highlighter with an `overlay` virtual text in `after/ftplugin/markdown.lua`. A link to a heading of the same note, `[[#Heading]]`, also loses its icon through `link.custom` in `plugin/40_plugins.lua`, so it reads `§Heading`. The sign is laid over the character instead of replacing the link text with the `wiki.body` option of 'render-markdown.nvim', which would hide the whole link and keep the cursor out of it. The highlighter does not know the renderer: the `§` also shows in `source`, in code and on the cursor line of `live`, and only the first `#` of a link is drawn.
