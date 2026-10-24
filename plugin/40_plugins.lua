@@ -444,9 +444,10 @@ local setup_obsidian = function(ev)
     -- HACK: obsidian.nvim c25aa3d (upstream main) renames the whole note when
     -- `vim.lsp.buf.rename()` runs on a block id, heading, footnote, tag or
     -- attachment, instead of the element under the cursor, and has no way to
-    -- keep a `title` equal to the `id` in step with it. This branch of a fork
-    -- fixes both (proposal: obsidian-nvim/obsidian.nvim#1007, the `title` part
-    -- is `frontmatter.sync_title`). Go back to
+    -- keep a `title` or a first heading equal to the `id` in step with it. This
+    -- branch of a fork fixes all of it (proposal:
+    -- obsidian-nvim/obsidian.nvim#1007; the rest is `frontmatter.sync_title`
+    -- and `note.sync_heading`). Go back to
     -- 'https://github.com/obsidian-nvim/obsidian.nvim' once they are merged.
     add({
       {
@@ -463,6 +464,9 @@ local setup_obsidian = function(ev)
       legacy_commands = false,
       -- A `title` equal to the `id` follows it when the note is renamed.
       frontmatter = { sync_title = true },
+      -- The first heading equal to the `id` follows it too, with the links
+      -- that name it.
+      note = { sync_heading = true },
       picker = { name = 'mini.pick' },
       templates = {
         substitutions = {
