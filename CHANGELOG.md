@@ -1,6 +1,10 @@
 ## 2026-10-24
 
-- Set `note.sync_filename` for 'obsidian.nvim', so that `<Leader>lr` on the first heading of a note, when it equals the file name, also renames the file, with its backlinks, `id` and (through `frontmatter.sync_title`) `title`, in the same edit. Like the two options below it, it exists only on the fork branch `feat/frontmatter-sync-title`. On this machine Neovim 0.12's `vim.lsp.util.rename()` does not move the buffer of the renamed file (it matches the backslash path from `fs_realpath()` against a forward-slash buffer name), so the old note is recreated when the plugin updates the front matter of the stale buffer; `:Obsidian rename` does the same.
+- Set `note.sync_filename` for 'obsidian.nvim', so that `<Leader>lr` on the first heading of a note, when it equals the file name, also renames the file, with its backlinks, `id` and (through `frontmatter.sync_title`) `title`, in the same edit. Like the two options below it, it exists only on the fork branch `feat/frontmatter-sync-title`.
+
+- Move the buffer of a renamed note along with its file on Windows (`HACK` around `vim.lsp.util.rename()` in `plugin/10_options.lua`). Neovim 0.12.5 splits the backslash path from `fs_realpath()` on `/`, so it never finds the buffer: the old note was written back at its old path when 'obsidian.nvim' updated the front matter, for `<Leader>lr` and `:Obsidian rename` alike.
+
+- Fix `markdown_om_original` window ids in `after/ftplugin/markdown.lua` and in the `clear` hook of 'render-markdown.nvim' (`plugin/40_plugins.lua`): a table keyed by window id was stored in `b:` as a sparse list, so changing the filetype of a note (which a rename does) raised an error.
 
 - Set `note.sync_heading` for 'obsidian.nvim', so that the first heading of a note equal to its `id` is renamed with the note, and the links naming it are rewritten in the same edit. Like `frontmatter.sync_title`, the option exists only on the fork branch `feat/frontmatter-sync-title`.
 

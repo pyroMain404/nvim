@@ -365,6 +365,37 @@ end, { nargs = '*', desc = 'Async :lmake - same makeprg/errorformat, non-blockin
 
 -- There are other autocommands created by 'mini.basics'. See 'plugin/30_mini.lua'.
 
+-- HACK: on Windows `vim.lsp.util.rename()` (used by LSP file renames, 'obsidian.nvim'
+-- and `:Obsidian rename`) looks for the buffers of the renamed file by splitting
+-- the `fs_realpath()` result, which has backslashes, on `/`; no buffer ever
+-- matches, so the buffer keeps the old name and is written back at the old path.
+-- After the file has moved, give such a buffer the new name the way upstream does
+-- (`:saveas!`, which keeps the buffer number), without autocommands: the write
+-- would run the front matter hook of 'obsidian.nvim' in the middle of its rename.
+-- Files only, not directories. Still present in Neovim 0.12.5; delete after an
+-- update that fixes it.
+local lsp_rename = vim.lsp.util.rename
+vim.lsp.util.rename = function(old_fname, new_fname, opts)
+  lsp_rename(old_fname, new_fname, opts)
+  if vim.uv.fs_stat(old_fname) or not vim.uv.fs_stat(new_fname) then
+    return
+  end
+  local old_norm = vim.fs.normalize(old_fname)
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    local name = vim.api.nvim_buf_get_name(buf)
+    if
+      vim.api.nvim_buf_is_loaded(buf)
+      and vim.bo[buf].buftype == ''
+      and vim.fs.normalize(name) == old_norm
+    then
+      vim.api.nvim_buf_call(buf, function()
+        vim.cmd('noautocmd keepalt saveas! ' .. vim.fn.fnameescape(new_fname))
+      end)
+      vim.cmd('bdelete! ' .. vim.fn.bufnr(name))
+    end
+  end
+end
+
 -- Diagnostics ================================================================
 
 -- Neovim has built-in support for showing diagnostic messages. This configures
