@@ -1,6 +1,6 @@
 ## 2026-10-24
 
-- Install 'obsidian.nvim' from the `feat/lsp-rename-tags` branch of a fork (`plugin/40_plugins.lua`, marked `HACK`, `nvim-pack-lock.json` updated by `vim.pack`) so that `<Leader>lr` renames the element under the cursor in a vault note: a block id, heading, footnote, tag or attachment, besides a note link. Upstream renames the whole note from anywhere that is not a link, so `^blk-1` renamed the file and left the id alone. `:Obsidian rename` still renames the note of the buffer. Go back to the upstream repository once obsidian-nvim/obsidian.nvim#1007 is merged.
+- Install 'obsidian.nvim' from the `feat/lsp-rename-elements` branch of a fork (`plugin/40_plugins.lua`, marked `HACK`, `nvim-pack-lock.json` updated by `vim.pack`) so that `<Leader>lr` renames the element under the cursor in a vault note: a block id, heading, footnote, tag or attachment, besides a note link. Upstream renames the whole note from anywhere that is not a link, so `^blk-1` renamed the file and left the id alone. `:Obsidian rename` still renames the note of the buffer. Go back to the upstream repository once obsidian-nvim/obsidian.nvim#1007 is merged (pull request #1009).
 
 ## 2026-10-23
 

@@ -446,7 +446,7 @@ local setup_obsidian = function(ev)
     -- attachment, instead of the element under the cursor. This branch of a
     -- fork fixes that (proposal: obsidian-nvim/obsidian.nvim#1007). Go back to
     -- 'https://github.com/obsidian-nvim/obsidian.nvim' once it is merged.
-    add({ { src = 'https://github.com/pyroMain404/obsidian.nvim', version = 'feat/lsp-rename-tags' } })
+    add({ { src = 'https://github.com/pyroMain404/obsidian.nvim', version = 'feat/lsp-rename-elements' } })
     if plugin_missing('obsidian.nvim', 'obsidian') then return end
     -- The plugin maps `<CR>` (smart action), `]o` and `[o` in every vault
     -- note; `<CR>` stays a plain Markdown `<CR>` here and `]o` / `[o` stay
