@@ -32,6 +32,8 @@
 --   in a single one.
 -- - `Config.git.toggle_diff_ref(buf_id, rev)` - reference a revision, or restore
 --   the Git index when one is already referenced.
+-- - `Config.git.diff_ref_label(buf_id)` - what the statusline says about the
+--   diff of a buffer: reference, scope and whether the overlay is on.
 -- - `Config.git.toggle_overlay()` - turn the in-buffer overlay of the reference
 --   text on and off, guarded against a buffer where it does not apply.
 -- - `Config.git.blame` - whether the line under the cursor is blamed.
@@ -296,6 +298,7 @@ Config.git.set_diff_ref = function(buf_id, rev)
   else
     buf_id = buf_id == 0 and vim.api.nvim_get_current_buf() or buf_id
     vim.b[buf_id].diff_ref = rev
+    vim.b[buf_id].diff_ref_index = rev == nil
     -- A per-buffer restore (`rev == nil`) must write the Git index source
     -- EXPLICITLY: leaving `minidiff_config` unset falls back to whatever the
     -- GLOBAL config's source currently is, which is the referenced revision
@@ -332,6 +335,43 @@ Config.git.set_diff_ref = function(buf_id, rev)
 
   local suffix = buf_id ~= nil and ' (buffer)' or ''
   vim.notify('Diff reference' .. suffix .. ': ' .. (rev or 'Git index'))
+  -- The statusline shows the reference (`diff_ref_label()`), and redraws only
+  -- when something asks it to.
+  vim.cmd.redrawstatus({ bang = true })
+end
+
+-- What the statusline says about the diff of `buf_id`, `nil` when there is
+-- nothing to say: 'mini.diff' is not enabled there, or the reference is the Git
+-- index and the overlay is off - which is what 'mini.diff' shows by default.
+-- It says which revision is the reference, at which scope, and whether the
+-- overlay that draws it in the buffer is on:
+-- - `@HEAD~` - a revision referenced in every buffer (`<Leader>gr`)
+-- - `@HEAD~ (buf)` - a revision referenced in this buffer only (`<Leader>gR`)
+-- - `@index (buf)` - this buffer restored to the Git index while a revision
+--   is still referenced everywhere else (`<Leader>gR` on a buffer that
+--   `<Leader>gr` had already moved)
+-- - `@index` - the overlay is on over the Git index (`<Leader>go`)
+-- - `(off)` after any of them - the reference is set but the overlay is hidden
+-- NOTE: `vim.b.diff_ref_index` is what tells the `@index (buf)` case from a
+-- buffer that follows the global reference: both have `vim.b.diff_ref == nil`,
+-- while `set_diff_ref()` writes the index source into the second one explicitly.
+Config.git.diff_ref_label = function(buf_id)
+  local data = _G.MiniDiff ~= nil and MiniDiff.get_buf_data(buf_id) or nil
+  if data == nil then return nil end
+
+  local ref, label = Config.git.diff_ref, nil
+  if vim.b[buf_id].diff_ref ~= nil then
+    label = '@' .. vim.b[buf_id].diff_ref .. ' (buf)'
+  elseif ref ~= nil and vim.b[buf_id].diff_ref_index then
+    label = '@index (buf)'
+  elseif ref ~= nil then
+    label = '@' .. ref
+  elseif data.overlay then
+    label = '@index'
+  else
+    return nil
+  end
+  return data.overlay and label or (label .. ' (off)')
 end
 
 -- The revision to reference once `commit` has been chosen: `commit` itself, or
@@ -341,7 +381,8 @@ end
 -- reading that commit was picked for, the change it made. Asked of Git the way
 -- `show_patch()` asks it, restricted to the file when `buf_id` names one.
 -- NOTE: the first commit of a repository has no parent to reference, so there
--- the commit itself is kept and the overlay stays empty.
+-- the commit itself is kept and the overlay stays empty - the statusline then
+-- names the revision that is really in use instead of a `<commit>~` that is not.
 local reference_for = function(buf_id, commit, on_done)
   local root = Config.git.require_root(buf_id)
   if root == nil then return end
@@ -419,6 +460,8 @@ Config.git.toggle_overlay = function()
     return vim.notify('mini.diff is not enabled here', vim.log.levels.WARN)
   end
   MiniDiff.toggle_overlay(buf_id)
+  -- The statusline says whether the overlay is on (`diff_ref_label()`).
+  vim.cmd.redrawstatus({ bang = true })
 end
 
 -- Patch navigation ===========================================================
