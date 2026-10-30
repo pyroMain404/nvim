@@ -334,9 +334,48 @@ Config.git.set_diff_ref = function(buf_id, rev)
   vim.notify('Diff reference' .. suffix .. ': ' .. (rev or 'Git index'))
 end
 
+-- The revision to reference once `commit` has been chosen: `commit` itself, or
+-- its parent when nothing has changed since it. The second is what the commit
+-- at `HEAD` is on a clean tree, which would reference a state every file
+-- already is in and show an overlay with nothing in it; the parent is the
+-- reading that commit was picked for, the change it made. Asked of Git the way
+-- `show_patch()` asks it, restricted to the file when `buf_id` names one.
+-- NOTE: the first commit of a repository has no parent to reference, so there
+-- the commit itself is kept and the overlay stays empty.
+local reference_for = function(buf_id, commit, on_done)
+  local root = Config.git.require_root(buf_id)
+  if root == nil then return end
+  local cmd = { 'git', 'diff', '--quiet', commit }
+  if buf_id ~= nil then
+    local path = buf_path(buf_id)
+    if path == nil then return end
+    vim.list_extend(cmd, { '--', path })
+  end
+  Config.git.run(cmd, { cwd = root }, function(out)
+    if out.code == 1 then return on_done(commit) end
+    if out.code ~= 0 then
+      local cmd_desc = '`git diff --quiet ' .. commit .. '` failed'
+      return vim.notify(Config.git.fail(out, cmd_desc), vim.log.levels.ERROR)
+    end
+    local parent = commit .. '~'
+    local probe =
+      { 'git', 'rev-parse', '--verify', '--quiet', parent .. '^{commit}' }
+    Config.git.run(probe, { cwd = root }, function(p)
+      if p.code ~= 0 then
+        vim.notify('Nothing changed since ' .. commit .. ', which has no parent')
+        return on_done(commit)
+      end
+      vim.notify('Nothing changed since ' .. commit .. ': referencing its parent')
+      on_done(parent)
+    end)
+  end)
+end
+
 -- Reference the revision `rev`, or one picked from the Git log when it is not
 -- given. Restore the Git index instead when a revision is already referenced,
--- which is what makes this a toggle. Example usage:
+-- which is what makes this a toggle. When nothing has changed since the
+-- revision, its parent is referenced instead (`reference_for()`), so that the
+-- commit at `HEAD` shows what it changed rather than nothing. Example usage:
 -- - `:lua Config.git.toggle_diff_ref()` - what `<Leader>gr` does
 -- - `:lua Config.git.toggle_diff_ref(0)` - what `<Leader>gR` does
 -- - `:lua Config.git.toggle_diff_ref(nil, 'HEAD~3')` - skip the picker
@@ -350,14 +389,21 @@ Config.git.toggle_diff_ref = function(buf_id, rev)
     cur_ref = vim.b[buf_id].diff_ref
   end
   if cur_ref ~= nil then return Config.git.set_diff_ref(buf_id, nil) end
-  if rev ~= nil then return Config.git.set_diff_ref(buf_id, rev) end
+
+  local apply = function(commit)
+    reference_for(
+      buf_id,
+      commit,
+      function(target) Config.git.set_diff_ref(buf_id, target) end
+    )
+  end
+  if rev ~= nil then return apply(rev) end
 
   local path = nil
   if buf_id ~= nil then
     path = buf_path(buf_id)
     if path == nil then return end
   end
-  local apply = function(commit) Config.git.set_diff_ref(buf_id, commit) end
   Config.git.pick_commit(path, apply)
 end
 
@@ -670,7 +716,11 @@ end
 -- NOTE: asking costs a second run of Git, which is what buys the difference
 -- between "nothing changed" and "nothing happened". It is `--quiet`, so Git
 -- stops at the first difference it finds instead of formatting a patch.
-local show_patch = function(buf_id, diff_args, label)
+--
+-- `fallback` is a function run in place of the "No change to show" warning when
+-- the patch is empty. The commit picker uses it to turn "nothing since" into
+-- "what the commit changed", by calling `Config.git.diff_commit_only()`.
+local show_patch = function(buf_id, diff_args, label, fallback)
   local root = Config.git.require_root(buf_id)
   if root == nil then return end
 
@@ -687,6 +737,7 @@ local show_patch = function(buf_id, diff_args, label)
   local args = table.concat(diff_args, ' ')
   local on_done = function(out)
     if out.code == 0 then
+      if fallback ~= nil then return fallback() end
       return vim.notify('No change to show ' .. label, vim.log.levels.WARN)
     end
     if out.code ~= 1 then
@@ -732,12 +783,18 @@ local pick_commit_patch = function(buf_id, rev, patch_of)
 end
 
 -- Patch of everything changed since a commit, of the repository or of one file.
--- Example usage:
+-- When nothing has changed since it - the commit at `HEAD` on a clean tree - the
+-- patch of what the commit changed by itself is shown instead, which is what
+-- picking it was for. Example usage:
 -- - `:lua Config.git.diff_commit()` - what `<Leader>gs` does
 -- - `:lua Config.git.diff_commit(0, 'HEAD~3')` - the buffer since `HEAD~3`
 Config.git.diff_commit = function(buf_id, rev)
   local patch_of = function(id, commit)
-    show_patch(id, { commit }, 'since ' .. commit)
+    local own = function()
+      vim.notify('Nothing changed since ' .. commit .. ': showing what it changed')
+      Config.git.diff_commit_only(id, commit)
+    end
+    show_patch(id, { commit }, 'since ' .. commit, own)
   end
   pick_commit_patch(buf_id, rev, patch_of)
 end

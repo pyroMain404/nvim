@@ -1,5 +1,7 @@
 ## 2026-10-30
 
+- Make every command that picks a commit read the commit when nothing has changed since it. On a clean tree the commit at `HEAD` gave `No change to show` for `<Leader>gs` / `<Leader>gS` and `<Leader>rs`, and an empty overlay for `<Leader>gr` / `<Leader>gR`; they now show what that commit changed (its patch, the files it touched, or the overlay against its parent) and say so. A tree with changes is read as before, and `<Leader>gp` / `<Leader>rp` are unchanged.
+
 - Drop 'shiki.nvim' from `plugin/40_plugins.lua`: its `src` was a local working tree (`W:/repos/shiki.nvim`) that does not exist on a fresh machine, so `vim.pack.add()` failed at the first start with `does not appear to be a git repository`.
 
 ## 2026-10-24

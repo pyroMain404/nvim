@@ -256,7 +256,10 @@ end
 -- in the command line, and both messages name it: a review limited to a
 -- directory which finds nothing has to say which directory it looked in. The
 -- error names the command as it was run, the review names itself as it reads.
-local git_changed = function(diff_args, root, pathspec, label, on_open)
+-- NOTE: `fallback` is a function run in place of opening an empty review, so
+-- that `Config.review.git()` can turn "nothing since" into a review of what the
+-- commit changed, by calling `Config.review.commit_only()`.
+local git_changed = function(diff_args, root, pathspec, label, on_open, fallback)
   local cmd = { 'git', '-c', 'core.quotePath=false', 'diff', '--name-only' }
   vim.list_extend(cmd, diff_args)
   local args = table.concat(diff_args, ' ')
@@ -279,6 +282,7 @@ local git_changed = function(diff_args, root, pathspec, label, on_open)
     do
       table.insert(paths, dir .. '/' .. vim.trim(line))
     end
+    if #paths == 0 and fallback ~= nil then return fallback() end
     Config.review.open(paths, label, on_open)
   end
   Config.git.run(cmd, { cwd = root }, on_done)
@@ -315,7 +319,11 @@ end
 -- That revision is also what the review is read against: it becomes the
 -- 'mini.diff' reference text, so every file opened shows the change it received
 -- since then - hunk navigation, hunk textobject and overlay included - without
--- picking the same commit a second time under `<Leader>gr`. Example usage:
+-- picking the same commit a second time under `<Leader>gr`.
+--
+-- When nothing has changed since it - the commit at `HEAD` on a clean tree - the
+-- files the commit changed by itself are reviewed instead, read against its
+-- parent, as `Config.review.commit_only()` does. Example usage:
 -- - `:lua Config.review.git()` - what `<Leader>rs` does
 -- - `:lua Config.review.git('HEAD~3')` - skip the picker
 -- - `:lua Config.review.git(nil, 'configs/')` - pick, then keep that directory
@@ -327,7 +335,11 @@ Config.review.git = function(rev, pathspec)
   if root == nil then return end
   local since = function(commit)
     local reference = function() reference_rev(commit) end
-    git_changed({ commit }, root, pathspec, 'since ' .. commit, reference)
+    local own = function()
+      vim.notify('Nothing changed since ' .. commit .. ': reviewing what it changed')
+      Config.review.commit_only(commit, pathspec)
+    end
+    git_changed({ commit }, root, pathspec, 'since ' .. commit, reference, own)
   end
   if rev ~= nil then return since(rev) end
 
