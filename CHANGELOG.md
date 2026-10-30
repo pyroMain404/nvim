@@ -1,3 +1,7 @@
+## 2026-10-30
+
+- Drop 'shiki.nvim' from `plugin/40_plugins.lua`: its `src` was a local working tree (`W:/repos/shiki.nvim`) that does not exist on a fresh machine, so `vim.pack.add()` failed at the first start with `does not appear to be a git repository`.
+
 ## 2026-10-24
 
 - Set `note.sync_filename` for 'obsidian.nvim', so that `<Leader>lr` on the first heading of a note, when it equals the file name, also renames the file, with its backlinks, `id` and (through `frontmatter.sync_title`) `title`, in the same edit. Like the two options below it, it exists only on the fork branch `feat/frontmatter-sync-title`.
