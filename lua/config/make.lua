@@ -53,7 +53,7 @@ end
 
 -- Run through the configured shell like `:make` does: `vim.system()` takes an
 -- argv list and never goes through 'shell'.
-local shell_argv = function(cmd)
+M.shell_argv = function(cmd)
   local argv = { vim.o.shell }
   vim.list_extend(argv, vim.split(vim.o.shellcmdflag, ' ', { plain = true }))
   table.insert(argv, cmd)
@@ -73,7 +73,7 @@ local run = function(args, is_loc)
   local cmd = build_cmd(args)
   vim.notify('Build started: ' .. cmd, vim.log.levels.INFO)
   job = vim.system(
-    shell_argv(cmd),
+    M.shell_argv(cmd),
     { cwd = vim.fn.getcwd(), text = true },
     function(out)
       job = nil

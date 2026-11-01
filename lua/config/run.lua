@@ -115,6 +115,46 @@ M.npm = function(args)
   return nil, reason:format(vim.fs.basename(manifest)), root
 end
 
+-- Default for a C, C++ or Rust file in no project: compile it into the cache
+-- directory and run the result. `compiler` is the argv up to the source file.
+-- One shell command in the terminal job, so compiler errors and program output
+-- share the split and the editor never waits on the compiler; `&&` means a
+-- failed compile never starts a stale binary.
+-- NOTE: the command name is bare (a quoted one is a parse error in pwsh) and the
+-- `& ` call operator that pwsh needs to run a quoted path means "background" in `sh`.
+M.compiled = function(compiler, args)
+  local source = vim.api.nvim_buf_get_name(0)
+  if source == '' then
+    return nil, 'save the buffer first: there is no file to compile'
+  end
+  if vim.fn.executable(compiler[1]) ~= 1 then
+    return nil, ('`%s` is not on PATH'):format(compiler[1])
+  end
+
+  local dir = vim.fs.joinpath(vim.fn.stdpath('cache'), 'run')
+  vim.fn.mkdir(dir, 'p')
+  local windows = vim.fn.has('win32') == 1
+  local out = vim.fs.joinpath(
+    dir,
+    vim.fn.fnamemodify(source, ':t:r') .. (windows and '.exe' or '')
+  )
+
+  local quote = vim.fn.shellescape
+  local compile = { compiler[1] }
+  for i = 2, #compiler do
+    table.insert(compile, quote(compiler[i]))
+  end
+  vim.list_extend(compile, { quote(source), '-o', quote(out) })
+
+  local run = { (windows and '& ' or '') .. quote(out) }
+  for _, arg in ipairs(args) do
+    table.insert(run, quote(arg))
+  end
+
+  local script = table.concat(compile, ' ') .. ' && ' .. table.concat(run, ' ')
+  return require('config.make').shell_argv(script)
+end
+
 -- Run `:make`/`:lmake` from the project root (tools print project-relative paths).
 -- NOTE: `QuickFixCmdPre` matches the COMMAND NAME (`:h QuickFixCmdPre`), so the
 -- pair cannot be buffer-local; `vim.fn.chdir()` not `:lcd`, which would leave a

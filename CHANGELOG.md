@@ -1,5 +1,7 @@
 ## 2026-11-01
 
+- Add `:Run` for a C, C++ or Rust file in no project: it compiles the file with `clang`, `clang++` or `rustc --edition 2024` into `stdpath('cache')/run` and runs the result in the terminal split, compiler errors included; arguments go to the program, and a project (`Cargo.toml`, `CMakeLists.txt`, `Makefile`) behaves as before.
+
 - Fix the Markdown shown by `K` (LSP hover) opening in `live` state: any Markdown buffer in a floating window now starts in `reading`, the nonmodifiable state, while `b:markdown_om_start` still overrides it.
 
 - Fix `<Tab>` and `<S-Tab>` doing nothing in a snippet session: they now jump to the next and previous tabstop of a 'mini.snippets' session (LSP snippets included) and fall back to the completion popup and to a literal tab as before; `<C-l>` and `<C-h>` keep working.

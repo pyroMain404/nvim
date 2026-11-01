@@ -33,8 +33,9 @@ if root ~= nil then
 end
 
 -- `:Run` under the contract of 'lua/config/run.lua'.
--- NOTE: runs the program as the last `:make` left it and never builds first;
--- building inside the resolver would freeze the editor with no quickfix list.
+-- NOTE: a project's `:Run` runs the program as the last `:make` left it and never
+-- builds first: building inside the resolver would freeze the editor with no
+-- quickfix list. A file in no project is compiled by the terminal job itself.
 local function programs()
   local found = {}
   local collect = function(dir, depth)
@@ -54,7 +55,10 @@ end
 
 require('config.run').command(function(args)
   if root == nil then
-    return nil, 'this file belongs to no project: nothing to run'
+    return require('config.run').compiled(
+      { vim.bo.filetype == 'cpp' and 'clang++' or 'clang' },
+      args
+    )
   end
 
   local found = programs()
