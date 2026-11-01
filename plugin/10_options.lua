@@ -33,24 +33,11 @@ vim.o.path = require('config.path').default
 
 vim.o.shada = "'100,<50,s10,:1000,/100,@100,h" -- Limit ShaDa file (for startup)
 
--- Use PowerShell 7, not the Windows default `cmd.exe`, for `:!`, `:make`,
--- `system()` and the terminal - this machine's own convention (see personal
--- memory, "Ambiente": "Invocare PowerShell con `pwsh`, non Windows PowerShell
--- 5.1"). `shellquote`/`shellxquote` are cleared because `pwsh -Command`
--- parses its own argument, unlike `cmd.exe` which expects Vim to wrap it in
--- quotes (`:h 'shellxquote'`). `shellpipe`/`shellredir` route through
--- `Tee-Object`/`Out-File` with UTF8 explicitly, because PowerShell's default
--- console encoding is UTF-16LE with a BOM, which `errorformat` does not skip
--- and would otherwise corrupt every line pushed into the quickfix list.
---
--- Measured, replacing the equivalent NOTE this used to carry about
--- `cmd.exe`: unlike `cmd.exe`'s `2>&1| tee %s` (whose own exit code is
--- always `tee`'s, always 0), PowerShell's `$LastExitCode` after
--- `<command> 2>&1 | Tee-Object <file>; exit $LastExitCode` still reports the
--- external command's real exit code - `Tee-Object` is a cmdlet, not an
--- external process, so it never overwrites `$LastExitCode`. `v:shell_error`
--- is therefore trustworthy again; see the `QuickFixCmdPost` autocommand
--- below for what still does not rely on it and why.
+-- PowerShell 7 for `:!`, `:make`, `system()` and the terminal.
+-- NOTE: `shellquote`/`shellxquote` are cleared because `pwsh -Command` parses its
+-- own argument (`:h 'shellxquote'`); `shellpipe`/`shellredir` write UTF8
+-- explicitly, as the UTF-16LE default would corrupt every quickfix line.
+-- `$LastExitCode` still carries the real exit code through `Tee-Object`.
 if vim.fn.has('win32') == 1 then
   vim.o.shell = 'pwsh'
   vim.o.shellcmdflag = '-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command'
@@ -120,148 +107,7 @@ Config.new_autocmd('FileType', nil, function()
   vim.cmd('setlocal formatoptions-=c formatoptions-=o')
 end, "Proper 'formatoptions'")
 
--- `:make`/`:lmake` run synchronously and leave the result to be read off the
--- (location) list - useful once inside it, silent the moment the command
--- returns control. This is language agnostic on purpose: every `:compiler`
--- plugin ('java.lua', 'maven.vim' through it, `gcc`, `cargo`, …) already
--- populates the same two lists the same way, so one autocommand answers for
--- all of them instead of each ftplugin reporting for itself.
---
--- NOTE: `v:shell_error` became trustworthy again once the shell switched to
--- `pwsh` above (`2>&1 | Tee-Object %s; exit $LastExitCode` correctly carries
--- the compiled program's real exit code, unlike `cmd.exe`'s `2>&1| tee %s`,
--- whose pipeline exit code was always `tee`'s - always 0). Measured:
--- `:make` on `pwsh -Command exit 1` now reports "shell returned 1", where it
--- used to leave `v:shell_error` at 0. Still not relied on here, on purpose:
--- it answers "did the shell's own pipeline fail", not "did the build fail" -
--- a `:compiler` plugin whose `errorformat` matches nothing on a real failure
--- (measured on Gradle, 'after/ftplugin/java.lua''s own TODO) exits non-zero
--- from the correct step and would still need this counting to notice an
--- empty quickfix list is not the same thing as a clean build. Counting only
--- the `E`-type entries `errorformat` recognized stays the one signal that
--- covers both failure shapes, and the one already proven on Maven.
-Config.new_autocmd('QuickFixCmdPost', { 'make', 'lmake' }, function(args)
-  local list = args.match == 'lmake' and vim.fn.getloclist(0) or vim.fn.getqflist()
-  local typed = function(t)
-    return #vim.tbl_filter(function(item)
-      return item.valid == 1 and item.type:upper() == t
-    end, list)
-  end
-  local errors, warnings = typed('E'), typed('W')
-  if errors > 0 then
-    vim.notify(
-      ('Build failed: %d error%s'):format(errors, errors == 1 and '' or 's'),
-      vim.log.levels.ERROR
-    )
-  else
-    local message = 'Build succeeded'
-    if warnings > 0 then
-      message = message .. (' (%d warning%s)'):format(warnings, warnings == 1 and '' or 's')
-    end
-    vim.notify(message, vim.log.levels.INFO)
-  end
-end, 'Report the outcome of :make/:lmake')
-
--- `:Make`/`:LMake`: the same `'makeprg'`/`'errorformat'` contract as
--- `:make`/`:lmake`, run asynchronously through `vim.system()` instead of
--- blocking Neovim for the length of the build. Reuses the `QuickFixCmdPost`
--- autocommand above for the success/failure report instead of repeating it -
--- `doautocmd` fires it exactly as `:make` itself would.
---
--- `vim.fn.expandcmd()` expands the same `%`/`#`/environment-variable forms
--- `:make` expands in `'makeprg'` (`:h 'makeprg'`, `:h expandcmd()`); `$*` is
--- NOT one of them, so it is substituted by hand, the same convention
--- `'makeprg'` itself documents: replaced if present, appended otherwise.
-local function build_make_cmd(args)
-  local prg = vim.fn.expandcmd(vim.o.makeprg)
-  local extra = table.concat(args, ' ')
-  if prg:find('$*', 1, true) then
-    prg = prg:gsub('%$%*', (extra:gsub('%%', '%%%%')))
-  elseif extra ~= '' then
-    prg = prg .. ' ' .. extra
-  end
-  return prg
-end
-
--- Run the built command through the CONFIGURED shell (`'shell'`/
--- `'shellcmdflag'`, `pwsh` above) exactly like `:make` does, rather than
--- assuming a POSIX-style split - `vim.system()` takes an argv list and never
--- goes through `:h 'shell'` itself.
-local function shell_argv(cmd)
-  local argv = { vim.o.shell }
-  vim.list_extend(argv, vim.split(vim.o.shellcmdflag, ' ', { plain = true }))
-  table.insert(argv, cmd)
-  return argv
-end
-
--- One run at a time: a second `:Make` while one is in flight WARNS and
--- refuses rather than cancelling and restarting, on purpose - a build that
--- gets killed halfway writes a partial object file just as often as it
--- writes nothing, and "wait for the first one" is the simpler contract to
--- reason about from a mapping.
-local make_job = nil
-local function run_make(args, is_loc)
-  if make_job ~= nil then
-    return vim.notify('A `:Make`/`:LMake` run is already in progress', vim.log.levels.WARN)
-  end
-  local cmd = build_make_cmd(args)
-  vim.notify('Build started: ' .. cmd, vim.log.levels.INFO)
-  make_job = vim.system(shell_argv(cmd), { cwd = vim.fn.getcwd(), text = true }, function(out)
-    make_job = nil
-    vim.schedule(function()
-      local lines =
-        vim.split((out.stdout or '') .. (out.stderr or ''), '\n', { trimempty = true })
-      local opts = { lines = lines, efm = vim.o.errorformat, title = 'Make' }
-      if is_loc then
-        vim.fn.setloclist(0, {}, ' ', opts)
-      else
-        vim.fn.setqflist({}, ' ', opts)
-      end
-      vim.cmd('doautocmd <nomodeline> QuickFixCmdPost ' .. (is_loc and 'lmake' or 'make'))
-    end)
-  end)
-end
-
-vim.api.nvim_create_user_command('Make', function(cmdopts)
-  run_make(cmdopts.fargs, false)
-end, { nargs = '*', desc = 'Async :make - same makeprg/errorformat, non-blocking' })
-
-vim.api.nvim_create_user_command('LMake', function(cmdopts)
-  run_make(cmdopts.fargs, true)
-end, { nargs = '*', desc = 'Async :lmake - same makeprg/errorformat, non-blocking' })
-
 -- There are other autocommands created by 'mini.basics'. See 'plugin/30_mini.lua'.
-
--- HACK: on Windows `vim.lsp.util.rename()` (used by LSP file renames, 'obsidian.nvim'
--- and `:Obsidian rename`) looks for the buffers of the renamed file by splitting
--- the `fs_realpath()` result, which has backslashes, on `/`; no buffer ever
--- matches, so the buffer keeps the old name and is written back at the old path.
--- After the file has moved, give such a buffer the new name the way upstream does
--- (`:saveas!`, which keeps the buffer number), without autocommands: the write
--- would run the front matter hook of 'obsidian.nvim' in the middle of its rename.
--- Files only, not directories. Still present in Neovim 0.12.5; delete after an
--- update that fixes it.
-local lsp_rename = vim.lsp.util.rename
-vim.lsp.util.rename = function(old_fname, new_fname, opts)
-  lsp_rename(old_fname, new_fname, opts)
-  if vim.uv.fs_stat(old_fname) or not vim.uv.fs_stat(new_fname) then
-    return
-  end
-  local old_norm = vim.fs.normalize(old_fname)
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    local name = vim.api.nvim_buf_get_name(buf)
-    if
-      vim.api.nvim_buf_is_loaded(buf)
-      and vim.bo[buf].buftype == ''
-      and vim.fs.normalize(name) == old_norm
-    then
-      vim.api.nvim_buf_call(buf, function()
-        vim.cmd('noautocmd keepalt saveas! ' .. vim.fn.fnameescape(new_fname))
-      end)
-      vim.cmd('bdelete! ' .. vim.fn.bufnr(name))
-    end
-  end
-end
 
 -- Diagnostics ================================================================
 

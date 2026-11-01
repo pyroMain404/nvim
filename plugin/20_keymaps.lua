@@ -252,9 +252,8 @@ xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 -- by an "replace" operator in 'mini.operators' (which is more commonly used).
 --
 -- `:make`/`:lmake` stay synchronous here on purpose; `:Make`/`:LMake` in
--- 'plugin/10_options.lua' are the async, vim.system()-backed equivalents,
--- and are commands rather than mappings because they take the same
--- optional arguments `:make` itself does.
+-- 'lua/config/make.lua' are the async equivalents, and are commands because they
+-- take the same optional arguments `:make` does.
 nmap_leader('la', '<Cmd>lua vim.lsp.buf.code_action()<CR>',          'Actions')
 nmap_leader('ld', '<Cmd>lua vim.diagnostic.open_float()<CR>',        'Diagnostic popup')
 nmap_leader('lf', "<Cmd>lua require('config.format').changed()<CR>", 'Format changed')
