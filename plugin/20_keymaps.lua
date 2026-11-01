@@ -6,17 +6,9 @@
 
 -- General mappings ===========================================================
 
--- Use this section to add custom general mappings. See `:h vim.keymap.set()`.
+local nmap = function(lhs, rhs, desc) vim.keymap.set('n', lhs, rhs, { desc = desc }) end
 
--- An example helper to create a Normal mode mapping
-local nmap = function(lhs, rhs, desc)
-  -- See `:h vim.keymap.set()`
-  vim.keymap.set('n', lhs, rhs, { desc = desc })
-end
-
--- Paste linewise before/after current line, replacing the built-in `[p`/`]p`
--- (indent-adjusted put, `:h ]p`) with an unindented one instead.
--- Usage: `yiw` to yank a word and `]p` to put it on the next line.
+-- Unindented linewise paste, replacing `:h ]p`.
 nmap('[p', '<Cmd>exe "iput! " . v:register<CR>', 'Paste Above')
 nmap(']p', '<Cmd>exe "iput "  . v:register<CR>', 'Paste Below')
 
@@ -25,9 +17,7 @@ nmap('<C-S-J>', '<C-w>J', 'Move to very bottom')
 nmap('<C-S-K>', '<C-w>K', 'Move to very top')
 nmap('<C-S-L>', '<C-w>L', 'Move to very right')
 
--- Swap adjacent arguments with the `a` textobject of 'mini.ai' and the exchange
--- operator `gx` of 'mini.operators': on `a` in `(aa, bb)` press `)` then `(`.
--- Not 100% reliable; it overrides `:h (` and `:h )`.
+-- Swap adjacent arguments ('mini.ai' `a`, 'mini.operators' `gx`); overrides `:h (` and `:h )`.
 vim.keymap.set('n', '(', 'gxiagxila', { remap = true, desc = 'Swap arg left' })
 vim.keymap.set('n', ')', 'gxiagxina', { remap = true, desc = 'Swap arg right' })
 
@@ -39,36 +29,12 @@ nmap('N', 'Nzv' .. map_refresh, 'Previous match')
 nmap('*', '*zv' .. map_refresh, 'Star')
 nmap('#', '#zv' .. map_refresh, 'Hash')
 
--- Many general mappings are created by 'mini.basics'. See 'plugin/30_mini.lua'
-
 -- stylua: ignore start
--- The next part (until `-- stylua: ignore end`) is aligned manually for easier
--- reading. Consider preserving this or remove `-- stylua` lines to autoformat.
-
 -- Leader mappings ============================================================
 
--- Neovim has the concept of a Leader key (see `:h <Leader>`). It is a configurable
--- key that is primarily used for "workflow" mappings (opposed to text editing).
--- Like "open file explorer", "create scratch buffer", "pick from buffers".
---
--- In 'plugin/10_options.lua' <Leader> is set to <Space>, i.e. press <Space>
--- whenever there is a suggestion to press <Leader>.
---
--- This config uses a "two key Leader mappings" approach: first key describes
--- semantic group, second key executes an action. Both keys are usually chosen
--- to create some kind of mnemonic.
--- Example: `<Leader>f` groups "find" type of actions; `<Leader>ff` - find files.
--- Use this section to add Leader mappings in a structural manner.
---
--- Usually if there are global and local kinds of actions, lowercase second key
--- denotes global and uppercase - local.
--- Example: `<Leader>fs` / `<Leader>fS` - find workspace/document LSP symbols.
---
--- Many of the mappings use 'mini.nvim' modules set up in 'plugin/30_mini.lua'.
+-- Two-key Leader mappings: first key is the group, second the action (`:h <Leader>`).
 
--- Create a global table with information about Leader groups in certain modes.
--- This is used to provide 'mini.clue' with extra clues.
--- Add an entry if you create a new group.
+-- Leader group names for 'mini.clue'.
 Config.leader_group_clues = {
   { mode = 'n', keys = '<Leader>b', desc = '+Buffer' },
   { mode = 'n', keys = '<Leader>e', desc = '+Explore/Edit' },
@@ -86,11 +52,7 @@ Config.leader_group_clues = {
   { mode = 'x', keys = '<Leader>l', desc = '+Language' },
 }
 
--- Helpers for a more concise `<Leader>` mappings.
--- Most of the mappings use `<Cmd>...<CR>` string as a right hand side (RHS) in
--- an attempt to be more concise yet descriptive. See `:h <Cmd>`.
--- This approach also doesn't require the underlying commands/functions to exist
--- during mapping creation: a "lazy loading" approach to improve startup time.
+-- Leader mapping helpers; a `<Cmd>` RHS needs no module loaded at mapping time (`:h <Cmd>`).
 local nmap_leader = function(suffix, rhs, desc)
   vim.keymap.set('n', '<Leader>' .. suffix, rhs, { desc = desc })
 end
@@ -98,10 +60,7 @@ local xmap_leader = function(suffix, rhs, desc)
   vim.keymap.set('x', '<Leader>' .. suffix, rhs, { desc = desc })
 end
 
--- b is for 'Buffer'. Common usage:
--- - `<Leader>bs` - create scratch (temporary) buffer
--- - `<Leader>ba` - navigate to the alternative buffer
--- - `<Leader>bw` - wipeout (fully delete) current buffer
+-- b is for 'Buffer'.
 nmap_leader('ba', '<Cmd>b#<CR>',                                 'Alternate')
 nmap_leader('bd', '<Cmd>lua MiniBufremove.delete()<CR>',         'Delete')
 nmap_leader('bD', '<Cmd>lua MiniBufremove.delete(0, true)<CR>',  'Delete!')
@@ -109,20 +68,10 @@ nmap_leader('bs', function() vim.api.nvim_win_set_buf(0, vim.api.nvim_create_buf
 nmap_leader('bw', '<Cmd>lua MiniBufremove.wipeout()<CR>',        'Wipeout')
 nmap_leader('bW', '<Cmd>lua MiniBufremove.wipeout(0, true)<CR>', 'Wipeout!')
 
--- e is for 'Explore' and 'Edit'. Common usage:
--- - `<Leader>ed` - open explorer at current working directory
--- - `<Leader>ef` - open directory of current file (needs to be present on disk)
--- - `<Leader>eg` - glance at the file under cursor in a popup, like diagnostics
---   (also a Markdown `[label](path)` link); see 'lua/config/glance.lua'
--- - `<Leader>ei` - edit 'init.lua'
--- - All mappings that use `edit_plugin_file` - edit 'plugin/' config files
--- `:h stdpath()` answers with the directory Neovim was started from, which
--- here is a junction to the config inside the repository. Opening a file
--- through it gives a path from which no root marker ('.git', '.stylua.toml')
--- is reachable, so a language server starts a second time with no root - in
--- single file mode, where `lua_ls` publishes no diagnostics at all. Resolving
--- it once, here, is what keeps every `<Leader>e` mapping on the real path and
--- on the client that is already running (`:h resolve()`).
+-- e is for 'Explore' and 'Edit'; `eg` is in 'lua/config/glance.lua'.
+-- NOTE: resolve the config path: opened through the startup junction no root marker is
+-- reachable and `lua_ls` starts rootless in single file mode, without diagnostics
+-- (`:h resolve()`).
 local config_file = function(relative)
   local path = vim.fn.resolve(vim.fn.stdpath('config') .. '/' .. relative)
   return string.format('<Cmd>edit %s<CR>', vim.fn.fnameescape(path))
@@ -137,23 +86,12 @@ local explore_locations = function()
   vim.cmd(vim.fn.getloclist(0, { winid = true }).winid ~= 0 and 'lclose' or 'lopen')
 end
 
--- Notification history reuses one scratch buffer across calls
--- (`:h MiniNotify.show_history()`) and, left as it is, replaces the CURRENT
--- window's buffer in place - unlike every `<Leader>g` output buffer
--- ('lua/config/git'), which opens in its own tabpage (`:h MiniGit-examples`,
--- `command.split = 'auto'`) and closes with `q` without touching what was
--- being edited. Matching that convention here instead of dropping the read
--- history into whatever window happened to be current.
+-- Open the history in its own tabpage, like the `<Leader>g` outputs; `q` closes it.
 local show_notification_history = function()
-  -- `:h :tab` on `:split` reuses the CURRENT buffer in the new tab's window
-  -- instead of `:tabnew`'s fresh empty one, so `show_history()` below has
-  -- nothing orphaned to leave behind once it swaps the window to its own
-  -- reused buffer (`:h MiniNotify.show_history()`).
+  -- `:tab split` keeps the current buffer, so no empty one is orphaned (`:h :tab`).
   vim.cmd('tab split')
   MiniNotify.show_history()
-  -- That buffer is itself created LISTED (`nvim_create_buf(true, true)`);
-  -- unlist it, since it is meant to be closed with `q`, not kept around
-  -- like a regular file.
+  -- Created listed; unlist it, it is closed with `q`.
   vim.bo.buflisted = false
   vim.keymap.set('n', 'q', '<Cmd>silent! close<CR>', { buffer = 0, desc = 'Close notification history' })
 end
@@ -170,21 +108,11 @@ nmap_leader('ep', edit_plugin_file('40_plugins.lua'),                          '
 nmap_leader('eq', explore_quickfix,                                            'Quickfix list')
 nmap_leader('eQ', explore_locations,                                           'Location list')
 
--- f is for 'Fuzzy Find'. Common usage:
--- - `<Leader>ff` - find files; for best performance requires `ripgrep`
--- - `<Leader>fg` - find inside files; requires `ripgrep`
--- - `<Leader>fh` - find help tag
--- - `<Leader>fr` - resume latest picker
--- - `<Leader>fv` - all visited paths; requires 'mini.visits'
---
--- All these use 'mini.pick'. See `:h MiniPick-overview` for an overview.
+-- f is for 'Fuzzy Find' (`:h MiniPick-overview`).
 
--- HACK: `:Pick ... path="%"` can not be used on Windows, as 'mini.pick' converts
--- command arguments to a table by loading them as Lua code, where backslashes of
--- an expanded path are parsed as (mostly invalid) escape sequences.
--- Call the picker directly with the path as a proper Lua value instead.
--- Remove after this is fixed upstream (still present in 'mini.nvim' ac5dffc,
--- 2026-09-13).
+-- HACK: `:Pick ... path="%"` fails on Windows: 'mini.pick' loads arguments as Lua, so path
+-- backslashes parse as escapes. Call the picker directly. Remove once fixed upstream
+-- (still present in 'mini.nvim' ac5dffc, 2026-09-13).
 local pick_buf_path = function(picker, scope)
   return function()
     local path = vim.api.nvim_buf_get_name(0)
@@ -222,15 +150,7 @@ nmap_leader('fT', '<Cmd>HipatternsGrep<CR>',                         'Todo/Fixme
 nmap_leader('fv', '<Cmd>Pick visit_paths cwd=""<CR>',                'Visit paths (all)')
 nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                       'Visit paths (cwd)')
 
--- g is for 'Git'. Common usage:
--- - `<Leader>gi` - show information at cursor
--- - `<Leader>go` - toggle 'mini.diff' overlay to show in-buffer unstaged changes
--- - `<Leader>gd` - show unstaged changes as a patch in separate tabpage
--- - `<Leader>gL` - show Git log of current file
--- - `<Leader>gb` - toggle who last changed the line under the cursor
---
--- The functions called here live in 'lua/config/git'; they are required by name
--- so that nothing of the Git workflow loads before the first of these is used.
+-- g is for 'Git'; functions live in 'lua/config/git', required lazily.
 
 nmap_leader('ga', "<Cmd>lua require('config.git').diff_staged()<CR>",       'Added diff')
 nmap_leader('gA', "<Cmd>lua require('config.git').diff_staged(0)<CR>",      'Added diff buffer')
@@ -252,22 +172,9 @@ nmap_leader('gS', "<Cmd>lua require('config.git').diff_commit(0)<CR>",      'Sin
 
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 
--- l is for 'Language'. Common usage:
--- - `<Leader>ld` - show more diagnostic details in a floating window
--- - `<Leader>lr` - perform rename via LSP
--- - `<Leader>ls` - navigate to source definition of symbol under cursor
--- - `<Leader>lf` - format the lines changed since the diff reference;
---   `<Leader>lF` formats the whole buffer, and over a Visual selection
---   `<Leader>lf` formats exactly that. See 'lua/config/format.lua' for why the
---   default is the changed lines and not the file.
---
--- NOTE: most LSP mappings represent a more structured way of replacing built-in
--- LSP mappings (like `:h gra` and others). This is needed because `gr` is mapped
--- by an "replace" operator in 'mini.operators' (which is more commonly used).
---
--- `:make`/`:lmake` stay synchronous here on purpose; `:Make`/`:LMake` in
--- 'lua/config/make.lua' are the async equivalents, and are commands because they
--- take the same optional arguments `:make` does.
+-- l is for 'Language'; `lf` formats the changed lines ('lua/config/format.lua').
+-- NOTE: `gr` is the 'mini.operators' replace operator, so LSP mappings live here
+-- instead of `:h gra`. `:make` stays synchronous; `:Make` ('lua/config/make.lua') is async.
 nmap_leader('la', '<Cmd>lua vim.lsp.buf.code_action()<CR>',          'Actions')
 nmap_leader('ld', '<Cmd>lua vim.diagnostic.open_float()<CR>',        'Diagnostic popup')
 nmap_leader('lf', "<Cmd>lua require('config.format').changed()<CR>", 'Format changed')
@@ -282,34 +189,20 @@ nmap_leader('lt', '<Cmd>lua vim.lsp.buf.type_definition()<CR>',      'Type defin
 
 xmap_leader('lf', "<Cmd>lua require('config.format').selection()<CR>", 'Format selection')
 
--- m is for 'Map'. Common usage:
--- - `<Leader>mt` - toggle map from 'mini.map' (closed by default)
--- - `<Leader>mf` - focus on the map for fast navigation
--- - `<Leader>ms` - change map's side (if it covers something underneath)
+-- m is for 'Map'.
 nmap_leader('mf', '<Cmd>lua MiniMap.toggle_focus()<CR>', 'Focus (toggle)')
 nmap_leader('mr', '<Cmd>lua MiniMap.refresh()<CR>',      'Refresh')
 nmap_leader('ms', '<Cmd>lua MiniMap.toggle_side()<CR>',  'Side (toggle)')
 nmap_leader('mt', '<Cmd>lua MiniMap.toggle()<CR>',       'Toggle')
 
--- o is for 'Other'. Common usage:
--- - `<Leader>oz` - toggle between "zoomed" and regular view of current buffer
--- - `<Leader>oy` - copy the current file's absolute path to the system clipboard
---   for pasting outside Neovim; see `:h quoteplus` and `:h filename-modifiers`.
+-- o is for 'Other'.
 
 nmap_leader('or', '<Cmd>lua MiniMisc.resize_window()<CR>',   'Resize to default width')
 nmap_leader('ot', '<Cmd>lua MiniTrailspace.trim()<CR>',      'Trim trailspace')
 nmap_leader('oy', '<Cmd>let @+ = expand("%:p")<CR>', 'Copy full file path')
 nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',            'Zoom toggle')
 
--- r is for 'Review'. Common usage:
--- - `<Leader>rd` - open the files changed and not staged yet
--- - `<Leader>ra` - open the files already staged
--- - `<Leader>rs` - open the files changed since a commit picked from the Git
---   log, read against it
--- - `<Leader>rp` - open the files that commit changed by itself
--- - `<Leader>rc` - close the review and drop the buffers it opened
---
--- The functions called here live in 'lua/config/review.lua'.
+-- r is for 'Review'; functions live in 'lua/config/review.lua'.
 
 nmap_leader('ra', "<Cmd>lua require('config.review').staged()<CR>",      'Added files')
 nmap_leader('rc', "<Cmd>lua require('config.review').close()<CR>",       'Close review')
@@ -317,10 +210,7 @@ nmap_leader('rd', "<Cmd>lua require('config.review').unstaged()<CR>",    'Diff f
 nmap_leader('rp', "<Cmd>lua require('config.review').commit_only()<CR>", 'Commit files')
 nmap_leader('rs', "<Cmd>lua require('config.review').git()<CR>",         'Since commit files')
 
--- s is for 'Session'. Common usage:
--- - `<Leader>sn` - start new session
--- - `<Leader>sr` - read previously started session
--- - `<Leader>sR` - restart Neovim preserving current session
+-- s is for 'Session'.
 
 nmap_leader('sd', '<Cmd>lua MiniSessions.select("delete")<CR>',                                   'Delete')
 nmap_leader('sn', '<Cmd>lua vim.ui.input({ prompt = "Session name: " }, MiniSessions.write)<CR>', 'New')
@@ -328,19 +218,12 @@ nmap_leader('sr', '<Cmd>lua MiniSessions.select("read")<CR>',                   
 nmap_leader('sR', '<Cmd>lua MiniSessions.restart()<CR>',                                          'Restart')
 nmap_leader('sw', '<Cmd>lua MiniSessions.write()<CR>',                                            'Write current')
 
--- t is for 'Terminal'. Common usage:
--- - `<Leader>tt` / `<Leader>tT` - terminal in vertical/horizontal split
--- - `<Leader>tl` - 'lazygit' in a centered floating window. Quit it as usual
---   (`q`) to close the window and reload files it changed on disk. It is the
---   Git client of this config, so it lives in 'lua/config/git/lazygit.lua'.
+-- t is for 'Terminal'; lazygit lives in 'lua/config/git/lazygit.lua'.
 nmap_leader('tl', "<Cmd>lua require('config.git').lazygit()<CR>", 'Lazygit')
 nmap_leader('tT', '<Cmd>horizontal term<CR>',                     'Terminal (horizontal)')
 nmap_leader('tt', '<Cmd>vertical term<CR>',                       'Terminal (vertical)')
 
--- v is for 'Visits'. Common usage:
--- - `<Leader>vv` - add    "core" label to current file.
--- - `<Leader>vV` - remove "core" label to current file.
--- - `<Leader>vc` - pick among all files with "core" label.
+-- v is for 'Visits'.
 local make_pick_core = function(cwd, desc)
   return function()
     local sort_latest = MiniVisits.gen_sort.default({ recency_weight = 1 })
