@@ -9,8 +9,8 @@
 -- `:checkhealth` discovers any 'lua/**/health.lua' on `:h 'runtimepath'` and names
 -- the check after its path, so this one is reachable as `config`. It is not the
 -- only file under 'lua/': `lua/config/run.lua` and `lua/config/mise.lua` also live
--- there, required by name rather than found by path - see `language-declaration.md`
--- for the test that decides which of the two a new module belongs to.
+-- there, required by name rather than found by path - see "Where a change goes"
+-- in 'AGENTS.md' for the rule that decides which of the two a new module is.
 --
 -- Structure: one `check_*()` function per area, called from `M.check()` in the
 -- order they should be read. This is the shape every healthcheck in Neovim's own

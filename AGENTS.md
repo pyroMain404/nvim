@@ -226,7 +226,6 @@ Each document owns one kind of rule; cite the file and the heading, never a `§N
 | `.omp/skills/nvim-language-troubleshooting/SKILL.md` | Symptom to layer to command, for a language already configured that misbehaves. |
 | `.omp/skills/nvim-language-support/references/capabilities.md` | The catalogue of axes a language can cover and the mechanisms behind each. |
 | `.omp/skills/nvim-language-support/references/<lang>.md` | The per-language outcome of phases 1, 2 and 4-5, the daily cycle, and language-specific verification. |
-| `.omp/skills/nvim-language-support/references/language-declaration.md` | The anatomy shared by every language declaration: what file declares what, the contract, what breaks when it is missing, and the skeleton in `assets/`. |
 | `.omp/skills/nvim-language-support/assets/` | Skeletons for the files a new language repeats. |
 | `.omp/skills/godot-project-setup/SKILL.md` | Godot-specific setup and the Neovim-Godot integration. |
 | `docs/analisi_funzionale_<lang>.md` | Frozen pre-implementation records: the analysis that led to the implementation. They are never edited after the implementation commit; when they disagree with a reference, the reference wins. |
