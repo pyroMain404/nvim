@@ -2,28 +2,24 @@
 -- │ Review │
 -- └────────┘
 --
--- Opens the files a change touched as the argument list of a new tabpage, to be
--- read as a set. A source is anything producing paths; Git is the first.
--- Required by name from 'plugin/20_keymaps.lua'.
+-- Opens the files a change touched as the arglist of a new tabpage, to be read
+-- as a set. Required by name from 'plugin/20_keymaps.lua'.
 
 local git = require('config.git')
 local core = require('config.git.core')
 
 local M = {}
 
--- Past this many files the review opens only after a confirmation: a commit far
--- back names half the repository, and loading it freezes the editor.
+-- Past this many files the review asks first: loading half a repository freezes the editor.
 M.max_files = 50
 
--- Ask a yes/no question and run `on_yes` only on a clear 'y'.
 local confirm = function(prompt, on_yes)
   vim.ui.input({ prompt = prompt .. ' (y/n) ' }, function(answer)
     if (answer or ''):lower() == 'y' then on_yes() end
   end)
 end
 
--- One summary of a batch operation, WARN when something failed. The labels are
--- required: an item is a file when opening a review and a buffer when closing one.
+-- One summary of a batch operation; labels are required (files when opening, buffers when closing).
 local report = function(message, done, failed, done_label, failed_label)
   local msg = message .. ': ' .. done .. ' ' .. done_label
   local level = vim.log.levels.INFO
@@ -34,9 +30,7 @@ local report = function(message, done, failed, done_label, failed_label)
   vim.notify(msg, level)
 end
 
--- Argument list local to the window of a new tabpage (`:h :arglocal`): it starts
--- empty and the global list is left alone. The files are loaded and listed right
--- away, so the whole set is one `:bnext` away and shows in the picker and tabline.
+-- Window-local arglist of a new tabpage (`:h :arglocal`), files loaded and listed.
 -- NOTE: `bufadd()` creates a buffer neither listed nor loaded, hence the two calls after it.
 -- NOTE: loading throws on a file another Neovim edits (`:h E325`); without the
 -- `pcall` the first such file ends the loop and the review silently misses files.
@@ -73,14 +67,9 @@ local open_arglist = function(paths, label, on_open)
   )
 end
 
---- Open `paths` as the review, asking first when it is a big one. `label` reads
---- after the word "Review"; `on_open` is what the source does once the tabpage exists.
----@param paths string[]
----@param label string
----@param on_open function|nil
+--- Open `paths` as the review, asking first when it is big; `label` reads after "Review".
 M.open = function(paths, label, on_open)
-  -- A path the change deleted or renamed away has nothing to open behind it;
-  -- every source produces some, so they are dropped here.
+  -- Deleted or renamed-away paths have nothing to open; every source produces some.
   paths = vim.tbl_filter(function(p) return vim.fn.filereadable(p) == 1 end, paths)
   paths = vim.tbl_map(vim.fs.normalize, paths)
   if #paths == 0 then
@@ -94,9 +83,7 @@ M.open = function(paths, label, on_open)
   )
 end
 
---- Close the review of the current tabpage: drop the buffers it opened (the
---- ones already open before stay) and restore the diff reference it found, unless
---- that was changed by hand meanwhile.
+--- Close the review of the current tabpage: drop its buffers, restore the diff reference.
 -- NOTE: a buffer with unsaved changes refuses to be deleted (`:h E89`) and is
 -- reported, not forced.
 -- NOTE: both tabpage variables are read before `:tabclose`, after which they are
@@ -138,13 +125,10 @@ M.close = function()
   end)
 end
 
--- Files `git diff --name-only <diff_args>` lists, handed to `M.open()`. `label`
--- says the same in words; `fallback` runs instead of opening an empty review.
--- Asynchronous, so the callback runs once a picker has closed and a window can open.
--- NOTE: with the default `core.quotePath`, Git quotes paths holding non-ASCII
--- ("caff\303\250.lua"), which match no file on disk and would drop out of the review.
--- NOTE: a pathspec (string or list) is read from the repository root and named in
--- both messages, so a review limited to a directory that finds nothing says which.
+-- Files `git diff --name-only <diff_args>` lists, for `M.open()`; `fallback` runs instead of an empty review.
+-- NOTE: with the default `core.quotePath` Git quotes non-ASCII paths, which match
+-- no file on disk and would drop out of the review.
+-- NOTE: a pathspec is read from the repository root and named in both messages.
 local git_changed = function(diff_args, root, pathspec, label, on_open, fallback)
   local cmd = { 'git', '-c', 'core.quotePath=false', 'diff', '--name-only' }
   vim.list_extend(cmd, diff_args)
@@ -175,8 +159,7 @@ local git_changed = function(diff_args, root, pathspec, label, on_open, fallback
   end)
 end
 
--- Reference `rev` in every buffer (what `<Leader>gr` does) and record it and the
--- reference it replaces in the tabpage, for `M.close()`.
+-- Reference `rev` in every buffer and record it in the tabpage, for `M.close()`.
 -- NOTE: the reference is global, so a second review over the first takes it over;
 -- closing the first afterwards finds a reference it did not set and leaves it.
 -- NOTE: a range such as `main...` is not a state `git show <rev>:<path>` resolves,
@@ -186,13 +169,7 @@ local reference_rev = function(rev)
   git.set_diff_ref(nil, rev)
 end
 
---- Review the files changed since `rev` (picked from the log when `nil`),
---- narrowed by `pathspec`. The revision becomes the diff reference. When nothing
---- changed since it, the files the commit changed by itself are reviewed.
--- NOTE: the root is resolved before the picker, so a call outside a repository
--- is refused right away.
----@param rev string|nil
----@param pathspec string|string[]|nil
+--- Review the files changed since `rev` (log pick when nil), narrowed by `pathspec`; `rev` becomes the diff reference.
 M.git = function(rev, pathspec)
   local root = git.require_root()
   if root == nil then return end
@@ -210,11 +187,8 @@ M.git = function(rev, pathspec)
 end
 
 --- Review the files a commit changed by itself, read against its parent.
--- NOTE: `<rev>^!` names the commit excluding its parents (`:h gitrevisions`) and
--- works on the first commit too; the reference stays `<rev>~`, a state, which
--- the first commit lacks, so its files fall back to the index.
----@param rev string|nil
----@param pathspec string|string[]|nil
+-- NOTE: `<rev>^!` works on the first commit too (`:h gitrevisions`); the reference
+-- stays `<rev>~`, which the first commit lacks, so its files fall back to the index.
 M.commit_only = function(rev, pathspec)
   local root = git.require_root()
   if root == nil then return end
@@ -227,9 +201,6 @@ M.commit_only = function(rev, pathspec)
   git.pick_commit(nil, only)
 end
 
---- Review the files changed and not staged yet / already staged. Neither touches
---- the diff reference.
----@param pathspec string|string[]|nil
 M.unstaged = function(pathspec)
   local root = git.require_root()
   if root == nil then return end

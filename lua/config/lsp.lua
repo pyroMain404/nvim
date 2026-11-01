@@ -2,19 +2,14 @@
 -- │ LSP client behaviour  │
 -- └───────────────────────┘
 --
--- Client side fixes and switches that belong to no single server. Which servers
--- run is declared in 'plugin/40_plugins.lua'; per-server settings are in
--- 'after/lsp/'. Switched on by `setup()` from 'plugin/50_features.lua'.
+-- Client-side fixes for no single server; switched on by `setup()` in 'plugin/50_features.lua'.
 
 local M = {}
 
--- HACK: on Windows `vim.lsp.util.rename()` (LSP file renames, 'obsidian.nvim',
--- `:Obsidian rename`) looks for the buffers of the renamed file by splitting the
--- `fs_realpath()` result, which has backslashes, on `/`; no buffer matches, so it
--- keeps the old name and is written back at the old path. After the move, give
--- such a buffer the new name the way upstream does (`:saveas!`), without
--- autocommands: the write would run the front matter hook of 'obsidian.nvim' in
--- the middle of its rename. Files only. Still present in Neovim 0.12.5.
+-- HACK: on Windows `vim.lsp.util.rename()` splits the backslashed `fs_realpath()`
+-- on `/`, so the renamed buffer keeps its old name and is written back at the old
+-- path. Rename it with `:saveas!` without autocommands (the write would run the
+-- 'obsidian.nvim' front matter hook mid-rename). Still present in Neovim 0.12.5.
 local patch_rename = function()
   local lsp_rename = vim.lsp.util.rename
   vim.lsp.util.rename = function(old_fname, new_fname, opts)
@@ -40,15 +35,11 @@ local patch_rename = function()
   end
 end
 
--- HACK: 'nvim-lspconfig' announces `rust-analyzer.showReferences` among the
--- commands the client implements and then registers only `runSingle`, so every
--- "N implementations" / "N references" lens ends in "Language server
--- `rust_analyzer` does not support command". The command is client-side by
--- design: the server hands over the locations, the editor decides how to show
--- them. Still missing in 'nvim-lspconfig' ac9d2f7 (2026-09-10).
+-- HACK: 'nvim-lspconfig' announces `rust-analyzer.showReferences` but registers
+-- only `runSingle`, so reference lenses end in "does not support command". Show
+-- the locations client-side. Still missing in 'nvim-lspconfig' ac9d2f7 (2026-09-10).
 local add_show_references = function()
   vim.lsp.commands['rust-analyzer.showReferences'] = function(command, ctx)
-    -- Arguments are `{ uri, position, locations }`; only the third is needed.
     local locations = command.arguments and command.arguments[3] or {}
     local encoding = vim.lsp.get_client_by_id(ctx.client_id).offset_encoding
     if #locations == 0 then
@@ -66,9 +57,6 @@ end
 M.setup = function()
   patch_rename()
   add_show_references()
-  -- Servers announce code lens at a precise place ("run this test"); Neovim asks
-  -- for them only when told to. No filter covers every server and later buffer
-  -- (`:h vim.lsp.codelens.enable()`).
   vim.lsp.codelens.enable(true)
 end
 

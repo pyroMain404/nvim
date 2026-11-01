@@ -2,24 +2,12 @@
 -- │ mise tools  │
 -- └─────────────┘
 --
--- Query the versions `mise` has installed for a tool. The two language-server
--- files that need this (`after/lsp/ts_ls.lua` and `after/lsp/jdtls.lua`) used
--- to each shell out to `mise ls <tool> --json`, decode the output and degrade
--- silently when `mise` was missing. That duplication is now one module.
---
--- The contract is only the query: callers keep their own warning strings and
--- their own idea of "newest" (Node by major, Java by Eclipse release), because
--- those messages are part of the language-server behavior this config exposes.
+-- Shared by 'after/lsp/ts_ls.lua' and `jdtls.lua`.
 
 local M = {}
 
--- Return the installed versions of `tool` that `mise ls <tool> --json`
--- reports, newest first, as `{ version, path }`. Returns `nil` when `mise` is
--- missing, the query fails, or the output is not valid JSON.
---
--- NOTE: one process per call, with no cache. Each of its three callers asks
--- about a different tool (`node`, `npm:typescript`, `java`) from a file read
--- once per session, so a cache keyed by tool could never answer twice.
+-- Installed versions of `tool` as `{ version, path }`, newest first; `nil` on any failure.
+-- NOTE: no cache: each caller asks about a different tool once per session.
 function M.installed(tool)
   local ok, out = pcall(
     function() return vim.system({ 'mise', 'ls', tool, '--json' }):wait() end
@@ -39,12 +27,10 @@ function M.installed(tool)
     end
   end
 
-  -- `mise` reports oldest first; reverse so the newest release is at index 1.
+  -- `mise` reports oldest first
   return vim.fn.reverse(installed)
 end
 
--- First installed entry of `tool` (newest first) that `accept(entry)` takes, or
--- the first one when `accept` is nil; `nil` when there is none.
 function M.newest(tool, accept)
   for _, entry in ipairs(M.installed(tool) or {}) do
     if accept == nil or accept(entry) then return entry end

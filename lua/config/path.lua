@@ -1,17 +1,12 @@
 -- ┌────────────────────────┐
 -- │ Global value of 'path' │
 -- └────────────────────────┘
---
--- Required by name from 'plugin/10_options.lua', 'after/ftplugin/c.lua' and
--- 'lua/config/git' (patch buffers), which extend it per buffer.
+-- Per-buffer extensions of 'path' for 'plugin/10_options.lua', c and git patch buffers.
 
 local M = {}
 
--- `.;` searches the directory of the current file and then every directory above
--- it (`:h file-searching`); the trailing `,,` keeps the working directory.
 -- NOTE: a constant, not a read of `vim.o.path`: the first write to a
--- never-locally-set global-local string option from any scope also overwrites
--- the global value (Neovim 0.12.5), so reading it back later grows without bound.
+-- never-locally-set global-local option also overwrites the global (Neovim 0.12.5).
 M.default = '.;,,'
 
 --- Value of 'path' for a buffer that adds `dirs` (already escaped) to the default.

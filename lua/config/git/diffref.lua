@@ -9,12 +9,10 @@ local core = require('config.git.core')
 
 local M = {}
 
--- Revision referenced in every buffer, `nil` for the Git index. A single buffer
--- carries its own in `vim.b.diff_ref`.
+-- Global revision, `nil` for the Git index; a single buffer carries its own in `vim.b.diff_ref`.
 local diff_ref = nil
 
--- Which file a buffer holds: a file on disk, or the copy of a file at some
--- commit which 'mini.git' opens, whose repository relative path is in its name.
+-- A file on disk, or a file at some commit that 'mini.git' opens (its path is in the buffer name).
 local buf_git_location = function(buf_id)
   local name = vim.api.nvim_buf_get_name(buf_id)
   local path_at_commit = name:match(core.patterns.show_path)
@@ -28,10 +26,9 @@ local buf_git_location = function(buf_id)
   return { cwd = dir, path = base, at_commit = false }
 end
 
--- Per-(revision, directory) set of the paths a revision has. 'mini.diff' wants a
--- synchronous answer from `attach` for a path the revision lacks, so only the
--- first attach per pair pays a blocking `git ls-tree`. Cleared on every
--- `set_diff_ref()`, as a branch or a commit can add files to a revision like `HEAD`.
+-- Per-(revision, directory) set of the paths a revision has: `attach` must answer
+-- synchronously, so only the first attach per pair blocks on `git ls-tree`. Cleared
+-- on every `set_diff_ref()`, as a branch or commit can add files to `HEAD`.
 local ls_tree_cache = {}
 local ls_tree = function(rev, cwd)
   local key = rev .. '\30' .. cwd
@@ -63,7 +60,6 @@ local diff_source_at = function(rev)
       if not loc.at_commit then return false end
       return MiniDiff.set_ref_text(buf_id, '')
     end
-    -- `ls_tree` answered whether a reference exists, so the content is fetched async.
     local cmd = { 'git', 'show', rev .. ':./' .. loc.path }
     core.run(cmd, { cwd = loc.cwd }, function(out)
       if out.code ~= 0 then
@@ -71,7 +67,6 @@ local diff_source_at = function(rev)
         vim.notify(core.fail(out, cmd_desc), vim.log.levels.ERROR)
         return
       end
-      -- Account for possible 'crlf' end of line in Git object
       MiniDiff.set_ref_text(buf_id, (out.stdout:gsub('\r\n', '\n')))
     end)
   end
@@ -86,13 +81,9 @@ end
 local diff_source_git = nil
 
 --- Revision referenced in every buffer, `nil` for the Git index.
----@return string|nil
 M.get = function() return diff_ref end
 
---- Reference `rev` in every buffer (`buf_id == nil`) or in one (`0` is the
---- current buffer); `rev == nil` restores the Git index.
----@param buf_id integer|nil
----@param rev string|nil
+--- Reference `rev` in every buffer (`buf_id == nil`) or one (`0`: current); `nil` restores the Git index.
 M.set = function(buf_id, rev)
   ls_tree_cache = {}
   local source = rev ~= nil and diff_source_at(rev) or nil
@@ -131,13 +122,9 @@ M.set = function(buf_id, rev)
   vim.cmd.redrawstatus({ bang = true })
 end
 
---- What the statusline says about the diff of `buf_id`, `nil` when nothing:
---- `@rev`, `@rev (buf)`, `@index (buf)` or `@index`, plus `(off)` when the
---- overlay is hidden.
+--- What the statusline says about the diff of `buf_id`, `nil` when nothing.
 -- NOTE: `vim.b.diff_ref_index` tells `@index (buf)` from a buffer following the
 -- global reference: both have `vim.b.diff_ref == nil`.
----@param buf_id integer
----@return string|nil
 M.label = function(buf_id)
   local data = _G.MiniDiff ~= nil and MiniDiff.get_buf_data(buf_id) or nil
   if data == nil then return nil end
@@ -157,9 +144,8 @@ M.label = function(buf_id)
   return data.overlay and label or (label .. ' (off)')
 end
 
--- The revision to reference once `commit` is chosen: `commit` itself, or its
--- parent when nothing has changed since it (the commit at `HEAD` on a clean
--- tree), which would otherwise show an empty overlay.
+-- The revision to reference once `commit` is chosen: its parent when nothing
+-- changed since it, which would show an empty overlay.
 -- NOTE: the first commit has no parent, so it is kept and the overlay stays empty.
 local reference_for = function(buf_id, commit, on_done)
   local root = core.require_root(buf_id)
@@ -191,8 +177,6 @@ end
 --- revision is already referenced (in `buf_id`, or everywhere when `nil`).
 -- NOTE: `0` is resolved before the picker starts: by the time a commit is
 -- chosen, the current buffer is the picker.
----@param buf_id integer|nil
----@param rev string|nil
 M.toggle = function(buf_id, rev)
   local cur_ref = diff_ref
   if buf_id ~= nil then

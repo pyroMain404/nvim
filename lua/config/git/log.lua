@@ -15,8 +15,7 @@ local M = {}
 local git_log_cmd =
   [[Git log --pretty=format:\%h\ \%ad\ │\ \%s --date=format:\%Y-\%m-\%d\ \%H:\%M:\%S --topo-order]]
 
---- Git log of the repository (`buf_id == nil`) or of one file; `0` is the current buffer.
----@param buf_id integer|nil
+--- Git log of the repository (`buf_id == nil`) or of one file (`0`: current buffer).
 M.log = function(buf_id)
   local postfix, label, path = '', 'here', nil
   if buf_id ~= nil then
@@ -37,13 +36,9 @@ M.log = function(buf_id)
   end)
 end
 
--- Show `git diff <diff_args>` through 'mini.git' once `git diff --quiet` says
--- there is something to show. Outside a repository 'mini.git' would otherwise
--- print the whole usage of `git diff --no-index` for a key pressed in the wrong
--- directory. `label` names the selection after "No change to show"; `fallback`
--- runs in place of that warning.
--- NOTE: the probe costs a second run of Git, but it is `--quiet`: Git stops at
--- the first difference instead of formatting a patch.
+-- Show `git diff <diff_args>` once `git diff --quiet` says there is something:
+-- outside a repository 'mini.git' would print the usage of `git diff --no-index`.
+-- `fallback` runs in place of the "No change to show" warning.
 local show_patch = function(buf_id, diff_args, label, fallback)
   local root = core.require_root(buf_id)
   if root == nil then return end
@@ -67,16 +62,13 @@ local show_patch = function(buf_id, diff_args, label, fallback)
   end)
 end
 
---- Changes not staged yet / already staged, of the repository or of one buffer.
----@param buf_id integer|nil
+--- Changes not staged yet / already staged.
 M.diff_unstaged = function(buf_id) show_patch(buf_id, {}, 'not staged') end
 M.diff_staged = function(buf_id) show_patch(buf_id, { '--cached' }, 'staged') end
 
--- The commit a patch is asked about, picked from the log (of one file when
--- `buf_id` names it) or given as `rev`.
--- NOTE: the path is resolved and `0` turned into a real buffer before the picker
--- starts: by the time `choose` runs the current buffer is the picker's. The window
--- opens safely because `show_patch()` asks Git first, landing after the picker closed.
+-- The commit a patch is asked about: picked from the log or given as `rev`.
+-- NOTE: the path is resolved and `0` made a real buffer before the picker starts:
+-- by the time `choose` runs the current buffer is the picker's.
 local pick_commit_patch = function(buf_id, rev, patch_of)
   if buf_id ~= nil then
     if core.buf_path(buf_id) == nil then return end
@@ -89,11 +81,8 @@ local pick_commit_patch = function(buf_id, rev, patch_of)
   core.pick_commit(path, show)
 end
 
---- Patch of what a commit changed by itself, against the commit before it.
--- NOTE: `<rev>^!` and not `<rev>~..<rev>`: the first commit has no parent to
--- name, while `^!` resolves against the empty tree (`:h gitrevisions`).
----@param buf_id integer|nil
----@param rev string|nil
+--- Patch of what a commit changed by itself.
+-- NOTE: `<rev>^!` and not `<rev>~..<rev>`: it works for the first commit too (`:h gitrevisions`).
 M.diff_commit_only = function(buf_id, rev)
   local patch_of = function(id, commit)
     show_patch(id, { commit .. '^!' }, 'in ' .. commit)
@@ -101,10 +90,7 @@ M.diff_commit_only = function(buf_id, rev)
   pick_commit_patch(buf_id, rev, patch_of)
 end
 
---- Patch of everything changed since a commit; when nothing has, the patch of
---- what the commit changed by itself.
----@param buf_id integer|nil
----@param rev string|nil
+--- Patch of everything changed since a commit, else of the commit alone.
 M.diff_commit = function(buf_id, rev)
   local patch_of = function(id, commit)
     local own = function()

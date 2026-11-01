@@ -2,15 +2,11 @@
 -- │ Formatting │
 -- └────────────┘
 --
--- Decides what gets formatted: the lines changed against the 'mini.diff'
--- reference text (the Git index, or the revision `set_diff_ref()` referenced),
--- the same hunks the gutter signs mark. Which program formats is declared in
--- 'lua/config/toolchain.lua'. Required by name from 'plugin/20_keymaps.lua'.
+-- Formats the lines changed against the 'mini.diff' reference text, the same
+-- hunks the gutter marks. Formatter choice: 'lua/config/toolchain.lua'.
 
 local M = {}
 
--- Formatting one range at a time is what 'conform.nvim' supports
--- (`:h conform.format()`), so several hunks mean several calls.
 -- NOTE: the end column has to be a real column of a real line: `math.huge` is not
 -- an integer and 'conform.nvim' silently formats nothing. A line gone by now is
 -- skipped, as an empty range would silently do the same.
@@ -29,8 +25,7 @@ local format_range = function(from, to)
   return err, did_edit
 end
 
--- Whether a format pass has anything to run: a CLI formatter or the LSP fallback
--- (`:h conform.list_formatters_to_run()`). Warns once, so callers only `return`.
+-- A CLI formatter or the LSP fallback must exist; warns once (`:h conform.list_formatters_to_run()`).
 local has_formatter = function(conform)
   local formatters, lsp = conform.list_formatters_to_run(0)
   if #formatters > 0 or lsp then return true end
@@ -42,7 +37,6 @@ local has_formatter = function(conform)
   return false
 end
 
--- An unloaded plugin degrades the feature, it does not abort the caller.
 local conform_or_notify = function()
   local ok, conform = pcall(require, 'conform')
   if ok then return conform end
@@ -50,16 +44,13 @@ local conform_or_notify = function()
   return nil
 end
 
---- Format the whole buffer, for a file being adopted or one whose reference is
---- not worth trusting.
 M.buffer = function()
   local conform = conform_or_notify()
   if not conform then return end
   conform.format()
 end
 
---- Format the lines that differ from the diff reference, bottom-up: formatting a
---- hunk changes the line numbers of everything below it.
+--- Format the lines that differ from the diff reference, bottom-up (line numbers below shift).
 M.changed = function()
   local conform = conform_or_notify()
   if not conform then return end

@@ -4,26 +4,17 @@
 --
 -- Required by name from the `<Leader>eg` mapping in 'plugin/20_keymaps.lua'.
 --
--- "Glance" shows the file under the cursor in a floating window and nothing
--- else: no buffer in the list, no change of the current window. It is the same
--- float `vim.diagnostic.open_float()` uses (`:h vim.lsp.util.open_floating_preview()`),
--- so it behaves the same way: it closes on the first cursor move, and pressing
--- `<Leader>eg` again while it is open moves into it (`q` or `<C-w>c` closes it).
--- The name is found the way `gf` finds it, through 'path' (`:h findfile()`), so
--- both agree on what a name means. When no file or directory matches, the `:h`
--- tag of the word is shown instead.
--- Example: cursor on 'extensions/x.ts' or on `vim.diagnostic.open_float`, then
--- `<Leader>eg`.
+-- Shows the file under the cursor in the float `vim.diagnostic.open_float()`
+-- uses (`:h vim.lsp.util.open_floating_preview()`): no buffer, no window change,
+-- closes on cursor move; `<Leader>eg` again enters it. The name is resolved like
+-- `gf` ('path'); failing that, the `:h` tag of the word is shown.
 
 local M = {}
 
--- Lines read per file. A glance is a look, not a viewer: a bigger file is cut
--- here and the last line says so.
+-- Lines read per file; the last line says when a bigger file was cut.
 local max_lines = 60
 
--- The `:h` tag `tag` names, as lines starting at its definition, and the help
--- file they come from. Reads 'doc/tags' of every runtime directory, which is
--- what `:help` itself consults.
+-- The lines of the `:h` tag from its definition, and its help file ('doc/tags').
 local help_tag = function(tag)
   for _, tags in ipairs(vim.api.nvim_get_runtime_file('doc/tags', true)) do
     for line in io.lines(tags) do
@@ -41,8 +32,6 @@ local help_tag = function(tag)
   end
 end
 
--- Show the file or directory under the cursor in a floating window; failing
--- that, the help for the word under the cursor.
 M.open = function()
   local find = function(name)
     local found = name ~= '' and vim.fn.findfile(name) or ''
@@ -51,8 +40,7 @@ M.open = function()
   end
   local path = vim.fn.expand('<cfile>')
   local file = find(path)
-  -- Like `gf`, ask 'includeexpr' when `<cfile>` names nothing. `v:fname` is
-  -- empty, enough for an expression that reads the cursor (a link, with spaces).
+  -- Like `gf`, fall back to 'includeexpr' (`v:fname` empty, fine for cursor-reading expressions).
   if not file and vim.bo.includeexpr ~= '' then
     local ok, name = pcall(vim.fn.eval, vim.bo.includeexpr)
     if ok and type(name) == 'string' and name ~= '' then
