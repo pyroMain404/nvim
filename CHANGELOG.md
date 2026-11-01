@@ -1,5 +1,7 @@
 ## 2026-11-01
 
+- Fix typing in a Java buffer filling the screen with `jdtls: Validate documents` and `jdtls: Publish Diagnostics` notifications: 'mini.notify' no longer shows those two progress reports, which jdtls opens on every document change, while importing and building still show; they stay in the history of `<Leader>en`.
+
 - Fix a Markdown link that fits the window once its destination is hidden leaving an empty row after it in a floating window (the `See Also` links of a Java hover): Neovim sizes a wrapped line from its raw text, so such a window is now shown without 'wrap' and fitted to its lines; the text of the buffer is not touched.
 
 - Fix spell checking underlining words in the hover opened by `K` and in other floating Markdown windows: 'spell' is now off there.

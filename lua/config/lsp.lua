@@ -54,6 +54,29 @@ local add_show_references = function()
   end
 end
 
+-- HACK: jdtls opens a progress report for every document change ('Validate
+-- documents', 'Publish Diagnostics'), so typing in a Java buffer fills the screen with
+-- notifications. Keep them out of the window of 'mini.notify' (`:h MiniNotify.config`),
+-- as the `content.sort` set in 'plugin/30_mini.lua'; importing and building still show.
+-- (jdtls 1.61.0, locked 2026-11-01, not retested)
+local noisy_progress = {
+  jdtls = { 'Validate documents', 'Publish Diagnostics' },
+}
+
+M.notify_sort = function(notifications)
+  local shown = vim.tbl_filter(function(notif)
+    local data = notif.data or {}
+    if data.source ~= 'lsp_progress' then return true end
+    for _, title in ipairs(noisy_progress[data.client_name] or {}) do
+      if vim.startswith(notif.msg, data.client_name .. ': ' .. title) then
+        return false
+      end
+    end
+    return true
+  end, notifications)
+  return MiniNotify.default_sort(shown)
+end
+
 M.setup = function()
   patch_rename()
   add_show_references()

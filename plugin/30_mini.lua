@@ -38,7 +38,16 @@ now(function()
   later(MiniIcons.tweak_lsp_kind)
 end)
 
-now(function() require('mini.notify').setup() end)
+-- `content.sort` hides the progress reports jdtls sends on every keystroke
+now(function()
+  require('mini.notify').setup({
+    content = {
+      sort = function(notifications)
+        return require('config.lsp').notify_sort(notifications)
+      end,
+    },
+  })
+end)
 
 now(function() require('mini.sessions').setup() end)
 
