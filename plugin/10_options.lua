@@ -25,6 +25,10 @@ if vim.fn.has('win32') == 1 then
   vim.o.shellpipe = '2>&1 | Tee-Object %s; exit $LastExitCode'
   vim.o.shellquote = ''
   vim.o.shellxquote = ''
+
+  -- HACK: Nvim on Windows starts with `v:ctype` = 'C' when $LANG is unset, which
+  -- `:checkhealth` reports as an error (nvim v0.12.6, locked 2026-11-01, not retested).
+  vim.cmd.language('ctype', 'en_US.UTF-8')
 end
 
 -- UI =========================================================================
