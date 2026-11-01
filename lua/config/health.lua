@@ -34,9 +34,10 @@ local function check_tool(tool)
     health.ok(name .. ': ' .. path)
     return path
   end
-  local version = first_line({ name, '--version' })
+  local version =
+    first_line(vim.list_extend({ name }, tool.version or { '--version' }))
   if version == nil then
-    health.warn('`' .. name .. '` is on PATH but `--version` failed', advice)
+    health.warn('`' .. name .. '` is on PATH but its version command failed', advice)
     return nil
   end
   health.ok(name .. ': ' .. version)

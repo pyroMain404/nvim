@@ -71,7 +71,8 @@ M.external = {
 -- Per language: `name` is the title of its health section (`health = false`
 -- gives it none), `bundled` parsers ship with Neovim, `markers` identify a
 -- project of the language. A tool is checked for its `--version`, by path only
--- with `check = 'path'`, and only when `needs` is installed.
+-- with `check = 'path'`, and only when `needs` is installed. A tool that has no
+-- `--version` names its own in `version` (`go version`).
 M.languages = {
   {
     name = 'Lua',
@@ -269,6 +270,34 @@ M.languages = {
         exe = 'make',
         why = "`:make` in a plain-Makefile project ('after/ftplugin/c.lua') does nothing",
         advice = winget('GnuWin32.Make') .. ', or use a CMake project',
+      },
+    },
+  },
+  {
+    name = 'Go',
+    -- `gomod` and `gowork` read 'go.mod' and 'go.work'
+    parsers = { 'go', 'gomod', 'gowork' },
+    servers = { 'gopls' },
+    -- What `gofmt -l` in a project's CI agrees with
+    formatters = { go = { 'gofmt' } },
+    tools = {
+      {
+        exe = 'go',
+        version = { 'version' },
+        why = "nothing compiles, and `:make` and `:Run` ('after/ftplugin/go.lua') do nothing",
+        advice = mise('go@latest'),
+      },
+      {
+        exe = 'gopls',
+        version = { 'version' },
+        why = 'Go buffers lose completion, diagnostics, rename and go to definition',
+        advice = mise('go:golang.org/x/tools/gopls@latest'),
+      },
+      {
+        exe = 'gofmt',
+        check = 'path',
+        why = '`<Leader>lf` falls back to the server, which formats the same way',
+        advice = 'It comes with the Go toolchain',
       },
     },
   },
