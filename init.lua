@@ -100,42 +100,13 @@ end
 -- Load now to have 'mini.misc' available for custom loading helpers.
 vim.pack.add({ 'https://github.com/nvim-mini/mini.nvim' })
 
--- Loading helpers used to organize config into fail-safe parts. Example usage:
--- - `now` - execute immediately. Use for what must be executed during startup.
---   Like colorscheme, statusline, tabline, dashboard, etc.
--- - `later` - execute a bit later. Use for things not needed during startup.
--- - `now_if_args` - use only if needed during startup when Neovim is started
---   like `nvim -- path/to/file`, but otherwise delaying is fine.
--- - Others are better used only if the above is not enough for good performance.
---   Use only if you are comfortable with adding complexity to your config:
---   - `on_event` - execute once on a first matched event. Like "delay until
---     first Insert mode enter": `on_event('InsertEnter', function() ... end)`.
---   - `on_filetype` - execute once on a first matched filetype. Like "delay
---     until first Lua file": `on_filetype('lua', function() ... end)`.
---
--- See also:
--- - `:h MiniMisc.safely()`
--- - 'plugin/30_mini.lua' and 'plugin/40_plugins.lua'
+-- Loading helpers: `now` for what the first draw needs, `now_if_args` for what
+-- it needs only when a file is opened, `later` for everything else.
+-- See `:h MiniMisc.safely()`.
 local misc = require('mini.misc')
 Config.now = function(f) misc.safely('now', f) end
 Config.later = function(f) misc.safely('later', f) end
 Config.now_if_args = vim.fn.argc(-1) > 0 and Config.now or Config.later
-Config.on_event = function(ev, f) misc.safely('event:' .. ev, f) end
-Config.on_filetype = function(ft, f) misc.safely('filetype:' .. ft, f) end
-
--- HACK: a snapshot of the global default of `'path'`, taken before any
--- buffer can write it. `plugin/41_git.lua` and `after/ftplugin/c.lua` both
--- prepend project directories to it, and both need the value that was there
--- BEFORE - but the FIRST write to a never-locally-set global-local string
--- option like `'path'`, from ANY scope (`vim.bo`, `vim.opt_local`, even
--- `:setlocal`), overwrites Neovim's own compiled-in GLOBAL default too
--- (measured: `vim.o.path` reads the written value afterwards, in a buffer
--- that never touched it). Reading `vim.o.path` a second time then reads
--- back what the first write already corrupted it to, so the entries grow
--- without bound across repeated `:setf`/buffer opens. Present in Neovim
--- 0.12.5; remove if a future release stops promoting a local write into the
--- global slot.
-Config.pristine_path = vim.o.path
 
 -- Ask a yes/no question and run `on_yes` only on a clear 'y'. Used by any
 -- part of the config that needs permission before acting, so the prompt shape

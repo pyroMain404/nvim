@@ -97,13 +97,8 @@ if root ~= nil then
       table.insert(dirs, (dir:gsub('[ ,]', '\\%0')))
     end
   end
-  -- `Config.pristine_path`, not `vim.o.path` or `vim.bo.path`: reading
-  -- either live option here reads back whatever a PREVIOUS C/C++ buffer's
-  -- write already promoted into the global slot - see the HACK at
-  -- `Config.pristine_path`'s definition in 'init.lua'. Opening a second
-  -- project's file in the same session, before this was fixed, kept the
-  -- first project's directories and appended the second's on top.
-  vim.bo.path = Config.pristine_path .. ',' .. table.concat(dirs, ',')
+  -- Built from the constant, not from a live read of 'path' (see 'lua/config/path.lua').
+  vim.bo.path = require('config.path').with(dirs)
 end
 
 -- Running the project, under the contract of 'lua/config/run.lua'. What a C/C++

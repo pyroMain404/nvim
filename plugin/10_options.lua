@@ -28,16 +28,8 @@ vim.g.mapleader = ' ' -- Use `<Space>` as <Leader> key
 vim.o.mousescroll = 'ver:25,hor:6' -- Customize mouse scroll
 vim.o.switchbuf   = 'usetab'       -- Use already opened buffers when switching
 
--- `.;` makes 'path' search the directory of the current file and then every
--- directory above it (`:h file-searching`), so `gf`, `gF`, `<C-w>f`, `:find` and
--- the glance popup (`<Leader>eg`) resolve a name written relative to a parent
--- directory, like 'extensions/x.ts' in 'skills/x/SKILL.md'. The trailing `,,`
--- keeps the working directory, as in the default `.,,`.
-vim.o.path = '.;,,'
--- NOTE: 'init.lua' snapshots 'path' as `Config.pristine_path` before this file
--- runs, and 'after/ftplugin/c.lua' and 'plugin/41_git.lua' build their local
--- value from that snapshot. Refresh it, or they would drop the upward search.
-Config.pristine_path = vim.o.path
+-- Upward search for `gf`, `:find` and the glance popup. See 'lua/config/path.lua'.
+vim.o.path = require('config.path').default
 
 vim.o.shada = "'100,<50,s10,:1000,/100,@100,h" -- Limit ShaDa file (for startup)
 
@@ -102,12 +94,9 @@ vim.o.shiftwidth    = 2       -- Use this number of spaces for indentation
 vim.o.spelloptions  = 'camel' -- Treat camelCase word parts as separate words
 vim.o.tabstop       = 2       -- Show tab as this number of spaces
 
--- Spell checking (see `:h 'spelllang'`, `:h 'spellfile'`, `:h zg`). Dictionaries
--- are downloaded on first use. Custom words go to one file per language, kept in
--- the config: `zg` adds to English, `2zg` to Italian (`:h spellfile-cleanup`).
--- Add a language by appending it to both lists, e.g. 'de' and '<spell>/de.utf-8.add'.
+-- Spell checking (`:h 'spelllang'`, `:h 'spellfile'`, `:h zg`): `zg` adds to the
+-- English file, `2zg` to the Italian one. Both live in the config's 'spell/'.
 local spell_dir = vim.fn.stdpath('config') .. '/spell'
-vim.fn.mkdir(spell_dir, 'p')
 vim.o.spelllang = 'en,it'
 vim.o.spellfile = spell_dir .. '/en.utf-8.add,' .. spell_dir .. '/it.utf-8.add'
 
