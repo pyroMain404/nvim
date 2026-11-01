@@ -2,28 +2,12 @@
 -- │ Godot resource behaviour │
 -- └──────────────────────────┘
 --
--- This file contains behavior specific to `.tscn`/`.tres` buffers (filetype
--- `gdresource`, assigned by 'ftdetect/godot.lua'). A '.tscn' is a text
--- resource: `$VIMRUNTIME` has no ftplugin for it, and until now this config
--- read it as the INI-shaped file it is written as, which hides the one
--- structure that actually matters here - the scene's node tree.
---
--- `:GodotTree` opens a scratch buffer (`:h scratch-buffer`) listing every
--- `[node ...]` section of the CURRENT buffer as a tree, one line per node,
--- indented by depth; `<CR>` on a line jumps the source window to that node's
--- section header. The `godot_resource` parser is installed
--- ('plugin/40_plugins.lua', checked by 'lua/config/health.lua') so the tree
--- is read from the syntax tree instead of a regex (`:h vim.treesitter.query`).
+-- `:GodotTree` lists the `[node ...]` sections of a `.tscn`/`.tres` buffer as a
+-- tree in a scratch buffer (`:h scratch-buffer`); `<CR>` jumps to the node.
+-- Filetype from 'ftdetect/godot.lua'; parser `godot_resource` ('plugin/40_plugins.lua').
 
--- A Godot scene file is `(resource (section (identifier) (attribute
--- (identifier) (string|integer|...))*)*)` - each `[section]` header is an
--- unnamed `identifier` child, and each `key=value` line under it is an
--- `attribute` with its own `identifier` (the key) and value child. Measured
--- with `:lua print(vim.treesitter.get_parser(0,'godot_resource'):parse()[1]:root():sexpr())`
--- against a real 3-node scene: `section`'s and `attribute`'s FIRST child is
--- an anonymous `[`/`=` token, so the identifier is `named_child(0)`, not
--- `child(0)` - `child()` walks every child including anonymous ones,
--- `named_child()` only the ones the grammar names (`:h TSNode:named_child()`).
+-- NOTE: the identifier of a `section`/`attribute` is `named_child(0)`, not
+-- `child(0)`, because the first child is an anonymous `[`/`=` token.
 local query = vim.treesitter.query.parse(
   'godot_resource',
   [[
@@ -32,26 +16,20 @@ local query = vim.treesitter.query.parse(
 ]]
 )
 
--- A node's indentation depth is the number of path segments in its own
--- `parent=` attribute, plus one for itself - the scene root carries no
--- `parent=` at all (depth 0), and `parent="."` (a direct child of the root)
--- has zero segments in `.`, so it lands at depth 1. `parent="Sprite"` has one
--- segment, depth 2, and so on (`:h vim.split()`).
+-- Depth is the segment count of `parent=` plus one; the root has no `parent=`
+-- (depth 0) and `parent="."` is depth 1.
 local function depth_of(parent_path)
   if parent_path == nil then return 0 end
   if parent_path == '.' then return 1 end
   return #vim.split(parent_path, '/', { plain = true }) + 1
 end
 
--- Parse the CURRENT buffer's `[node ...]` sections into
--- `{ { name, type, depth, lnum }, ... }`, in file order (the order Godot
--- itself uses to resolve `parent=` paths, so no sorting is needed).
+-- `{ { name, type, depth, lnum }, ... }` in file order.
 local function scene_nodes(bufnr)
   local parser = vim.treesitter.get_parser(bufnr, 'godot_resource')
   local root = parser:parse()[1]:root()
 
   local function text(node) return vim.treesitter.get_node_text(node, bufnr) end
-  -- Strip the surrounding quotes a `(string)` capture carries.
   local function unquote(node) return text(node):sub(2, -2) end
 
   local sections, attrs = {}, {}
@@ -88,8 +66,7 @@ local function scene_nodes(bufnr)
   return nodes
 end
 
--- Render the node list into scratch-buffer lines and a parallel `lnum` table
--- (line N of the tree -> line N of `nodes`, so `<CR>` needs no re-parse).
+-- Tree lines plus a parallel `lnum` table, so `<CR>` needs no re-parse.
 local function render(nodes)
   local lines, lnums = {}, {}
   for _, node in ipairs(nodes) do

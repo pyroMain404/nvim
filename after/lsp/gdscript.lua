@@ -2,46 +2,8 @@
 -- │ GDScript via Godot │
 -- └────────────────────┘
 --
--- This file contains configuration of the GDScript language server.
--- Source: the Godot editor itself, which serves LSP on a TCP port while it has
--- a project open. Install: `mise use -g godot@4`, and `mise use godot@<x.y>` in
--- the game, whose engine version is a property of that checkout.
---
--- It is used by `:h vim.lsp.enable()` and `:h vim.lsp.config()`.
--- See `:h vim.lsp.Config` and `:h vim.lsp.ClientConfig` for all available fields.
---
--- Only `root_markers` is set, and the reason is the whole file. The inherited
--- list is `{ 'project.godot', '.git' }`, and that '.git' means any loose '.gd'
--- file inside any repository attaches to whatever Godot happens to be running
--- - answering with the completion, the diagnostics and the definitions of a
--- DIFFERENT game, with nothing to say it. The client is a connection to one
--- open editor, so it is worth having only where that editor's project is.
---
--- A list is a value here, not a table to merge into: `vim.tbl_deep_extend()`
--- replaces it whole, so this really is `{ 'project.godot' }` and not the
--- inherited two with the first one repeated (measured on `vim.lsp.config()`).
---
--- What is NOT here, deliberately:
--- - `cmd`. The inherited one is a FUNCTION - `vim.lsp.rpc.connect('127.0.0.1',
---   GDScript_Port or 6005)` - and a function is REPLACED, not merged, so
---   writing the `{ 'ncat', host, port }` that every Windows recipe shows would
---   trade a socket libuv already opens for an external program that is not
---   installed here. See `:h vim.lsp.rpc.connect()`.
--- - `filetypes`. The inherited `{ 'gdscript' }` is the only filetype Neovim
---   has for this language; the `gd`, `gdscript3` and `gdshader` that circulate
---   match nothing, or match a language this server does not speak.
--- - the port. It is one per machine, so a second game has to start Godot with
---   `--lsp-port` and say so through `GDScript_Port` - in that project's
---   '.nvim.lua' (`:h 'exrc'`, skill `nvim-project-environment`), because here
---   it would change for every project at once, which is the same as for none.
---
--- NOTE: nothing here handles two Godot editors open at once, and that is a
--- decision rather than an oversight - one game at a time is how this machine
--- works. What it costs to be wrong is worth knowing, because it does not look
--- like a failure: the second editor gets NO port (it does not fall back to
--- another one, measured), so a buffer of the second project attaches to the
--- first editor and answers with the completion, the diagnostics and the
--- definitions of the other game, without a message. The tell is a definition
--- that jumps somewhere impossible; the fix is the two halves above, and it is
--- written the day a second game exists.
+-- Served by the Godot editor while it has a project open. `root_markers` drops
+-- the inherited '.git' so a loose '.gd' never attaches to another game's editor.
+-- NOTE: `cmd` stays inherited (a function, replaced if set); two editors at once
+-- are not handled: the second gets no port and attaches to the first.
 return { root_markers = { 'project.godot' } }

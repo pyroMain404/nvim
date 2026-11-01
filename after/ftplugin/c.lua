@@ -2,84 +2,29 @@
 -- │ C behaviour │
 -- └─────────────┘
 --
--- This file contains behavior for both `c` and `cpp` buffers, added on top of
--- what '$VIMRUNTIME/ftplugin/c.vim' already does - `commentstring`, `include`,
--- `define` and `omnifunc` - plus `cindent` from '$VIMRUNTIME/indent/c.vim'.
--- None of that is repeated here. `:verbose setlocal commentstring? include?`
--- says who set what.
---
--- The indentation is not set here either: `expandtab`, `tabstop=2` and
--- `shiftwidth=2` come from 'plugin/10_options.lua' and happen to match the LLVM
--- style that `clang-format` falls back to. A project that wants something else
--- says so in its own '.clang-format', which is the file both the formatter and
--- the server read.
---
--- `.c` is the filetype Neovim's own detector falls back to for a header-less
--- file, and every project sampled on this machine that builds C also builds
--- C++ from the same 'CMakeLists.txt' or 'Makefile' - so one file covers both,
--- the one the narrower audience borrows from. C++ arrives here by itself:
--- '$VIMRUNTIME/ftplugin/cpp.vim' runs `runtime! ftplugin/c[.]{vim,lua} ...`
--- for every `cpp` buffer, 'runtimepath' carries this config twice - as itself
--- and as the `.../after` entry Neovim appends for every config
--- (`:set runtimepath?`) - and `ftplugin/c.lua`, resolved against that second
--- entry, IS this file. There is nothing cpp-only to split out; if that
--- changes, it goes in a 'cpp.lua' that adds to what this file did.
---
--- NOTE: a `runtime! after/ftplugin/c.lua` of our own would source this file
--- twice per `cpp` buffer. The option assignments survive that; `:Run` does not
--- - the second copy of its `b:undo_ftplugin` line registers `delcommand Run`
--- twice, and the second one raises `E184` on the next filetype change.
+-- Serves `c` and `cpp` ('$VIMRUNTIME/ftplugin/cpp.vim' sources this file).
 
 local ft = require('config.ft')
 
--- Fold on functions and classes (`:h vim.treesitter.foldexpr()`).
 ft.ts_fold()
 
--- Which build drives `:make`, and where a built program is looked for. Walking
--- up costs a handful of `stat` calls per buffer, which is what
--- '$VIMRUNTIME/ftplugin/rust.vim' does for 'Cargo.toml'; nothing here reads a
--- file until `:make` or `:Run` is called.
 local build = vim.fs.find({ 'CMakeLists.txt', 'Makefile', 'makefile' }, {
   path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
   upward = true,
 })[1]
 local root = build and vim.fs.dirname(build) or nil
 
--- Build through `:h :make`, so that errors land in the quickfix list and `]q` /
--- `[q` of 'mini.bracketed' walk them. Which compiler plugin answers depends on
--- how the project is built, the same way '$VIMRUNTIME/ftplugin/rust.vim' picks
--- between `cargo` and `rustc`:
--- - 'compiler/cmake.lua' of this config for a CMake project: it has to be
---   written here because the runtime ships no compiler plugin for CMake
---   (`:=vim.fn.getcompletion('', 'compiler')` lists `gcc` and `msvc`, not
---   `cmake`);
--- - `gcc` ('$VIMRUNTIME/compiler/gcc.vim') for a plain makefile. That one sets
---   'errorformat' and no 'makeprg', which is exactly right here: the default
---   `make` is already the command to run, and the format of GCC is also the
---   format of clang.
+-- `:make` via 'compiler/cmake.lua' for CMake, `gcc` for a plain makefile. `:h :make`
 if build ~= nil then
   ft.build(vim.fs.basename(build) == 'CMakeLists.txt' and 'cmake' or 'gcc')
 end
 
--- `gf` on an `#include`, and with it `[I` and `:checkpath` (`:h 'path'`). The
--- runtime sets 'include' and 'define', so what is missing is only where to
--- look: the global 'path' is `.,,`, the directory of the file and the working
--- directory, which resolves a quoted include of a sibling header and nothing
--- else.
---
--- Only directories OF THE PROJECT are added. System include paths do not
--- belong to a shared config - they differ per toolchain, per target and per
--- machine, and a wrong one sends `gf` to another version of the same header -
--- and for those the answer is `gd` of the server, which knows the flags of the
--- translation unit. `<Leader>lf`-style semantics beat a path list every time.
+-- `gf`, `[I` and `:checkpath` on an `#include`: project directories only. `:h 'path'`
 if root ~= nil then
   local dirs = {}
   for _, name in ipairs({ '', 'include', 'src', 'lib' }) do
     local dir = name == '' and root or vim.fs.joinpath(root, name)
     if vim.uv.fs_stat(dir) ~= nil then
-      -- A space or a comma inside a directory ends the entry when 'path' is
-      -- read, whatever wrote the value, so both are escaped ('C:/Program
-      -- Files/...' is the common case here). `:h 'path'`
       table.insert(dirs, (dir:gsub('[ ,]', '\\%0')))
     end
   end
@@ -87,36 +32,21 @@ if root ~= nil then
   vim.bo.path = require('config.path').with(dirs)
 end
 
--- Running the project, under the contract of 'lua/config/run.lua'. What a C/C++
--- project runs is a file it produced, so the default is READ by looking for it
--- rather than by asking a build tool - there is no `cargo run` here, and
--- `cmake --build` only builds.
---
--- NOTE: this runs the program as the last `:make` left it, and does not build
--- first. That is the division of labour of the two contracts: `:make` is the
--- synchronous question that ends and fills the quickfix list, `:Run` starts
--- something that lives. Building inside the resolver would freeze the editor
--- for the length of a build with no quickfix list to show for it, and a build
--- is one `:make` away.
+-- `:Run` under the contract of 'lua/config/run.lua'.
+-- NOTE: runs the program as the last `:make` left it and never builds first;
+-- building inside the resolver would freeze the editor with no quickfix list.
 local function programs()
   local found = {}
   local collect = function(dir, depth)
     if dir == nil or vim.uv.fs_stat(dir) == nil then return end
     for name, kind in vim.fs.dir(dir, { depth = depth }) do
-      -- 'CMakeFiles' holds the compiler probes CMake builds while configuring
-      -- ('CompilerIdCXX', 'cmTC_*'), which are executables and are not the
-      -- project
+      -- 'CMakeFiles' holds CMake's compiler probes, which are executables.
       if kind == 'file' and not name:find('CMakeFiles') then
         local path = vim.fs.joinpath(dir, name)
-        -- The only portable question "is this a program": on Windows it is
-        -- PATHEXT, so an '.exe' answers and an '.obj' or a '.lib' does not
         if vim.fn.executable(path) == 1 then table.insert(found, path) end
       end
     end
   end
-  -- The CMake build directory first, then the root itself for a makefile that
-  -- writes its output next to the sources. Depth 1 on the root is what keeps
-  -- the two from reporting the same file twice.
   collect(vim.fs.joinpath(root, 'build'), 3)
   collect(root, 1)
   return found
@@ -128,8 +58,6 @@ require('config.run').command(function(args)
   end
 
   local found = programs()
-  -- The first argument selects a program when it names one, so that a project
-  -- with several says which; everything else reaches the program itself
   local names = {}
   for _, path in ipairs(found) do
     local name = vim.fn.fnamemodify(path, ':t:r')

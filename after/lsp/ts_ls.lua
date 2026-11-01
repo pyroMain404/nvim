@@ -1,48 +1,12 @@
 -- ┌───────┐
 -- │ ts_ls │
 -- └───────┘
---
--- This file contains configuration of the TypeScript language server.
--- Source: https://github.com/typescript-language-server/typescript-language-server
--- Install: see `check_angular()` in 'lua/config/health.lua' for the exact `mise`
--- line. The server is a Node program launched through a `mise` shim, which is
--- what makes the runtime below a decision rather than an accident.
---
--- It is used by `:h vim.lsp.enable()` and `:h vim.lsp.config()`.
--- See `:h vim.lsp.Config` and `:h vim.lsp.ClientConfig` for all available fields.
---
--- Nothing here describes TypeScript: `filetypes`, `root_dir`, the handlers and
--- the two commands of 'nvim-lspconfig' are already right and none of them is
--- repeated. What this file adds is the Node the server itself runs on, which is
--- not the Node the project builds with - and, because of the HACK below, the
--- one line of command that carries it.
 
 local mise = require('config.mise')
 
--- The Node the *server* runs on, which is not the Node the project builds with.
---
--- A `mise` shim resolves its tools from the current directory, so a repository
--- pinning an old Node hands that one to every program started inside it, the
--- language server included. Node 14 is the ceiling of Angular 15, and on it
--- this server does not start at all:
--- measured, `typescript-language-server` 6.0.0 dies while parsing its own code
--- with `SyntaxError: Unexpected token '??='` - the nullish assignment, which
--- Node gained in 15. Neovim reports none of that. The client simply never
--- attaches, on a project where nothing is wrong.
---
--- `MISE_NODE_VERSION` decouples the two for this process alone: the server
--- starts on the Node chosen here, while the same directory keeps resolving the
--- Node its build needs for `:make`, for `npx` and for every terminal - and that
--- one has to stay 14, because the project's own compiler is what runs there.
---
--- The newest installed release is the choice, rather than a version named here,
--- for the reason 'after/lsp/jdtls.lua' gives at length: the day this server
--- raises its minimum, `mise use -g node@<major>` is the whole fix.
---
--- NOTE: it has to be this variable and not `PATH` or a Node named directly. The
--- shim recomputes its own environment from the tools of its working directory
--- and overwrites what it inherited, so anything pointing at an interpreter is
--- read and then discarded - silently, which is the part that costs a day.
+-- A Node too old for the server, pinned by a project, kills it silently through the
+-- `mise` shim; `MISE_NODE_VERSION` points this process alone at the newest Node.
+-- NOTE: not `PATH`: the shim recomputes its environment from the working directory.
 local node_entry = mise.newest(
   'node',
   function(entry) return tonumber(tostring(entry.version):match('^(%d+)')) ~= nil end
@@ -59,32 +23,8 @@ if node == nil then
   )
 end
 
--- The `typescript` package `tsserver.js` falls back to when a project has
--- none of its own: a plain `.ts` file outside any Node project (no
--- `node_modules`, no `tsconfig.json`) makes the server fail outright with
--- "Could not find a valid TypeScript installation" instead of degrading,
--- because its own workspace walk and its fallback to a package next to its
--- own install both come up empty - the server and `typescript` are two
--- separate `mise` npm packages, so neither install sees the other.
--- `fallbackPath` is additive: 'nvim-lspconfig' does not set it, and the
--- server only reaches it when a project's own `typescript` was not found, so
--- a project pinning its own version (as an Angular checkout does, resolved by
--- `angularls` and `ts_ls` both through the project's own 'node_modules') keeps
--- using it untouched.
---
--- Verified against typescript-language-server 6.0.0's `docs/configuration.md`
--- (2026-09-21): `path` is fixed and always wins; `fallbackPath` is the one
--- meant for exactly this case.
---
--- The newest installed `typescript` is not necessarily a usable one: since
--- TypeScript 7 ("Corsa"), the package ships `tsc.js` and drops the classic
--- `tsserver.js` this server requires entirely - measured on `npm:typescript`
--- 7.0.2's `lib/` (`getExePath.js`, `tsc.js`, `version.cjs`, no `tsserver.js`)
--- next to the pinned 5.9.3 that has it. Picking "newest directory that
--- exists" alone found exactly that lib and produced the same failure this
--- file exists to prevent, wearing a different mask. Requiring `tsserver.js`
--- itself, not just the `lib` directory, skips a TypeScript 7 install and
--- keeps walking to an older one that still has it.
+-- `typescript` fallback for a plain `.ts` outside any Node project.
+-- NOTE: TypeScript 7 drops `tsserver.js`, so require that file and skip such an install.
 local function lib_of(entry)
   return vim.fs.joinpath(entry.path, 'node_modules', 'typescript', 'lib')
 end
@@ -97,31 +37,16 @@ local ts_entry = mise.newest(
 local tsserver_fallback = ts_entry and lib_of(ts_entry) or nil
 
 return {
-  -- HACK: this whole function exists to pass one environment variable, and it
-  -- is a copy of the `cmd` of 'nvim-lspconfig' with `env` added to the spawn.
-  -- `cmd_env` - the field meant for exactly this - is read by `vim.lsp.start()`
-  -- only when `cmd` is a **list**. When it is a function, Neovim hands it the
-  -- dispatchers and steps aside, and 'nvim-lspconfig' ends it with
-  -- `vim.lsp.rpc.start({ cmd, '--stdio' }, dispatchers)`, passing no
-  -- `extra_spawn_params` at all: the variable is set in the merged config,
-  -- reported by `:=vim.lsp.config['ts_ls']`, and never reaches the process.
-  -- Measured on this project - `cmd_env` present, `MISE_NODE_VERSION` unset in
-  -- the server, no client attached - which is the failure the whole file exists
-  -- to prevent, wearing a different mask.
-  --
+  -- HACK: copy of the `cmd` of 'nvim-lspconfig' with `env` added, because
+  -- `cmd_env` is read by `vim.lsp.start()` only when `cmd` is a list, and the
+  -- plugin's `cmd` function passes no `extra_spawn_params`: the variable shows
+  -- in `:=vim.lsp.config['ts_ls']` and never reaches the process.
   -- Still true in 'nvim-lspconfig' ac9d2f7 (2026-09-10) on Neovim v0.12.5.
-  -- Delete this and go back to a plain `cmd_env` the day either the plugin
-  -- forwards it or `cmd` stops being a function.
+  -- Delete it the day the plugin forwards `cmd_env` or `cmd` stops being a function.
   --
   -- NOTE: `vim.tbl_deep_extend('force')` merges tables but replaces functions,
   -- so this `cmd` replaces the one of 'nvim-lspconfig' (and 'after/lsp/jdtls.lua'
   -- leaves `cmd` out for the same reason).
-  --
-  -- The preference for a `typescript-language-server` inside the project's own
-  -- 'node_modules/.bin' is kept, because dropping it would be a second, silent
-  -- change: it is what a monorepo pinning its own server relies on. It resolves
-  -- to nothing in a project that carries none - and a project that does gets it
-  -- launched on the same Node as the global one, which is the point.
   cmd = function(dispatchers, config)
     local cmd = 'typescript-language-server'
     local root = (config or {}).root_dir
