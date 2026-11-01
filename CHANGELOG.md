@@ -1,5 +1,7 @@
 ## 2026-11-01
 
+- Fix a Markdown link that fits the window once its destination is hidden leaving an empty row after it in a floating window (the `See Also` links of a Java hover): Neovim sizes a wrapped line from its raw text, so such a window is now shown without 'wrap' and fitted to its lines; the text of the buffer is not touched.
+
 - Fix spell checking underlining words in the hover opened by `K` and in other floating Markdown windows: 'spell' is now off there.
 
 - Fix `j` not leaving a line in Markdown `reading` state when the line is long and mostly concealed (the `See Also` links of a Java hover): `gj` counts the cells of concealed text and stepped into screen rows that are never drawn, where the cursor was pulled back; `j` now goes to the next line when `gj` lands in one.

@@ -124,6 +124,30 @@ local function guard()
   )
 end
 
+-- Neovim sizes a wrapped line from its raw text, concealed link destinations
+-- included (`:h nvim_win_text_height()`), so a link that fits the window once its
+-- destination is hidden still leaves empty rows after it. No option changes that
+-- and the text is not ours to shorten: show such a float without 'wrap', fitted to
+-- its lines.
+local function unwrap_if_concealed(buf, win)
+  local width = vim.api.nvim_win_get_width(win) - vim.fn.getwininfo(win)[1].textoff
+  for _, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
+    local shown = line:gsub('(%b[]%()[^)]*(%))', '%1%2')
+    if
+      vim.fn.strdisplaywidth(line) > width
+      and vim.fn.strdisplaywidth(shown) <= width
+    then
+      vim.wo[win][0].wrap = false
+      local height = vim.api.nvim_win_text_height(win, {}).all
+      vim.api.nvim_win_set_height(
+        win,
+        math.min(height, vim.api.nvim_win_get_height(win))
+      )
+      return
+    end
+  end
+end
+
 -- Attach to buffer `buf`: `live` by default, `reading` in a floating window (the
 -- LSP hover opened by `K`), `b:markdown_om_start` overrides both.
 function M.attach(buf)
@@ -222,6 +246,7 @@ function M.attach(buf)
         local floating = win and vim.api.nvim_win_get_config(win).relative ~= ''
         if floating then
           vim.wo[win][0].spell = false
+          unwrap_if_concealed(buf, win)
         end
         if renderer_available then
           set_state(vim.b.markdown_om_start or (floating and 'reading' or 'live'))
