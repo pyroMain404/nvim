@@ -2,21 +2,10 @@
 -- │ Built-in Neovim behavior │
 -- └──────────────────────────┘
 --
--- This file defines Neovim's built-in behavior. The goal is to improve overall
--- usability in a way that works best with MINI.
---
--- Here `vim.o.xxx = value` sets default value of option `xxx` to `value`.
--- See `:h 'xxx'` (replace `xxx` with actual option name).
---
--- Option values can be customized on a per buffer or window basis.
--- See 'after/ftplugin/' for common example.
---
--- Notes:
--- - Some options (like `:h 'exrc'`) need to be set before this file is sourced.
---   Set them directly at the bottom of the 'init.lua' file.
--- - Options which 'mini.basics' sets to the same value under `options.basic = true`
---   are not repeated here: it runs after this file ('plugin/30_mini.lua'), so it
---   is the one place listing them. Only the ones needing a different value stay.
+-- `vim.o.xxx = value` sets the default of option `xxx` (`:h 'xxx'`); filetypes
+-- override it per buffer in 'after/ftplugin/'. Options 'mini.basics' sets to
+-- the same value (`options.basic = true`) are not repeated here. Options such
+-- as `:h 'exrc'` that need setting earlier are at the bottom of 'init.lua'.
 
 -- stylua: ignore start
 -- The next part (until `-- stylua: ignore end`) is aligned manually for easier

@@ -13,3 +13,4 @@ later(function() require('config.git.autocmds').setup() end)
 -- Editor behaviour ===========================================================
 now(function() require('config.winbar').setup() end)
 now(function() require('config.make').setup() end)
+now(function() require('config.lsp').setup() end)
