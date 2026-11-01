@@ -249,7 +249,7 @@ local function check_rust()
   local install_toolchain = 'Install one with `rustup toolchain install stable`'
   report('rustc', 'nothing compiles', install_toolchain)
   report('cargo', '`:make check` and `:make test` do nothing', install_toolchain)
-  -- 'plugin/42_format.lua' falls back to the server when this is missing, but
+  -- 'lua/config/format.lua' falls back to the server when this is missing, but
   -- the server formats differently, and a rustup component is as easy to miss
   -- as `cargo-clippy` below, which already gets its own check
   report(

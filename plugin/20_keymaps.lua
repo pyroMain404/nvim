@@ -244,7 +244,7 @@ xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 -- - `<Leader>ls` - navigate to source definition of symbol under cursor
 -- - `<Leader>lf` - format the lines changed since the diff reference;
 --   `<Leader>lF` formats the whole buffer, and over a Visual selection
---   `<Leader>lf` formats exactly that. See 'plugin/42_format.lua' for why the
+--   `<Leader>lf` formats exactly that. See 'lua/config/format.lua' for why the
 --   default is the changed lines and not the file.
 --
 -- NOTE: most LSP mappings represent a more structured way of replacing built-in
@@ -255,19 +255,19 @@ xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 -- 'plugin/10_options.lua' are the async, vim.system()-backed equivalents,
 -- and are commands rather than mappings because they take the same
 -- optional arguments `:make` itself does.
-nmap_leader('la', '<Cmd>lua vim.lsp.buf.code_action()<CR>',     'Actions')
-nmap_leader('ld', '<Cmd>lua vim.diagnostic.open_float()<CR>',   'Diagnostic popup')
-nmap_leader('lf', '<Cmd>lua Config.format.changed()<CR>',       'Format changed')
-nmap_leader('lF', '<Cmd>lua Config.format.buffer()<CR>',        'Format buffer')
-nmap_leader('li', '<Cmd>lua vim.lsp.buf.implementation()<CR>',  'Implementation')
-nmap_leader('lh', '<Cmd>lua vim.lsp.buf.hover()<CR>',           'Hover')
-nmap_leader('ll', '<Cmd>lua vim.lsp.codelens.run()<CR>',        'Lens')
-nmap_leader('lr', '<Cmd>lua vim.lsp.buf.rename()<CR>',          'Rename')
-nmap_leader('lR', '<Cmd>lua vim.lsp.buf.references()<CR>',      'References')
-nmap_leader('ls', '<Cmd>lua vim.lsp.buf.definition()<CR>',      'Source definition')
-nmap_leader('lt', '<Cmd>lua vim.lsp.buf.type_definition()<CR>', 'Type definition')
+nmap_leader('la', '<Cmd>lua vim.lsp.buf.code_action()<CR>',          'Actions')
+nmap_leader('ld', '<Cmd>lua vim.diagnostic.open_float()<CR>',        'Diagnostic popup')
+nmap_leader('lf', "<Cmd>lua require('config.format').changed()<CR>", 'Format changed')
+nmap_leader('lF', "<Cmd>lua require('config.format').buffer()<CR>",  'Format buffer')
+nmap_leader('li', '<Cmd>lua vim.lsp.buf.implementation()<CR>',       'Implementation')
+nmap_leader('lh', '<Cmd>lua vim.lsp.buf.hover()<CR>',                'Hover')
+nmap_leader('ll', '<Cmd>lua vim.lsp.codelens.run()<CR>',             'Lens')
+nmap_leader('lr', '<Cmd>lua vim.lsp.buf.rename()<CR>',               'Rename')
+nmap_leader('lR', '<Cmd>lua vim.lsp.buf.references()<CR>',           'References')
+nmap_leader('ls', '<Cmd>lua vim.lsp.buf.definition()<CR>',           'Source definition')
+nmap_leader('lt', '<Cmd>lua vim.lsp.buf.type_definition()<CR>',      'Type definition')
 
-xmap_leader('lf', '<Cmd>lua Config.format.selection()<CR>', 'Format selection')
+xmap_leader('lf', "<Cmd>lua require('config.format').selection()<CR>", 'Format selection')
 
 -- m is for 'Map'. Common usage:
 -- - `<Leader>mt` - toggle map from 'mini.map' (closed by default)
