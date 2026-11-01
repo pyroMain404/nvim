@@ -201,7 +201,7 @@ settings = {
 
     -- 'nvim-lspconfig' turns every lens on and tells the server that three
     -- client commands are implemented, while only `runSingle` is.
-    -- `showReferences` is filled in by 'plugin/40_plugins.lua'; `debugSingle`
+    -- `showReferences` is filled in by 'lua/config/lsp.lua'; `debugSingle`
     -- asks for a debugger and not a handful of lines, so the "Debug" lens fails
     -- when run. Turn it back on together with a DAP client, not before.
     lens = { debug = { enable = false } },
@@ -218,7 +218,7 @@ progetto e quindi appartiene al suo `.nvim.lua`.
 
 **I lens erano accesi ma invisibili**, e la causa non era di Rust: Neovim non chiede
 i code lens a nessun server finché non glielo si dice. La riga che li accende è
-`vim.lsp.codelens.enable(true)` in `plugin/40_plugins.lua` — una sola, globale, valida
+`vim.lsp.codelens.enable(true)` in `lua/config/lsp.lua` — una sola, globale, valida
 per ogni server e per ogni buffer aperto dopo. **Non** un autocomando su
 `vim.lsp.codelens.refresh()`, che è la forma precedente: deprecata in 0.12 e rimossa
 in 0.13.
@@ -229,7 +229,7 @@ registra solo `runSingle`: i lens "N implementations" e "N references" finivano
 quindi in *"Language server `rust_analyzer` does not support command"*. È un
 comando **client-side** per costruzione — il server consegna le posizioni che ha
 già calcolato e l'editor decide come mostrarle — quindi bastano poche righe, e
-stanno in `plugin/40_plugins.lua` accanto a `vim.lsp.codelens.enable(true)`:
+stanno in `lua/config/lsp.lua` accanto a `vim.lsp.codelens.enable(true)`:
 `vim.lsp.commands` è un registro globale, mentre `after/lsp/rust_analyzer.lua`
 non può ospitare funzioni senza cancellare quelle ereditate. Una posizione sola
 apre il punto, più di una riempie il quickfix.

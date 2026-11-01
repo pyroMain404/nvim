@@ -85,7 +85,8 @@ Tre conseguenze misurate:
 
 ```text
 <radice del repository nvim-config>/
-├── plugin/40_plugins.lua           'gdscript' in languages, in vim.lsp.enable(), in formatters_by_ft, BufReadCmd su res://
+├── lua/config/toolchain.lua        'gdscript' in languages, servers, formatters_by_ft
+├── plugin/40_plugins.lua           BufReadCmd su res://
 ├── after/lsp/gdscript.lua          solo root_markers
 ├── after/snippets/gdscript.json    correzione dei cinque prefissi Godot 3
 ├── after/ftplugin/gdscript.lua     :make dalla radice, :Run, :GodotDoc, :GodotReconnect

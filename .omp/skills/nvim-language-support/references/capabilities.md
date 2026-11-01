@@ -152,7 +152,7 @@ a un buffer di restare in uno stato ibrido dopo un `:setfiletype`.
 ## 3. Tree-sitter: albero, highlight, query
 
 - **Attivare un linguaggio**: aggiungerlo alla tabella `languages` in
-  `plugin/40_plugins.lua`. L'autocomando che chiama `vim.treesitter.start()` sui
+  `lua/config/toolchain.lua`. L'autocomando che chiama `vim.treesitter.start()` sui
   filetype corrispondenti è già lì e non va toccato.
 - **Perché l'installazione riesca serve la CLI `tree-sitter`**: 'nvim-treesitter'
   scarica la grammatica e poi la **compila invocando quel programma**. Senza,
@@ -185,9 +185,9 @@ l'highlight fornito dal plugin, e non arriva nessun messaggio.
 ## 4. LSP: la semantica
 
 Configurazione in `after/lsp/<server>.lua` (ritorna una tabella,
-`:h vim.lsp.Config`), nome dentro la chiamata `vim.lsp.enable({ ... })` che si trova
-nella sezione `-- Language servers ===` di `plugin/40_plugins.lua`, dove è già
-predisposta e commentata.
+`:h vim.lsp.Config`), nome nella lista `servers` di
+`lua/config/toolchain.lua`, che `plugin/40_plugins.lua`
+passa a `vim.lsp.enable()`.
 
 Campi che si usano davvero: `cmd`, `filetypes`, `root_markers`
 (`:h lsp-root_markers`), `settings`, `capabilities`, `on_attach`. Con
@@ -258,7 +258,7 @@ un'**azione che il server annuncia in un punto preciso del codice**: "esegui que
 test", "esegui questo main", "mostra le implementazioni di questa interfaccia".
 Chiamarla richiede tre condizioni insieme, e la prima è quella che si dimentica:
 **Neovim non chiede i lens finché non glielo si dice** (`vim.lsp.codelens.enable()`,
-già chiamato una volta per tutti i server in 'plugin/40_plugins.lua'); poi che il
+già chiamato una volta per tutti i server in 'lua/config/lsp.lua'); poi che il
 server ne produca; e infine che il cursore sia sulla riga a cui uno è agganciato. Con
 la prima mancante la mapping resta silenziosa ovunque, il che si confonde facilmente
 con la terza. Attenzione a `vim.lsp.codelens.refresh()` dentro un autocomando, che
@@ -271,7 +271,7 @@ C'è poi una quarta condizione, che si manifesta solo dopo aver premuto: **un le
 può risolversi in un comando che tocca al client eseguire**, non al server. Quando
 il messaggio è *"Language server `X` does not support command `Y`"*, quel `Y` va
 registrato in `vim.lsp.commands` — un registro globale, quindi la sede è
-`plugin/40_plugins.lua` e non `after/lsp/`, dove una funzione cancellerebbe quelle
+`lua/config/lsp.lua` e non `after/lsp/`, dove una funzione cancellerebbe quelle
 ereditate. Succede quando la config di 'nvim-lspconfig' dichiara al server, nelle
 `capabilities`, dei comandi che poi non registra: per `rust_analyzer` è il caso di
 `showReferences` e `debugSingle`.
@@ -550,7 +550,7 @@ scritta nella sua config — usa il formatter dedicato del linguaggio, e ricade
 sull'LSP solo quando non ce n'è uno.
 
 Quindi, per un linguaggio nuovo: **se esiste il formatter ufficiale, dichiaralo** in
-`formatters_by_ft` in `plugin/40_plugins.lua`, anche quando il server saprebbe
+`formatters_by_ft` in `lua/config/toolchain.lua`, anche quando il server saprebbe
 formattare. È una mappa filetype → strumento, cioè una lista, quindi sta lì. Il
 formatter dedicato è più prevedibile del server: stessa versione della riga di
 comando e della CI, stesso file di configurazione del progetto, nessuna dipendenza

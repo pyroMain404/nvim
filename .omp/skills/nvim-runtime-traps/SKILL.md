@@ -12,7 +12,7 @@ Le regole sono in `nvim-config-testing` e il banco delle sonde in `nvim-headless
 | Trappola | Rimedio |
 |---|---|
 | L'attacco di un server LSP è asincrono: "non attaccato" e "non ancora attaccato" si somigliano | fai polling con `vim.wait`, come la sonda `lsp`; se non arriva, guarda `cmd` e PATH prima di sospettare la config |
-| Un server abilitato per un altro filetype non si attacca, e sembra un guasto | qui è abilitato solo ciò che sta in `vim.lsp.enable()` di `plugin/40_plugins.lua`: verifica quello per primo |
+| Un server abilitato per un altro filetype non si attacca, e sembra un guasto | qui è abilitato solo ciò che sta in `servers` di `lua/config/toolchain.lua`: verifica quello per primo |
 | `:make` con un `errorformat` che non riconosce niente lascia il quickfix vuoto, identico a una build riuscita | rompi qualcosa apposta, e pretendi una voce con file e riga |
 | L'output asincrono di `TSUpdate` mente ("up-to-date" senza parser installato) | usa la variante sincrona e cerca i `.so` / `.dll` in `stdpath('data')/site/parser/` |
 | Lo stato di 'mini.diff' letto subito è quello di mezzo secondo prima: `vim.b.minidiff_summary` è `nil` appena referenziata una revisione, e `ref_text` arriva **130 ms** dopo l'apertura del file (misurato) | l'attach è asincrono, e l'attesa si fa sulla cosa che serve: `vim.wait(800, function() return (vim.b.minidiff_summary or {}).source_name ~= nil end)`, oppure su `(MiniDiff.get_buf_data(0) or {}).ref_text`. E l'attach da solo non dice che c'è un riferimento: dentro un repository 'mini.diff' si attacca **anche** a un file che Git non traccia, con dati presenti, nessun `ref_text` e zero hunk |

@@ -1,4 +1,4 @@
-<p align="center"> <img src="logo.png" alt="mini.nvim" style="max-width:100%;border:solid 2px"/> </p>
+<p align="center"> <img src="logo.png" alt="Neovim configuration" style="max-width:100%;border:solid 2px"/> </p>
 
 ## Personal Neovim config
 
@@ -9,6 +9,10 @@ See [`AGENTS.md`](AGENTS.md) for the rules this repository is held to: where a c
 ### Origin
 
 This config started as a fork of [MiniMax](https://github.com/nvim-mini/MiniMax), a Neovim config generator built around 'mini.nvim' that offers several reference configs (one per supported Neovim version) to copy into `stdpath('config')` and then own. This repository kept `nvim-0.12`, the one this machine runs, deleted the others, and detached from MiniMax entirely on 2026-09-22: no upstream remote, no generator script, no multi-version layout. The structure, the `Config` helpers in `init.lua`, and much of the documentation style below still trace back to it — credit where due — but there is no ongoing relationship to keep in sync with.
+
+### Layout
+
+`plugin/` only wires (options, mappings, MINI, plugins, and the switches in `plugin/50_features.lua`). Behavior lives in `lua/config/`; `lua/config/toolchain.lua` declares every language once (parsers, servers, formatters, tools). Per filetype and per server files are in `after/`. See `AGENTS.md`, "Repository structure".
 
 ### What it is not
 

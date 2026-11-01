@@ -7,7 +7,7 @@ Read this file before changing anything. It is short on purpose: it states the r
 ## Project vision
 
 - This is **a config, not a distribution**. There are no automatic updates and no framework layer on top of Neovim. The config is owned and read by its user.
-- Config files are **meant to be read**. Every file starts with a comment block explaining what it is for and how to navigate it. A change that makes a file harder to read is a bad change, even if the code is shorter.
+- Config files are **meant to be read**. Every file starts with a box title and at most three lines saying what it is for. A change that makes a file harder to read is a bad change, even if the code is shorter.
 - The balance to aim for is the same one 'mini.nvim' aims for: **feature-richness against simplicity of implementation and support**. Prefer the solution that handles the realistic cases and stays understandable a year from now.
 - **Configure, do not reimplement.** If a MINI module already does what is needed, use it and adjust its `config` to fit the use case — writing the same behavior from scratch on top of Neovim built-ins is the wrong answer, even when it is possible. The order of preference applies to *choosing what to depend on*, not to how much code to write:
     1. A Neovim built-in, when it already covers the need — do not install anything for it.
@@ -36,21 +36,28 @@ Adapted from `mini.nvim-general-principles` (`:h mini.nvim-general-principles`, 
 ## Repository structure
 
 ```
-init.lua                 First file executed; plugin manager and `Config` helpers
+init.lua                 First file executed; the `Config` helpers (`new_autocmd`, `on_packchanged`, `now`, `later`, `now_if_args`)
 nvim-pack-lock.json      `vim.pack` lockfile — generated, never edited by hand
 plugin/10_options.lua    Built-in Neovim behavior
 plugin/20_keymaps.lua    Custom mappings, mostly under `<Leader>`
 plugin/30_mini.lua       MINI configuration
 plugin/40_plugins.lua    Plugins outside of MINI
-plugin/41_git.lua        Git workflow built on 'mini.diff' and 'mini.git',
-                         behind the `Config.git` API
-plugin/42_format.lua     What gets formatted, behind the `Config.format` API
-plugin/43_review.lua     Files opened to be read as a set, behind the
-                         `Config.review` API
+plugin/50_features.lua   Switches on the in-house modules that need `setup()` at startup
+lua/config/toolchain.lua The one declaration of languages: parsers, servers, formatters, tools, versions
+lua/config/git/          Git workflow on 'mini.diff' and 'mini.git' (core, diffref, blame, log, patch, lazygit, autocmds, init)
+lua/config/format.lua    What a format pass touches
+lua/config/review.lua    Files opened to be read as a set
+lua/config/winbar.lua    Tree-sitter breadcrumb
+lua/config/make.lua      Asynchronous `:Make`/`:LMake` and the outcome report
+lua/config/lsp.lua       Client side LSP fixes
+lua/config/markers.lua   Comment markers: hipatterns commands and word table
+lua/config/markdown.lua  Markdown buffer behavior (attach/detach)
+lua/config/obsidian.lua  'obsidian.nvim' setup
+lua/config/ft.lua        ftplugin boilerplate: undo, tree-sitter folds, build, Maven
+lua/config/run.lua       `:Run` resolver
+lua/config/mise.lua      Shared `mise` query, with `newest()`; required by `after/lsp/` files
 lua/config/health.lua    `:checkhealth config`; found by path, not required
-lua/config/run.lua       `:Run` resolver, required by name from ftplugins
-lua/config/mise.lua      shared `mise` query, required by name from
-                         `after/lsp/` files and the health check
+lua/config/              Also `path`, `pick`, `glance` and `mdlink`: small shared helpers
 snippets/                User defined snippets
 compiler/                `:compiler` plugins for `:make`
 ftdetect/                Filetype detection rules
@@ -66,7 +73,7 @@ docs/                    Frozen pre-implementation records
 ```
 
 - **This repository root is `%LOCALAPPDATA%\nvim`** (cloned there directly, see `pyro-resources/modules/editors/install.ps1`), so editing any file here changes the running config immediately. There is no other copy to keep in sync.
-- Files in `plugin/` are sourced automatically in alphabetical order. This is deliberate: it avoids occupying the shared `lua/` namespace and needs no `require()` calls in `init.lua`. Code required **by name** at an arbitrary later moment — from an ftplugin, an `after/lsp/` file, a health check, or another late-loaded site — lives in `lua/config/<area>.lua`. Behaviour that must exist from startup and is reached through `Config.<area>` lives in `plugin/NN_<area>.lua`. The file's own header says which mechanism it uses; do not move one to the other.
+- Files in `plugin/` are sourced automatically in alphabetical order and only wire: options, mappings, MINI, plugin declarations, and the `setup()` calls of `plugin/50_features.lua`. Behavior lives in `lua/config/<area>.lua` or `lua/config/<area>/`. A module that must exist from startup (autocommands, commands) exposes `setup()`, called from `plugin/50_features.lua` (the Git workflow: `config.git.autocmds`); every other module is required by name on first use.
 - The number prefixes reserve room for insertion. A genuinely new area of config gets its own `NN_name.lua` file with a number that places it correctly in the load order; it does not get appended to an unrelated file.
 
 ### Generated files
@@ -80,29 +87,27 @@ One file in the config is output, not source. It is read to know the current sta
 - **An option of Neovim itself** → `plugin/10_options.lua`.
 - **A mapping** → `plugin/20_keymaps.lua`, under the existing `<Leader>` group that matches its meaning, with a `mini.clue` description.
 - **A MINI module or its config** → `plugin/30_mini.lua`, in the same step as comparable modules (see below). This holds for every module without exception, 'mini.diff' and 'mini.git' included: a `setup()` call belongs there and nowhere else, and no module moves out of that file for being long.
-- **Behavior built on top of MINI modules, or shared helpers, lives in one of two shapes.** Use the test that matches the access pattern:
-    - It must exist from startup and is reached through `Config.<area>` → its own `plugin/NN_<area>.lua`. There are three today: `plugin/41_git.lua`, the Git workflow; `plugin/42_format.lua`, which decides what a format pass touches; and `plugin/43_review.lua`, which opens the files a change touched as the argument list of a tabpage. Each reads as a plugin: state, behavior, and a single `Config.xxx` API through which mappings and the rest of the config talk to it. Adding a file like this is justified only when the code is an area of its own rather than the configuration of something that already exists; the test is whether it would still make sense if it were a plugin installed from elsewhere.
-    - It is required **by name** from an ftplugin, an `after/lsp/` file, a health check, or another late-loaded site → `lua/config/<area>.lua`. Examples today: `lua/config/run.lua`, the `:Run` resolver; and `lua/config/mise.lua`, the shared `mise` query. The file's own header says which mechanism it uses; do not move one to the other.
+- **Behavior built on top of MINI modules, or shared helpers** → `lua/config/<area>.lua` or `lua/config/<area>/`. One rule: it gets a `setup()` (autocommands, commands) called from `plugin/50_features.lua` only when it must exist from startup; otherwise it is required by name on first use, from a mapping, an ftplugin, an `after/lsp/` file or the health check. `plugin/` files do not hold behavior. A new module is justified only when the code is an area of its own rather than the configuration of something that already exists.
 - **A non-MINI plugin** → `plugin/40_plugins.lua`, added through `vim.pack.add()`.
 - **Behavior for one filetype or one language server** → `after/ftplugin/` or `after/lsp/`, never the shared files.
 - **A tree-sitter query override** → `after/queries/<lang>/<name>.scm`, starting with `; extends` unless you mean to replace everything.
 - **A `:compiler` plugin** → `compiler/<tool>.lua`, picked by `:compiler <tool>` in an ftplugin.
 - **A new filetype detection rule** → `ftdetect/<name>.lua`, only when Neovim does not already recognize the extension.
-- **Shared code required by name from an ftplugin, an `after/lsp/` file, or a health check** → `lua/config/<area>.lua`.
+- **Boilerplate shared by ftplugins** (undo, tree-sitter folds, build, Maven) → `lua/config/ft.lua`, called from `after/ftplugin/`.
 - **A new external program the config depends on** → installed through `mise`, and reported by the health check. See below.
 
 ## External dependencies
 
 Language servers, formatters, linters and language runtimes are installed with [`mise`](https://mise.jdx.dev) (*mise-en-place*), which declares tools in a config file and installs them with a single `mise install`. This is the answer to "how do I get this working on a new machine", and it is what makes the setup reproducible instead of a sequence of commands nobody remembers.
 
-- `mise` covers the role usually given to 'mason.nvim' — which stays disabled on purpose (see the honorable mentions in `plugin/40_plugins.lua`), because it installs programs usable almost only inside Neovim. It does **not** replace 'nvim-lspconfig': the two are orthogonal, `mise` provides the binary and 'nvim-lspconfig' knows how to talk to it (`cmd`, `filetypes`, `root_markers`).
+- `mise` covers the role usually given to 'mason.nvim' — which stays out on purpose, because it installs programs usable almost only inside Neovim. It does **not** replace 'nvim-lspconfig': the two are orthogonal, `mise` provides the binary and 'nvim-lspconfig' knows how to talk to it (`cmd`, `filetypes`, `root_markers`).
 - Tools needed everywhere (language servers, formatters) belong to `mise`'s **global** config; a project's runtime versions belong to the `mise.toml` **of that project**, which follows whoever clones it. When the registry does not know a name, a backend usually covers it (`aqua:`, `npm:`, `cargo:`, `go:`, `pipx:`).
 - **A server that loads a library from the project belongs to both places at once.** `ngserver` is a shell around the `@angular/language-service` it finds in the project's 'node_modules', so its major has to be the project's rather than the newest. The global entry is what makes the server exist at all for a project that pins nothing; the pin in that project's own `mise.toml` is what makes it correct, because shims resolve by current directory and Neovim starts the server through a shim. A mismatch is invisible from inside Neovim - the client attaches and no diagnostic ever arrives - which is why `:checkhealth config` prints the major the project needs next to the command that installs it.
 - **`mise` is not where every program comes from, only the ones this config assumes.** The dividing question is what breaks when the program is absent: a language server, a formatter, a linter or the `tree-sitter` CLI breaks *this configuration*, and belongs to `mise` so that it is declared and reproducible. `git`, `ripgrep` or `lazygit` break a convenience and are ordinary system utilities: they come from the system package manager, and the health check advises that one for them. Installing a system utility through `mise` buys nothing and adds a version to keep.
 - Where a language has its own official channel that keeps the server aligned with the compiler (`rustup component add` for Rust), prefer it: one place for dependencies is a good rule right up to the point where it makes the result worse.
 - **Neovim inherits the environment of the shell that started it.** With shell activation, the active version is the one from the moment of launch — a session opened yesterday keeps yesterday's toolchain. `mise`'s shims avoid this once their directory is on the system `PATH` — but `mise` does not put it there on Windows, and until someone does, a tool installed through `mise` is invisible to a Neovim started from an icon or a launcher, which is the normal case here. Either way, the health check is what says which version is actually in use, and that is the first thing to suspect when a server behaves differently from the command line.
 - This does not weaken **Independence**: a missing tool degrades a feature, it never stops startup. `mise` is how dependencies are declared and installed, not something the config requires in order to run.
-- Every dependency added lands in two places or it does not exist: the health check that verifies it, and the reference of the language that needs it.
+- Every language or tool the config depends on is declared once in `lua/config/toolchain.lua`; the plugins and the health check read it. Add it there, and to the reference of the language that needs it.
 
 ## Code style
 
@@ -118,14 +123,14 @@ Language servers, formatters, linters and language runtimes are installed with [
     - `-- Step one or two ===...` — enabled with `now_if_args()`: needed for the first draw only when a file argument was given.
     - `-- Step two ===...` — enabled with `later()`: everything else.
 
-  The other files use the same separator style for their own topics (`-- UI ===...`, `-- Editing ===...` in `10_options.lua`; `-- General mappings ===...`, `-- Leader mappings ===...` in `20_keymaps.lua`; `-- Tree-sitter ===...`, `-- Language servers ===...`, `-- Formatting ===...`, `-- Snippets ===...`, `-- Honorable mentions ===...` in `40_plugins.lua`).
+  The other files use the same separator style for their own topics (`-- UI ===...`, `-- Editing ===...` in `10_options.lua`; `-- General mappings ===...`, `-- Leader mappings ===...` in `20_keymaps.lua`; `-- Tree-sitter ===...`, `-- Language servers ===...`, `-- Formatting ===...`, `-- Snippets ===...` in `40_plugins.lua`).
 - No leftovers: no commented-out experiments (except the ones that already exist as documented alternatives, like the color scheme lines), no debug prints, no notification used as a log.
 
-## Documentation comments
+## Comment policy
 
 The comment style is part of the config, not decoration. Match the surrounding file.
 
-- File headers and major sections use a box:
+- File headers and major sections use a box, and a header is the box title plus at most three lines:
 
     ```lua
     -- ┌────────────────────┐
@@ -133,21 +138,18 @@ The comment style is part of the config, not decoration. Match the surrounding f
     -- └────────────────────┘
     ```
 
-- Every `setup()` call and every non-obvious mapping gets a short comment saying **what it is for**, an **example of use** in the notation the config already uses, and **where to read more** (`:h mini.xxx`, `:h option`, `:h tag`).
-- Reference documentation through help tags (`:h vim.pack-lockfile`), not through URLs, so it can be read inside Neovim.
-- Explain *why*, not *what*. `-- Set 'foldlevel' to 10` is noise; `-- 'foldlevel' has to exceed the deepest fold so that zm closes one level per press` is documentation.
+- At most one purpose line plus a `:h` reference per `setup()` call or mapping group. Reference documentation through help tags (`:h vim.pack-lockfile`), not through URLs.
+- Explain *why*, not *what*. No `Example usage:` lists, no tutorial prose, no commented-out code (the color scheme alternatives excepted), no ticket labels, no private project or machine names.
 - Use the notation conventions already stated in `init.lua`: `<Space>fh` for key sequences, 'path/to/file' for paths, `:h xxx` for help.
 
 ### Keywords in comments
 
-Four words are highlighted, and only those four: `plugin/30_mini.lua` configures 'mini.hipatterns' with `FIXME`, `HACK`, `TODO` and `NOTE`. Anything else (`XXX`, `WARN`, `PERF`) is neither highlighted nor found by `:Pick hipatterns`, so as a marker it does not exist. Write the word in uppercase, at the start of the comment, followed by a colon.
+Four words are highlighted, and only those four: `plugin/30_mini.lua` configures 'mini.hipatterns' with `FIXME`, `HACK`, `TODO` and `NOTE`; `lua/config/markers.lua` holds the word table. Anything else is neither highlighted nor found by `:Pick hipatterns`. Write the word in uppercase, at the start of the comment, followed by a colon.
 
-- **`HACK`** — code that exists only because something outside this repository is broken or missing. The test is what happens if upstream fixes it tomorrow: a HACK is **deleted**, not rewritten. Say what upstream does wrong, why the workaround sits where it does, and **the version in which the problem is still present** — that last part is what makes it retestable after the next `vim.pack.update()`, and without it a workaround becomes scar tissue nobody dares to remove.
-- **`FIXME`** — something in this config is broken right now and is not worked around: whoever reads it has to know not to trust that piece. The difference from HACK is where the fault is, not how bad it is — HACK is broken elsewhere and compensated here, FIXME is broken here and left as is. A FIXME that gets worked around becomes a HACK; a HACK that stops being needed is deleted, never downgraded to a FIXME.
-- **`TODO`** — work deferred on purpose, to be done here. It has to be startable: what, why not now, and the first step, so that whoever picks it up does not have to redo the analysis. Anything that does not reach that bar is a wish and does not belong in the code.
-- **`NOTE`** — no pending work. A constraint, a non-obvious behavior of an API, a known limit: what a reader needs in order not to be surprised, or not to break the code with an innocuous looking edit. Never to explain *what* the code does.
-
-Configuring a module, or composing several of them into a behavior none of them provides alone, is not a HACK however much glue it takes: that is the config doing its job. And plain documentation takes no keyword at all. The four words are an index, and an index that lists everything indexes nothing — the more so once the markers are collected into a list, which is the TODO standing in `plugin/30_mini.lua`.
+- **`HACK`** — code that exists only because something outside this repository is broken or missing; a HACK is **deleted** when upstream fixes it, not rewritten. Say what upstream does wrong and end with `(<name> <rev>, locked <date>, not retested)`: the revision in which the problem was last seen, which makes it retestable after the next `vim.pack.update()`.
+- **`FIXME`** — something in this config is broken right now and is not worked around. A FIXME that gets worked around becomes a HACK; a HACK that stops being needed is deleted, never downgraded to a FIXME.
+- **`TODO`** — work deferred on purpose, to be done here, with what, why not now and the first step. Anything that does not reach that bar is a wish and does not belong in the code.
+- **`NOTE`** — no pending work: a constraint or non-obvious behavior, at most three lines, never to explain *what* the code does.
 
 ## Reporting problems
 
@@ -160,7 +162,7 @@ When config code detects something wrong — a missing executable, a buffer that
 - **`vim.notify_once()`** for a condition that is detected repeatedly but is worth saying once per session — typically something found at startup, like an optional executable being absent. Same arguments as `vim.notify()` (`:h vim.notify_once()`).
 - **`vim.health.*` inside a health check** for the state of the environment: what is installed, what version, what is missing. This is what `:checkhealth` is for, and it is the right place for problems the user is not blocked by right now. Use `vim.health.start()` once per section, then `ok()`, `info()`, `warn(msg, advice)`, `error(msg, advice)` — `warn` and `error` take an optional second argument with advice on how to fix it (`:h health-dev`).
 
-  A check of this config's own assumptions needs a module returning `{ check = function() ... end }` under `lua/`. This is the one admitted exception to the "no `lua/` directory" rule; see below for how to write it.
+  A check of this config's own assumptions needs a module returning `{ check = function() ... end }` under `lua/`; see below for how to write it.
 - **`vim.deprecate()`** when a helper of this config is kept working but should stop being used (`:h vim.deprecate()`).
 - **Never `error()` at config level.** A raised error during startup aborts the rest of the file and leaves a half-configured Neovim. Report and continue.
 
@@ -172,7 +174,7 @@ When config code detects something wrong — a missing executable, a buffer that
 
 Neovim in fact went the other way once. The `bad_files` list in `$VIMRUNTIME/lua/vim/health/health.lua` — files whose presence makes `:checkhealth` report a leftover installation — includes `lua/provider/node/health.lua`, `lua/provider/perl/health.lua`, `lua/provider/python/health.lua` and `lua/provider/ruby/health.lua`. The per-provider split existed and was merged back into the single `vim/provider/health.lua`.
 
-The dividing line those files draw is **"is this a subsystem worth interrogating on its own?"**, not "is this a separate directory". `:checkhealth vim.lsp` is worth asking alone; `:checkhealth config.keymaps` answers a question nobody has. This config is one subsystem, so it gets one file, and size is not a reason to split it — `lua/config/health.lua` is 784 lines and is not split.
+The dividing line those files draw is **"is this a subsystem worth interrogating on its own?"**, not "is this a separate directory". `:checkhealth vim.lsp` is worth asking alone; `:checkhealth config.keymaps` answers a question nobody has. This config is one subsystem, so it gets one file, and size is not a reason to split it.
 
 Follow the shape those files share (`vim/health/health.lua` is the clearest example):
 
@@ -282,7 +284,7 @@ This config targets the Neovim installed on this machine (currently 0.12). Upstr
 ## Non-goals
 
 - Becoming a distribution: no auto-update mechanism, no plugin abstraction layer, no config of the config.
-- A `lua/` module tree used to modularize startup behaviour. `lua/config/` is allowed only for code that is required by name at a later moment; see the load-order rule above.
+- A `lua/` module tree used to modularize startup behaviour through `plugin/` files: those only wire. Behavior lives in `lua/config/` modules, see the load-order rule above.
 - Editing generated files by hand: `nvim-pack-lock.json`.
 - Silencing warnings to make output look clean.
 - **Filetype or language specific logic in the shared `plugin/` files, except one case.** Concretely, none of these belong in `plugin/`:
@@ -290,7 +292,7 @@ This config targets the Neovim installed on this machine (currently 0.12). Upstr
     - settings for one language server — that is `after/lsp/<server>.lua`, picked up by `vim.lsp.enable()`;
     - snippets for one language — that is `after/snippets/<lang>.json`.
 
-  What *does* belong in `plugin/40_plugins.lua` is the language-agnostic machinery those files rely on: installing and configuring `nvim-treesitter`, `conform.nvim`, the list of servers passed to `vim.lsp.enable()`. The rule is about per-language *behaviour*, not about tools that happen to be aware of languages. The single admitted exception is a `BufReadCmd` for a URI scheme (`res://`, `jdt://`) that `gf` or an LSP response may create a buffer for: it must be registered before that buffer's `FileType` event, so it lives in a shared `plugin/` file, with `plugin/40_plugins.lua:232-245` as the worked example.
+  What *does* belong in `plugin/40_plugins.lua` is the language-agnostic machinery those files rely on: installing and configuring `nvim-treesitter`, `conform.nvim`, the servers passed to `vim.lsp.enable()`, all read from `lua/config/toolchain.lua`. The rule is about per-language *behaviour*, not about tools that happen to be aware of languages. The single admitted exception is a `BufReadCmd` for a URI scheme (`res://`, `jdt://`) that `gf` or an LSP response may create a buffer for: it must be registered before that buffer's `FileType` event, so it lives in a shared `plugin/` file, with the `res://` one in `plugin/40_plugins.lua` as the worked example.
 
 ## Checklist before finishing
 

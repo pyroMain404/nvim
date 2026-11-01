@@ -187,12 +187,12 @@ livelli più in basso.
 1. **Riconoscimento** — `ftdetect/<lang>.lua`, solo se la Fase 1 ha mostrato un
    filetype vuoto o sbagliato.
 2. **Tree-sitter** — il linguaggio nella tabella `languages` di
-   `plugin/40_plugins.lua`, sotto il separatore `-- Tree-sitter ===`. È una lista che
+   `lua/config/toolchain.lua`. È una lista che
    alimenta un macchinario agnostico, quindi è il posto giusto. Riavvia una volta e
    aspetta la fine dell'installazione del parser prima di aprire quei file.
 3. **Server di linguaggio** — `after/lsp/<server>.lua`, più il nome dentro
-   `vim.lsp.enable({ ... })` nella sezione `-- Language servers ===` di
-   `plugin/40_plugins.lua`.
+   `servers` di
+   `lua/config/toolchain.lua`.
 4. **Editing** — `after/ftplugin/<ft>.lua`, solo per ciò che il ftplugin del runtime
    non fa già. Qui vanno anche le config buffer-local di MINI.
 5. **Build e test** — se esiste un compiler plugin nel runtime, `:compiler <tool>` e

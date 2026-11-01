@@ -89,7 +89,7 @@ directory degli shim deve essere nel `PATH`, e `mise` non ce la mette.
 
 ```text
 <radice del repository nvim-config>/
-├── plugin/40_plugins.lua        parser, server abilitato, formatter
+├── lua/config/toolchain.lua     parser, server abilitato, formatter
 ├── after/lsp/clangd.lua         solo `cmd`
 ├── after/ftplugin/c.lua         compiler, fold, `path`, `:Run` — condiviso con C++
 ├── after/ftplugin/cpp.lua       `runtime!`s c.lua, niente di specifico a C++ oggi

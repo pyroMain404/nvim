@@ -9,7 +9,7 @@ a Markdown file starts in `reading`, the rendered read-only state, when the rend
 | Capability | Provider | Detail |
 |---|---|---|
 | Filetype and editing defaults | Neovim runtime | The Markdown ftplugin supplies the ordinary editing behavior. |
-| Syntax structure and folds | Tree-sitter | `markdown` is in `languages` in `plugin/40_plugins.lua`. |
+| Syntax structure and folds | Tree-sitter | `markdown` is in `languages` in `lua/config/toolchain.lua`. |
 | Markdown surroundings | `mini.surround` | `after/ftplugin/markdown.lua` adds the `L` link surrounding. |
 
 Neither Neovim nor MINI renders Markdown as a document while retaining the source

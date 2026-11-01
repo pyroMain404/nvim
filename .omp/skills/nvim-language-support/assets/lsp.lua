@@ -3,8 +3,8 @@
 -- └───────────────────────────────┘
 --
 -- Skeleton for 'after/lsp/<server>.lua'. Copy, rename after the server as
--- 'nvim-lspconfig' names it, and add that same name to the `vim.lsp.enable({ ... })`
--- call under `-- Language servers ===` in 'plugin/40_plugins.lua'.
+-- 'nvim-lspconfig' names it, and add that same name to `servers`
+-- in 'lua/config/toolchain.lua'.
 -- 'after/lsp/lua_ls.lua' is the worked example already in the config.
 --
 -- Source: <upstream URL of the server>

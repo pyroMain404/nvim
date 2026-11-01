@@ -90,7 +90,7 @@ la regola generale di `AGENTS.md` e `mise` è la via giusta.
 ## 4. Fase 5 — cosa implementare
 
 **Tree-sitter**: niente da fare. `lua` è già nella tabella `languages` di
-`plugin/40_plugins.lua` e il parser è built-in.
+`lua/config/toolchain.lua` e il parser è built-in.
 
 **Il server**: `'lua_ls'` in `vim.lsp.enable()` — è ciò che mancava, ed è il motivo
 per cui `<Leader>lh`, `<Leader>lR` e `<Leader>ll` non davano niente e le altre

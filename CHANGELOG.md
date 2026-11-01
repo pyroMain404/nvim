@@ -1,3 +1,25 @@
+## 2026-11-01
+
+- Split `plugin/` into wiring and modules: `plugin/` files now only wire, and the behavior lives in `lua/config/` (`git/`, `format`, `review`, `winbar`, `make`, `lsp`, `markers`, `markdown`, `obsidian`, `ft`, `toolchain`), with the modules needed at startup switched on from the new `plugin/50_features.lua`; `plugin/41_git.lua`, `plugin/42_format.lua` and `plugin/43_review.lua` are gone.
+
+- Remove the `Config.git`, `Config.format`, `Config.review`, `Config.winbar`, `Config.pristine_path`, `Config.confirm`, `Config.report`, `Config.on_event` and `Config.on_filetype` globals: modules are required by name (`require('config.git')`), the global value of 'path' lives in `lua/config/path.lua`, and `Config` keeps `new_autocmd`, `on_packchanged`, `now`, `later` and `now_if_args`.
+
+- Declare each language once in `lua/config/toolchain.lua`: the tree-sitter parsers, the servers passed to `vim.lsp.enable()`, the `formatters_by_ft` of 'conform.nvim' and the checks of `:checkhealth config` are all read from it, so adding a language no longer means editing four files that can disagree.
+
+- Add `Config.mise.newest()` (`lua/config/mise.lua`), used by `after/lsp/ts_ls.lua` and `after/lsp/jdtls.lua` in place of two hand-written loops over the newest installed tool.
+
+- Cut comments to a purpose line with a help tag, constraints and markers: the MiniMax tutorial text, example lists, the honorable-mentions block and private project names are gone, and the `lua_ls` machine quirk is now a `NOTE` instead of a `HACK`.
+
+- Fix the Git workflow: the `git ls-tree` cache of the diff reference is cleared on every reference change, the blame handler returns early when blame is off and closes its timer, the three drifted `git diff --quiet` probes are one `has_changes()`, and the statusline reads the diff label without loading the Git modules.
+
+- Fix the markdown ftplugin leaving reading-mode mappings, autocommands and the buffer-local 'mini.hipatterns' and 'mini.pairs' settings behind when the filetype of a buffer changes: `b:undo_ftplugin` now ends with `detach()` of `lua/config/markdown.lua`.
+
+- Drop a buffer's breadcrumb from the `winbar` cache on `BufDelete` and `BufWipeout`, so the cache no longer keeps entries of deleted buffers.
+
+- Register the nested comments autocommand after 'mini.misc' is set up, delete the commented-out MINI modules and the unused devicons mock, and stop creating the 'spell/' directory on every start, since it is committed.
+
+- Describe the mappings that had none: `(` and `)` are `Swap arg left` and `Swap arg right`, and `n`, `N`, `*` and `#` are `Next match`, `Previous match`, `Star` and `Hash`, all in `plugin/20_keymaps.lua`.
+
 ## 2026-10-30
 
 - Show the diff in the statusline, in front of the diff counts: which revision they are read against, at which scope, and whether the overlay is on. `@HEAD~` is a revision referenced in every buffer (`<Leader>gr`), `@HEAD~ (buf)` one referenced in the current buffer only (`<Leader>gR`), `@index (buf)` a buffer restored to the Git index while a revision is still referenced elsewhere, `@index` the overlay on over the index (`<Leader>go`), and `(off)` after any of them a reference whose overlay is hidden. Nothing is shown while the reference is the index and the overlay is off. The label is `Config.git.diff_ref_label()` in `plugin/41_git.lua`; the wrapper of `MiniStatusline.section_diff()` that prints it is in `plugin/30_mini.lua`, so the default statusline content and its truncation stay untouched.
