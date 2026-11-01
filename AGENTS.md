@@ -257,13 +257,13 @@ Signed-off-by: Gaetano Esposito <gaetanoesposito.exe@gmail.com>
 
 ## Typical workflow for adding change
 
-Adapted from `MAINTAINING.md#typical-workflow-for-adding-change`, minus everything that only makes sense for a shared project. This config has a single author working directly on `minimax-config`: no feature branches, no pull requests, no review, and — since 2026-09-22 — no upstream to keep separate from.
+Adapted from `MAINTAINING.md#typical-workflow-for-adding-change`, minus everything that only makes sense for a shared project. This config has a single author working directly on `windows`, the branch of this machine: no feature branches, no pull requests, no review, and — since 2026-09-22 — no upstream to keep separate from.
 
 1. Solve the problem, in the right file. Keep the change as local as the problem is.
 2. Make sure it still reads well: comments updated, `:h` references still correct, file structure and separators intact, formatting per `.stylua.toml`.
 3. If the change is worth being seen later (a notable or breaking feature or fix), add an entry to `CHANGELOG.md` — at the top of the file. See below.
 4. Verify, following the `nvim-config-testing` skill. Do it once, at the end.
-5. Commit on `minimax-config`, following the message rules above, and push to `origin`.
+5. Commit on `windows`, following the message rules above, and push to `origin`.
 6. Never force-push.
 
 ### Changelog entries
@@ -303,4 +303,4 @@ This config targets the Neovim installed on this machine (currently 0.12). Upstr
 - [ ] `CHANGELOG.md` updated if the change is worth being seen later, at the top of the file.
 - [ ] Verification done in one pass, as the `nvim-config-testing` skill prescribes.
 - [ ] One topic per commit; message has an allowed type, the Problem/Solution body, and `Signed-off-by`.
-- [ ] Committed on `minimax-config` and pushed to `origin`.
+- [ ] Committed on `windows` and pushed to `origin`.
