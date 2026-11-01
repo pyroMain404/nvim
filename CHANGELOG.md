@@ -1,5 +1,7 @@
 ## 2026-11-01
 
+- Fix `gF` on a `file://` link of a Go hover (`...dir.go#114,6`) opening the file at the top: gopls writes `#<line>,<col>`, which the hover-window `gF` did not parse. It now goes to the line and the column.
+
 - Fix `gf` on a Markdown link in a hover window (`jdt://` or `file://`) opening the file inside the floating window, and `gF` ignoring the `#<line>` of a `jdt://` link: both close the window and open the target in the window the hover started from, `gF` at the line. Add `<C-o>` and `<C-i>` in a hover window: they walk back and forward through the hovers opened with `K`, which replace one another and so leave the jump list nothing to go back to.
 
 - Fix a Markdown link that fits the window once its destination is hidden leaving an empty row after it in a floating window (the `See Also` links of a Java hover): Neovim sizes a wrapped line from its raw text, so such a window is now shown without 'wrap' and fitted to its lines; the text of the buffer is not touched.

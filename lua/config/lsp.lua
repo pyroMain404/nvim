@@ -302,7 +302,8 @@ end
 
 -- `gf` on a Markdown link would open the file inside the floating window: close the
 -- window and open it in the one the chain started from (`:h vim.lsp.util.show_document()`).
--- `gF` also goes to the line a `#<line>` fragment names, which 'isfname' can not parse.
+-- `gF` also goes to the line a `#<line>` or `#<line>,<col>` fragment names (gopls writes
+-- the latter), which 'isfname' can not parse.
 local follow_link = function(ctx, with_line)
   local line, col =
     vim.api.nvim_get_current_line(), vim.api.nvim_win_get_cursor(0)[2] + 1
@@ -318,7 +319,7 @@ local follow_link = function(ctx, with_line)
   end
   if target:find('^https?://') then return vim.ui.open(target) end
 
-  local uri, lnum = target:match('^(.*)#L?(%d+)$')
+  local uri, lnum, cnum = target:match('^(.*)#L?(%d+),?(%d*)$')
   uri = uri or target
   if not (uri:find('^jdt://') or uri:find('^file:')) then
     return vim.notify('Unsupported link: ' .. target, vim.log.levels.WARN)
@@ -329,7 +330,12 @@ local follow_link = function(ctx, with_line)
   vim.api.nvim_set_current_win(ctx.win)
   vim.api.nvim_win_close(float, true)
   vim.cmd("normal! m'")
-  local at = with_line and lnum and { line = tonumber(lnum) - 1, character = 0 }
+  local at = with_line
+      and lnum
+      and {
+        line = tonumber(lnum) - 1,
+        character = math.max((tonumber(cnum) or 1) - 1, 0),
+      }
     or nil
   vim.lsp.util.show_document(
     { uri = uri, range = at and { start = at, ['end'] = at } or nil },
