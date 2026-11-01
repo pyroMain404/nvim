@@ -86,6 +86,33 @@ now_if_args(function()
       end
     end,
   })
+
+  -- NOTE: go to definition on a JDK or jar class answers a `jdt://` URI, which Neovim
+  -- opens as an empty buffer: its text is asked to jdtls, which must also be attached to
+  -- it for hover and further navigation. Same registration constraint as `res://` above.
+  vim.api.nvim_create_autocmd('BufReadCmd', {
+    pattern = 'jdt://*',
+    group = vim.api.nvim_create_augroup('config-jdt-class', { clear = true }),
+    desc = 'Read a jdt:// class file from jdtls',
+    nested = true,
+    callback = function(args)
+      local client = vim.lsp.get_clients({ name = 'jdtls' })[1]
+      local lines = client
+        and require('config.lsp').class_file_lines(client, args.match)
+      if lines == nil then
+        return vim.notify(
+          'jdtls has no source for ' .. args.match,
+          vim.log.levels.WARN
+        )
+      end
+      vim.bo[args.buf].buftype = 'nofile'
+      vim.bo[args.buf].swapfile = false
+      vim.api.nvim_buf_set_lines(args.buf, 0, -1, false, lines)
+      vim.bo[args.buf].modifiable = false
+      vim.bo[args.buf].filetype = 'java'
+      vim.lsp.buf_attach_client(args.buf, client.id)
+    end,
+  })
 end)
 
 -- Markdown rendering =========================================================

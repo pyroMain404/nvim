@@ -1,5 +1,7 @@
 ## 2026-11-01
 
+- Fix go to definition on a class of the JDK or a jar opening nothing (jdtls answers an empty list): `jdtls` is told it can serve `java/classFileContents` and a `BufReadCmd` on `jdt://*` opens the class source as a read-only `java` buffer with jdtls attached, so `gd`, `K` and `K` in a hover window work inside it.
+
 - Fix typing in a Java buffer filling the screen with `jdtls: Validate documents` and `jdtls: Publish Diagnostics` notifications: 'mini.notify' no longer shows those two progress reports, which jdtls opens on every document change, while importing and building still show; they stay in the history of `<Leader>en`.
 
 - Fix a Markdown link that fits the window once its destination is hidden leaving an empty row after it in a floating window (the `See Also` links of a Java hover): Neovim sizes a wrapped line from its raw text, so such a window is now shown without 'wrap' and fitted to its lines; the text of the buffer is not touched.

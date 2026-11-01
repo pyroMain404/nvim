@@ -54,6 +54,18 @@ local add_show_references = function()
   end
 end
 
+-- Text of a class the project has no file for, which jdtls names with a `jdt://` URI:
+-- the JDK, a jar. Nil when the server can not answer. Read by the `BufReadCmd` of
+-- 'plugin/40_plugins.lua' too.
+M.class_file_lines = function(client, uri)
+  local response =
+    client:request_sync('java/classFileContents', { uri = uri }, 10000)
+  if not response or response.err or type(response.result) ~= 'string' then
+    return
+  end
+  return vim.split((response.result:gsub('\r\n', '\n')), '\n', { plain = true })
+end
+
 -- HACK: jdtls opens a progress report for every document change ('Validate
 -- documents', 'Publish Diagnostics'), so typing in a Java buffer fills the screen with
 -- notifications. Keep them out of the window of 'mini.notify' (`:h MiniNotify.config`),

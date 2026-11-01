@@ -155,6 +155,13 @@ return {
   -- Nil without a JDK: the server stays on the project's JDK, warned above.
   cmd_env = server_jdk ~= nil and { MISE_JAVA_VERSION = server_jdk.version } or nil,
 
+  -- Without it, definition answers nothing for a class that has no sources in the
+  -- project (the JDK, a jar), and with it a `jdt://` URI whose text is asked to the
+  -- server: 'plugin/40_plugins.lua' reads it (`java/classFileContents`).
+  init_options = {
+    extendedClientCapabilities = { classFileContentsSupport = true },
+  },
+
   handlers = {
     -- `ServiceReady` (jdtls notification) is the last status, after the import.
     ['language/status'] = function(_, result, ctx)

@@ -85,13 +85,14 @@ tipo, i generatori di `toString`, dei costruttori, dei delegati e di
 proprio dialogo, perché il server chiede cosa generare (`capabilities.md` "LSP: la semantica"). È la
 metà del refactoring che un IDE Java offre, e nessuna riga di `settings` la avvicina.
 
-La seconda è che **un pezzo si può prendere senza adottare il plugin**. Il go to
-definition verso una libreria senza sorgenti allegati risponde con un URI `jdt://`,
-e oggi qui apre un buffer vuoto dal nome bizzarro: `plugin/jdtls.lua` risolve il caso
-con un `BufReadCmd` su `jdt://*` e `*.class` che chiede `java/classFileContents` al
-client già attaccato — una dozzina di righe in `plugin/`, indipendenti da tutto il
-resto (`capabilities.md` "Navigazione della codebase"). È il primo lavoro da fare qui se la navigazione nelle
-dipendenze diventa quotidiana, e non richiede di migrare niente.
+La seconda è che **un pezzo si può prendere senza adottare il plugin**, ed è già
+preso. Il go to definition verso una libreria senza sorgenti allegati (il JDK, un jar)
+risponde con un URI `jdt://`, e senza `extendedClientCapabilities.classFileContentsSupport`
+(`after/lsp/jdtls.lua`) il server non risponde niente. Con la capability, un
+`BufReadCmd` su `jdt://*` in `plugin/40_plugins.lua` chiede `java/classFileContents` al
+client già attaccato (`class_file_lines()` in `lua/config/lsp.lua`), imposta il filetype
+`java` e attacca il client al buffer, così `K` e `gd` continuano a funzionare lì
+dentro. Resta fuori `*.class` letto da disco.
 
 **Un formatter dedicato: no.** Java non ha un formatter ufficiale. `jdtls`
 formatta con il formatter di Eclipse e rispetta le impostazioni del progetto,
