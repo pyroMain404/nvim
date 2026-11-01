@@ -25,6 +25,20 @@ nmap('<C-S-J>', '<C-w>J', 'Move to very bottom')
 nmap('<C-S-K>', '<C-w>K', 'Move to very top')
 nmap('<C-S-L>', '<C-w>L', 'Move to very right')
 
+-- Swap adjacent arguments with the `a` textobject of 'mini.ai' and the exchange
+-- operator `gx` of 'mini.operators': on `a` in `(aa, bb)` press `)` then `(`.
+-- Not 100% reliable; it overrides `:h (` and `:h )`.
+vim.keymap.set('n', '(', 'gxiagxila', { remap = true, desc = 'Swap arg left' })
+vim.keymap.set('n', ')', 'gxiagxina', { remap = true, desc = 'Swap arg right' })
+
+-- Search jumps refresh 'mini.map'; `zv` opens enough folds to show the match.
+local map_refresh =
+  '<Cmd>lua MiniMap.refresh({}, { lines = false, scrollbar = false })<CR>'
+nmap('n', 'nzv' .. map_refresh, 'Next match')
+nmap('N', 'Nzv' .. map_refresh, 'Previous match')
+nmap('*', '*zv' .. map_refresh, 'Star')
+nmap('#', '#zv' .. map_refresh, 'Hash')
+
 -- Many general mappings are created by 'mini.basics'. See 'plugin/30_mini.lua'
 
 -- stylua: ignore start

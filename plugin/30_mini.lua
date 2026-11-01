@@ -2,8 +2,8 @@
 -- │ MINI configuration │
 -- └────────────────────┘
 --
--- This file contains configuration of the MINI parts of the config.
--- It contains only configs for the 'mini.nvim' plugin (installed in 'init.lua').
+-- One `setup()` per module of 'mini.nvim' (installed in 'init.lua'). Behavior
+-- built on top of the modules lives in 'lua/config/'.
 --
 -- 'mini.nvim' is a library of modules. Each is enabled independently via
 -- `require('mini.xxx').setup()` convention. It creates all intended side effects:
@@ -77,12 +77,6 @@ now(function()
       return not blocklist[ext:sub(-3)] and not blocklist[ext:sub(-4)]
     end,
   })
-
-  -- Mock 'nvim-tree/nvim-web-devicons' for plugins without 'mini.icons' support.
-  -- NOTE: no plugin installed here needs this mock today; it is kept as
-  -- a precaution so that a future devicons-dependent plugin does not silently
-  -- lose its icons. Do not remove this line.
-  later(MiniIcons.mock_nvim_web_devicons)
 
   -- Add LSP kind icons. Useful for 'mini.completion'.
   later(MiniIcons.tweak_lsp_kind)
@@ -374,15 +368,6 @@ end)
 -- - `:h MiniAlign-algorithm` - how alignment is done on algorithmic level
 later(function() require('mini.align').setup() end)
 
--- Animate common Neovim actions. Like cursor movement, scroll, window resize,
--- window open, window close. Animations are done based on Neovim events and
--- don't require custom mappings.
---
--- It is not enabled by default because its effects are a matter of taste.
--- Also scroll and resize have some unwanted side effects (see `:h mini.animate`).
--- Uncomment next line (use `gcc`) to enable.
--- later(function() require('mini.animate').setup() end)
-
 -- Go forward/backward with square brackets. Implements consistent sets of mappings
 -- for selected targets (like buffers, diagnostic, quickfix list entries, etc.).
 -- Example usage:
@@ -476,20 +461,6 @@ end)
 -- - Autopeek command range (like line number at the start) as-you-type.
 later(function() require('mini.cmdline').setup() end)
 
--- Tweak and save any color scheme. Contains utility functions to work with
--- color spaces and color schemes. Example usage:
--- - `:Colorscheme default` - switch with animation to the default color scheme
---
--- See also:
--- - `:h MiniColors.interactive()` - interactively tweak color scheme
--- - `:h MiniColors-recipes` - common recipes to use during interactive tweaking
--- - `:h MiniColors.convert()` - convert between color spaces
--- - `:h MiniColors-color-spaces` - list of supported color spaces
---
--- It is not enabled by default because it is not really needed on a daily basis.
--- Uncomment next line (use `gcc`) to enable.
--- later(function() require('mini.colors').setup() end)
-
 -- Comment lines. Provides functionality to work with commented lines.
 -- Uses `:h 'commentstring'` option to infer comment structure.
 -- Example usage:
@@ -501,24 +472,17 @@ later(function() require('mini.cmdline').setup() end)
 -- still enabled as it provides more customization opportunities.
 later(function() require('mini.comment').setup() end)
 
--- Let `gq` reflow a "second-level" comment (this file's own `----`, above
--- a nested one-off note inside a `--` block) without merging it into the
--- surrounding `--` paragraph. `:h MiniMisc.use_nested_comments()` derives the
--- nested leader from `:h 'commentstring'`, so it has to run per buffer, after
--- the filetype sets that option.
-Config.new_autocmd(
-  'BufEnter',
-  nil,
-  function(ev) require('mini.misc').use_nested_comments(ev.buf) end,
-  'Reflow nested comments with gq'
-)
-
--- Autohighlight word under cursor with a customizable delay.
--- Word boundaries are defined based on `:h 'iskeyword'` option.
---
--- It is not enabled by default because its effects are a matter of taste.
--- Uncomment next line (use `gcc`) to enable.
--- later(function() require('mini.cursorword').setup() end)
+-- Let `gq` reflow a nested comment without merging it into the surrounding one
+-- (`:h MiniMisc.use_nested_comments()`); per buffer, after the filetype sets
+-- 'commentstring'.
+later(function()
+  Config.new_autocmd(
+    'BufEnter',
+    nil,
+    function(ev) require('mini.misc').use_nested_comments(ev.buf) end,
+    'Reflow nested comments with gq'
+  )
+end)
 
 -- Work with diff hunks that represent the difference between the buffer text and
 -- some reference text set by a source. Default source uses text from Git index.
@@ -572,121 +536,24 @@ later(function() require('mini.git').setup() end)
 -- See also:
 -- - `:h MiniHipatterns-examples` - examples of common setups
 
--- The one place the four markers and their case variants are written down -
--- the highlighters below and the two commands after `hipatterns.setup()`
--- both build from this table, so they cannot drift apart the way a second,
--- hand-copied word list would.
-local hipatterns_words = {
-  fixme = { 'FIXME', 'Fixme', 'fixme' },
-  hack = { 'HACK', 'Hack', 'hack' },
-  todo = { 'TODO', 'Todo', 'todo' },
-  note = { 'NOTE', 'Note', 'note' },
-}
+-- The marker words and the `:HipatternsLoc`/`:HipatternsGrep` commands are in
+-- 'lua/config/markers.lua'.
 later(function()
   local hipatterns = require('mini.hipatterns')
   local hi_words = MiniExtra.gen_highlighter.words
+  local words = require('config.markers').words
   hipatterns.setup({
     highlighters = {
       -- Highlight a fixed set of common words. Will be highlighted in any place,
       -- not like "only in comments".
-      fixme = hi_words(hipatterns_words.fixme, 'MiniHipatternsFixme'),
-      hack = hi_words(hipatterns_words.hack, 'MiniHipatternsHack'),
-      todo = hi_words(hipatterns_words.todo, 'MiniHipatternsTodo'),
-      note = hi_words(hipatterns_words.note, 'MiniHipatternsNote'),
+      fixme = hi_words(words.fixme, 'MiniHipatternsFixme'),
+      hack = hi_words(words.hack, 'MiniHipatternsHack'),
+      todo = hi_words(words.todo, 'MiniHipatternsTodo'),
+      note = hi_words(words.note, 'MiniHipatternsNote'),
 
       -- Highlight hex color string (#aabbcc) with that color as a background
       hex_color = hipatterns.gen_highlighter.hex_color(),
     },
-  })
-
-  -- Current buffer, as a per-window location list. NOT built from
-  -- `:h MiniHipatterns.get_matches()`, despite it looking like the free
-  -- answer: that reads the module's own extmarks, which are set by a
-  -- debounced background process (`:h uv.new_timer()`, chained through
-  -- several `vim.schedule()` hops) - measured repeatedly stale or empty for
-  -- a buffer opened and acted on in the same breath, because the timer had
-  -- not fired yet. A synchronous scan of the SAME word table the
-  -- highlighters above use answers immediately and needs nothing from
-  -- `mini.hipatterns`'s internal state. The picker (`:Pick hipatterns`)
-  -- answers "jump to one now"; this answers "work through all of them",
-  -- because a location list persists and is navigated with `]q`/`[q`
-  -- without reopening anything.
-  vim.api.nvim_create_user_command('HipatternsLoc', function()
-    local bufnr = vim.api.nvim_get_current_buf()
-    local words = {}
-    for _, variants in pairs(hipatterns_words) do
-      vim.list_extend(words, variants)
-    end
-    local items = {}
-    for lnum, line in ipairs(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)) do
-      for _, word in ipairs(words) do
-        local col = line:find(word, 1, true)
-        if col ~= nil then
-          table.insert(
-            items,
-            { bufnr = bufnr, lnum = lnum, col = col, text = vim.trim(line) }
-          )
-          break
-        end
-      end
-    end
-    if #items == 0 then
-      return vim.notify(
-        'No FIXME/HACK/TODO/NOTE markers in this buffer',
-        vim.log.levels.INFO
-      )
-    end
-    vim.fn.setloclist(0, {}, ' ', { items = items, title = 'Hipatterns (buffer)' })
-    vim.cmd('lopen')
-  end, {
-    desc = 'FIXME/HACK/TODO/NOTE markers of the current buffer, in the location list',
-  })
-
-  -- The whole project, as a quickfix list. Calls `rg` directly through
-  -- `vim.system()` (async, same shape as `:Make` in 'plugin/10_options.lua')
-  -- rather than going through `:h :grep`/`'shellpipe'`: MEASURED that the
-  -- pattern's own `\b(...)` alternation, round-tripped through the
-  -- configured shell's own quoting (`pwsh`'s `-Command` string), came back
-  -- as `Can't open errorfile` - `rg`'s own argv, called directly, needs no
-  -- shell at all and sidesteps that entirely. `'grepformat'` (default
-  -- `%f:%l:%c:%m`, matching `rg --vimgrep`'s own output) parses it into the
-  -- quickfix list the same way `:grep` would have.
-  vim.api.nvim_create_user_command('HipatternsGrep', function()
-    if vim.fn.executable('rg') == 0 then
-      return vim.notify(
-        '`rg` not found on PATH: required for :HipatternsGrep',
-        vim.log.levels.ERROR
-      )
-    end
-    local words = {}
-    for _, variants in pairs(hipatterns_words) do
-      vim.list_extend(words, variants)
-    end
-    local pattern = '\\b(' .. table.concat(words, '|') .. ')\\b'
-    vim.system(
-      { 'rg', '--vimgrep', '-uu', pattern },
-      { text = true, cwd = vim.fn.getcwd() },
-      function(out)
-        vim.schedule(function()
-          local lines = vim.split(out.stdout or '', '\n', { trimempty = true })
-          vim.fn.setqflist(
-            {},
-            ' ',
-            { lines = lines, efm = vim.o.grepformat, title = 'Hipatterns (project)' }
-          )
-          if #vim.fn.getqflist() > 0 then
-            vim.cmd('copen')
-          else
-            vim.notify(
-              'No FIXME/HACK/TODO/NOTE markers found in the project',
-              vim.log.levels.INFO
-            )
-          end
-        end)
-      end
-    )
-  end, {
-    desc = 'FIXME/HACK/TODO/NOTE markers of the whole project, in the quickfix list',
   })
 end)
 
@@ -790,15 +657,6 @@ later(function()
       map.gen_integration.diagnostic(),
     },
   })
-
-  -- Map built-in navigation characters to force map refresh
-  for _, key in ipairs({ 'n', 'N', '*', '#' }) do
-    -- `zv` also opens enough folds to show the match jumped to
-    local rhs = key
-      .. 'zv'
-      .. '<Cmd>lua MiniMap.refresh({}, { lines = false, scrollbar = false })<CR>'
-    vim.keymap.set('n', key, rhs)
-  end
 end)
 
 -- Move any selection in any direction. Example usage in Normal mode:
@@ -827,18 +685,7 @@ later(function() require('mini.move').setup() end)
 -- See also:
 -- - `:h MiniOperators-mappings` - overview of how mappings are created
 -- - `:h MiniOperators-overview` - overview of present operators
-later(function()
-  require('mini.operators').setup()
-
-  -- Create mappings for swapping adjacent arguments. Notes:
-  -- - Relies on `a` argument textobject from 'mini.ai'.
-  -- - It is not 100% reliable, but mostly works.
-  -- - It overrides `:h (` and `:h )`.
-  -- Explanation: `gx`-`ia`-`gx`-`ila` <=> exchange current and last argument
-  -- Usage: when on `a` in `(aa, bb)` press `)` followed by `(`.
-  vim.keymap.set('n', '(', 'gxiagxila', { remap = true, desc = 'Swap arg left' })
-  vim.keymap.set('n', ')', 'gxiagxina', { remap = true, desc = 'Swap arg right' })
-end)
+later(function() require('mini.operators').setup() end)
 
 -- Autopairs functionality. Insert pair when typing opening character and go over
 -- right character if it is already to cursor's right. Also provides mappings for
@@ -881,36 +728,11 @@ later(function() require('mini.pairs').setup() end)
 -- - `:h MiniPick.builtin` and `:h MiniExtra.pickers` - available pickers;
 --   Execute one either with Lua function, `:Pick <picker-name>` command, or
 --   one of `<Leader>f` mappings defined in 'plugin/20_keymaps.lua'
-later(function()
-  -- Every picker listing files (files, grep, buffers, visits, LSP, ...) starts
-  -- its items with a path, and a deep one pushes the file name and the match
-  -- out of the window. Shorten its directories to one character
-  -- (`:h pathshorten()`) except the last two, which say where the file is,
-  -- only in what is displayed: the item itself is untouched, so choosing and
-  -- preview still get the full path. Items are
-  -- 'path<NUL>line<NUL>col<NUL>text' at most, so only the part before the first
-  -- NUL is shortened. Pickers with their own `show` are not affected.
-  local shorten_path = function(path)
-    local head, tail = path:match('^(.*[/\\])([^/\\]+[/\\][^/\\]+[/\\][^/\\]+)$')
-    if head == nil then return path end
-    return vim.fn.pathshorten(head .. 'x'):sub(1, -2) .. tail
+later(
+  function()
+    require('mini.pick').setup({ source = { show = require('config.pick').show } })
   end
-  local shorten = function(s) return (s:gsub('^[^%z]+', shorten_path, 1)) end
-  local show = function(buf_id, items, query)
-    local has_path = false
-    -- NOTE: the icon comes from `path` (preferred over `text`) and needs the
-    -- real file on disk, so it is kept alongside the shortened `text`.
-    local short = vim.tbl_map(function(item)
-      local text = type(item) == 'table' and item.text or item
-      if type(text) ~= 'string' then return item end
-      has_path = has_path or text:find('[/\\]') ~= nil
-      local path = type(item) == 'table' and item.path or text:match('^[^%z]+')
-      return { text = shorten(text), path = path }
-    end, items)
-    MiniPick.default_show(buf_id, short, query, { show_icons = has_path })
-  end
-  require('mini.pick').setup({ source = { show = show } })
-end)
+)
 
 -- Manage and expand snippets (templates for a frequently used text).
 -- Typical workflow is to type snippet's (configurable) prefix and expand it
@@ -974,11 +796,6 @@ later(function()
       snippets.gen_loader.from_lang({ lang_patterns = lang_patterns }),
     },
   })
-
-  -- By default snippets available at cursor are not shown as candidates in
-  -- 'mini.completion' menu. This requires a dedicated in-process LSP server
-  -- that will provide them. To have that, uncomment next line (use `gcc`).
-  -- MiniSnippets.start_lsp_server()
 end)
 
 -- Split and join arguments (regions inside brackets between allowed separators).
