@@ -59,78 +59,9 @@ now_if_args(function()
     'https://github.com/nvim-treesitter/nvim-treesitter-textobjects',
   })
 
-  -- Define languages which will have parsers installed and auto enabled
-  -- After changing this, restart Neovim once to install necessary parsers. Wait
-  -- for the installation to finish before opening a file for added language(s).
-  local languages = {
-    -- These are already pre-installed with Neovim. Used as an example.
-    'lua',
-    'vimdoc',
-    'markdown',
-    -- Only used through the injection of the 'markdown' parser, which parses
-    -- the frontmatter ('---' block) of a note as YAML. Without it the whole
-    -- block is one color.
-    'yaml',
-    -- Add here more languages with which you want to use tree-sitter
-    -- To see available languages:
-    -- - Execute `:=require('nvim-treesitter').get_available()`
-    -- - Visit 'SUPPORTED_LANGUAGES.md' file at
-    --   https://github.com/nvim-treesitter/nvim-treesitter/blob/main
-    'rust',
-    -- Manifest of a Rust project, read as often as the code itself
-    'toml',
-    -- Only used through the injection in 'after/queries/rust/injections.scm',
-    -- which parses the SQL inside the `sqlx` macros
-    'sql',
-    -- The Angular file set. `angular` is the parser for a component template,
-    -- and it is what knows about `{{ }}`, `*ngIf`, `(click)` and `[prop]`,
-    -- which the plain `html` parser reads as ordinary text and attribute
-    -- names. It declares filetypes `angular` and `htmlangular`, so the
-    -- autocommand below only reaches a template once 'ftdetect/htmlangular.lua'
-    -- has said that is what the file is.
-    'angular',
-    'typescript',
-    -- `html` for templates outside a component, `css` and `scss` for the
-    -- styles a component carries next to it, `json` for 'angular.json' and
-    -- the 'tsconfig.json' family
-    'html',
-    'css',
-    'scss',
-    'json',
-    'java',
-    -- Manifest of a Maven project: 'pom.xml' is where its dependencies, its
-    -- plugins and the test configuration live, so it is read as often as the
-    -- code. Neovim detects it as `xml`, not as a filetype of its own
-    'xml',
-    -- C and C++, which are one parser set and not two: the `cpp` parser
-    -- declares `c` among its `requires` in 'parsers.lua' of
-    -- 'nvim-treesitter', so it does not build without it. `c` ships with
-    -- Neovim, and naming it here is what also makes it explicit to the
-    -- health check.
-    'cpp',
-    'c',
-    -- The files a C or C++ project is built from, read as often as the code -
-    -- the same reason `toml` sits next to `rust` and `xml` next to `java`
-    'cmake',
-    'make',
-    -- GDScript, the language of the Godot engine. Tier 3 in 'parsers.lua' of
-    -- 'nvim-treesitter' - no declared maintainer - which is what makes the
-    -- '$VIMRUNTIME/syntax/gdscript.vim' left underneath a fallback worth
-    -- having rather than a leftover.
-    'gdscript',
-    -- The rest of what a Godot project is made of, and the two are not
-    -- optional extras of the language: a shader is written by hand, and a
-    -- '.tscn' is read by hand every time a scene has to be understood outside
-    -- the editor. `gdshader` declares the filetypes `gdshader` AND
-    -- `gdshaderinc` - the table in 'plugin/filetypes.lua' of
-    -- 'nvim-treesitter' adds to the parser name, it does not replace it - and
-    -- is tier 2, with a maintainer, unlike `gdscript`. `godot_resource`
-    -- declares `gdresource`, which is what Neovim calls both '.tscn' and
-    -- '.tres'. 'ftdetect/godot.lua' is what gives '.gdshaderinc' a filetype
-    -- at all, without which this parser would never reach it.
-    'gdshader',
-    'godot_resource',
-  }
+  -- Parsers are declared in 'lua/config/toolchain.lua'. After changing them,
+  -- restart Neovim once and wait for the install before opening such a file.
+  local languages = require('config.toolchain').parsers()
   local isnt_installed = function(lang)
     return #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0
   end
@@ -167,70 +98,10 @@ end)
 now_if_args(function()
   add({ 'https://github.com/neovim/nvim-lspconfig' })
 
-  -- Use `:h vim.lsp.enable()` to automatically enable language server based on
-  -- the rules provided by 'nvim-lspconfig'.
-  -- Use `:h vim.lsp.config()` or 'after/lsp/' directory to configure servers.
-  -- A name here needs the server installed to do anything: enabling one that is
-  -- missing fails silently, which is why the health check reports the toolchain.
-  vim.lsp.enable({
-    -- Installed with `mise`, configured in 'after/lsp/lua_ls.lua'
-    'lua_ls',
-    -- Installed with `rustup`, configured in 'after/lsp/rust_analyzer.lua'
-    'rust_analyzer',
-    -- Angular takes two servers, because they answer different questions and
-    -- neither answers the other's. `angularls` is the one that knows a
-    -- template: it type checks `{{ }}` against the component class, completes
-    -- a property inside a binding, and follows a selector to the component
-    -- that declares it. It knows nothing about TypeScript as a language, so on
-    -- its own a '.ts' file gets no diagnostics at all.
-    --
-    -- `ts_ls` is that half. Both attach to a `typescript` buffer, which Neovim
-    -- handles by asking every attached client and merging the answers
-    -- (`:h lsp-defaults`). Which of them formats is not left to chance:
-    -- `prettier` below is declared for these filetypes, so 'conform.nvim'
-    -- never reaches its `lsp_format` fallback.
-    --
-    -- What 'nvim-lspconfig' ships for `angularls` is already right, and there
-    -- is nothing to add: it computes its `cmd` from the project - the probe
-    -- paths into its 'node_modules', the Angular version read from its
-    -- 'package.json' - and it starts on any Node a project may pin, down to the
-    -- 14 of a project on Angular 15. Its one constraint is a version, and it
-    -- belongs to the project (see the NOTE below), not to a file here.
-    --
-    -- `ts_ls` is the one with a file in 'after/lsp/', and for the opposite
-    -- reason: below Node 18 it dies while parsing its own source, so it is the
-    -- server that cannot take the Node of the project it opens.
-    --
-    -- NOTE: `ngserver` loads the `@angular/language-service` of the project it
-    -- opens, so its major has to be the project's. A newer server calls into
-    -- an API that older service does not have, and the failure is quiet: the
-    -- client attaches, and every `didOpen` fails inside `:LspLog` while no
-    -- diagnostic ever arrives. `:checkhealth config` prints the project's
-    -- version and the `mise` line that matches it.
-    'angularls',
-    'ts_ls',
-    -- Installed with `mise`, configured in 'after/lsp/jdtls.lua'
-    'jdtls',
-    -- Installed with LLVM (WinGet), configured in 'after/lsp/clangd.lua'.
-    -- Covers C, C++, Objective-C and CUDA: the `filetypes` of
-    -- 'nvim-lspconfig' are already the right ones and are not copied over.
-    'clangd',
-    -- The one server here that Neovim does not start: it lives inside the
-    -- Godot editor, which has to be open on the project. 'nvim-lspconfig'
-    -- connects to it over TCP, so its `cmd` is a FUNCTION built on
-    -- `vim.lsp.rpc.connect` and writing one anywhere would replace the
-    -- connection with a process (`:=vim.lsp.config['gdscript']`). The port is
-    -- `GDScript_Port`, or 6005.
-    --
-    -- No client at all is a legitimate state and not a failure: with the
-    -- editor closed what remains is editing, tree-sitter, `gdformat` and
-    -- `:make`, and only the semantics are gone. NOTE: that port belongs to
-    -- the machine, not to the project - a second Godot opened elsewhere gets
-    -- no port at all, and a '.gd' buffer then answers with the symbols of the
-    -- OTHER game, silently. 'after/lsp/gdscript.lua' narrows the root markers
-    -- so at least an unrelated file cannot attach.
-    'gdscript',
-  })
+  -- Servers are declared in 'lua/config/toolchain.lua' and configured in 'after/lsp/'.
+  -- Enabling one that is not installed fails silently: the health check reports it.
+  -- See `:h vim.lsp.enable()` and `:h vim.lsp.config()`.
+  vim.lsp.enable(require('config.toolchain').servers())
 
   -- `res://` is Godot's own scheme for "relative to this project", and it is
   -- exactly what `gf` on a `preload('res://...')` leaves as a buffer name: a
@@ -385,49 +256,8 @@ later(function()
       -- Allow formatting from LSP server if no dedicated formatter is available
       lsp_format = 'fallback',
     },
-    -- Map of filetype to formatters
-    -- Make sure that necessary CLI tool is available
-    formatters_by_ft = {
-      -- The formatter this repository is already checked with: it reads the
-      -- '.stylua.toml' at the root, so `<Leader>lf` and the `stylua --check`
-      -- that `AGENTS.md` requires before a commit agree on every rule. Without
-      -- it `<Leader>lf` fell back to the server, which does not format at all
-      -- unless told to and would not know about that file anyway.
-      lua = { 'stylua' },
-      -- The official formatter of the language, so that `<Leader>lf`, the
-      -- command line and CI agree. The server would format too, but through
-      -- its own copy: `rustfmt` is the one that reads the project's
-      -- 'rustfmt.toml' and comes with the active toolchain.
-      rust = { 'rustfmt' },
-      -- `prettier` is what the Angular CLI puts in a new project and what its
-      -- CI runs, so declaring it here is what keeps `<Leader>lf` from
-      -- disagreeing with the command line. It also reads the project's
-      -- '.prettierrc', which neither server would. `htmlangular` is listed
-      -- next to `html` because it is a different filetype to Neovim and would
-      -- otherwise fall through to the server (`prettier` itself sees a '.html'
-      -- file either way).
-      typescript = { 'prettier' },
-      javascript = { 'prettier' },
-      html = { 'prettier' },
-      htmlangular = { 'prettier' },
-      css = { 'prettier' },
-      scss = { 'prettier' },
-      json = { 'prettier' },
-      -- Comes with LLVM, next to the server, so formatter and editor agree by
-      -- construction. It reads the project's '.clang-format', which the
-      -- server would not: the same reason `rustfmt` and `prettier` are
-      -- declared here. Without that file it falls back to the LLVM style, at
-      -- 2 spaces, which is already the default of 'plugin/10_options.lua'.
-      cpp = { 'clang-format' },
-      c = { 'clang-format' },
-      -- The formatter of GDScript Toolkit, the official one of the language.
-      -- Declaring it is what gives `<Leader>lf` something to call at all: the
-      -- Godot server does not implement formatting, so the `lsp_format`
-      -- fallback above would reach a server with nothing to answer. It
-      -- indents with tabs, which is what '$VIMRUNTIME/ftplugin/gdscript.vim'
-      -- already sets in the buffer.
-      gdscript = { 'gdformat' },
-    },
+    -- Declared per language in 'lua/config/toolchain.lua'
+    formatters_by_ft = require('config.toolchain').formatters_by_ft(),
   })
 end)
 

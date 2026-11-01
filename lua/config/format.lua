@@ -5,7 +5,7 @@
 -- Decides what gets formatted: the lines changed against the 'mini.diff'
 -- reference text (the Git index, or the revision `set_diff_ref()` referenced),
 -- the same hunks the gutter signs mark. Which program formats is declared in
--- 'plugin/40_plugins.lua'. Required by name from 'plugin/20_keymaps.lua'.
+-- 'lua/config/toolchain.lua'. Required by name from 'plugin/20_keymaps.lua'.
 
 local M = {}
 
