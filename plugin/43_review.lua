@@ -185,8 +185,8 @@ Config.review.close = function()
         if not pcall(vim.api.nvim_buf_delete, buf_id, {}) then kept = kept + 1 end
       end
     end
-    if diff_ref ~= nil and Config.git.diff_ref == diff_ref.set then
-      Config.git.set_diff_ref(nil, diff_ref.prev)
+    if diff_ref ~= nil and require('config.git').get_diff_ref() == diff_ref.set then
+      require('config.git').set_diff_ref(nil, diff_ref.prev)
     end
 
     Config.report(
@@ -274,7 +274,7 @@ local git_changed = function(diff_args, root, pathspec, label, on_open, fallback
   local on_done = function(out)
     if out.code ~= 0 then
       local cmd_desc = vim.trim('git diff ' .. args)
-      return vim.notify(Config.git.fail(out, cmd_desc), vim.log.levels.ERROR)
+      return vim.notify(require('config.git').fail(out, cmd_desc), vim.log.levels.ERROR)
     end
     local dir, paths = vim.fs.normalize(root), {}
     for _, line in
@@ -285,12 +285,12 @@ local git_changed = function(diff_args, root, pathspec, label, on_open, fallback
     if #paths == 0 and fallback ~= nil then return fallback() end
     Config.review.open(paths, label, on_open)
   end
-  Config.git.run(cmd, { cwd = root }, on_done)
+  require('config.git').run(cmd, { cwd = root }, on_done)
 end
 
 -- Root of the repository to review, `nil` outside one - `Config.git`'s own
 -- resolver and warning, reused instead of repeated across all four sources.
-local review_root = Config.git.require_root
+local review_root = require('config.git').require_root
 
 -- Reference `rev` in every buffer, which is what `<Leader>gr` does by hand, and
 -- write down in the review tabpage both it and the reference it replaces.
@@ -305,14 +305,14 @@ local review_root = Config.git.require_root
 -- on the Git index fallback of the source. The review then holds the right
 -- files and the reference shows what is not staged, neither of them saying
 -- anything is off: a range is reviewed with the reference set on its merge base
--- (`<Leader>gr`, or `:lua Config.git.set_diff_ref(nil, 'main')`).
+-- (`<Leader>gr`, or `:lua require('config.git').set_diff_ref(nil, 'main')`).
 local reference_rev = function(rev)
-  vim.t.review_diff_ref = { set = rev, prev = Config.git.diff_ref }
-  Config.git.set_diff_ref(nil, rev)
+  vim.t.review_diff_ref = { set = rev, prev = require('config.git').get_diff_ref() }
+  require('config.git').set_diff_ref(nil, rev)
 end
 
 -- Review the files changed since `rev`, or since a commit picked from the Git
--- log when it is not given - the same way `Config.git.diff_commit()` picks the
+-- log when it is not given - the same way `require('config.git').diff_commit()` picks the
 -- commit to diff against. `pathspec` narrows the review to a part of the tree,
 -- and holds whether the revision is given or picked.
 --
@@ -343,7 +343,7 @@ Config.review.git = function(rev, pathspec)
   end
   if rev ~= nil then return since(rev) end
 
-  Config.git.pick_commit(nil, since)
+  require('config.git').pick_commit(nil, since)
 end
 
 -- Review the files a commit changed by itself - what `<Leader>gp` shows as a
@@ -370,7 +370,7 @@ Config.review.commit_only = function(rev, pathspec)
   end
   if rev ~= nil then return only(rev) end
 
-  Config.git.pick_commit(nil, only)
+  require('config.git').pick_commit(nil, only)
 end
 
 -- The two sets which need no revision to name them, and the ones read most

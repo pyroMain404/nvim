@@ -126,7 +126,7 @@ end
 -- Notification history reuses one scratch buffer across calls
 -- (`:h MiniNotify.show_history()`) and, left as it is, replaces the CURRENT
 -- window's buffer in place - unlike every `<Leader>g` output buffer
--- ('plugin/41_git.lua'), which opens in its own tabpage (`:h MiniGit-examples`,
+-- ('lua/config/git'), which opens in its own tabpage (`:h MiniGit-examples`,
 -- `command.split = 'auto'`) and closes with `q` without touching what was
 -- being edited. Matching that convention here instead of dropping the read
 -- history into whatever window happened to be current.
@@ -215,26 +215,26 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                       'Visit path
 -- - `<Leader>gL` - show Git log of current file
 -- - `<Leader>gb` - toggle who last changed the line under the cursor
 --
--- Everything these mappings call lives in 'plugin/41_git.lua', under
--- `Config.git`, next to the 'mini.diff' and 'mini.git' setup it configures.
+-- The functions called here live in 'lua/config/git'; they are required by name
+-- so that nothing of the Git workflow loads before the first of these is used.
 
-nmap_leader('ga', '<Cmd>lua Config.git.diff_staged()<CR>',       'Added diff')
-nmap_leader('gA', '<Cmd>lua Config.git.diff_staged(0)<CR>',      'Added diff buffer')
-nmap_leader('gb', '<Cmd>lua Config.git.toggle_blame()<CR>',      'Blame line (toggle)')
-nmap_leader('gc', '<Cmd>Git commit<CR>',                         'Commit')
-nmap_leader('gC', '<Cmd>Git commit --amend<CR>',                 'Commit amend')
-nmap_leader('gd', '<Cmd>lua Config.git.diff_unstaged()<CR>',     'Diff')
-nmap_leader('gD', '<Cmd>lua Config.git.diff_unstaged(0)<CR>',    'Diff buffer')
-nmap_leader('gi', '<Cmd>lua MiniGit.show_at_cursor()<CR>',       'Info at cursor')
-nmap_leader('gl', '<Cmd>lua Config.git.log()<CR>',               'Log')
-nmap_leader('gL', '<Cmd>lua Config.git.log(0)<CR>',              'Log buffer')
-nmap_leader('go', '<Cmd>lua Config.git.toggle_overlay()<CR>',    'Toggle overlay')
-nmap_leader('gp', '<Cmd>lua Config.git.diff_commit_only()<CR>',  'Commit patch')
-nmap_leader('gP', '<Cmd>lua Config.git.diff_commit_only(0)<CR>', 'Commit patch buffer')
-nmap_leader('gr', '<Cmd>lua Config.git.toggle_diff_ref()<CR>',   'Reference revision')
-nmap_leader('gR', '<Cmd>lua Config.git.toggle_diff_ref(0)<CR>',  'Reference revision buffer')
-nmap_leader('gs', '<Cmd>lua Config.git.diff_commit()<CR>',       'Since commit')
-nmap_leader('gS', '<Cmd>lua Config.git.diff_commit(0)<CR>',      'Since commit buffer')
+nmap_leader('ga', "<Cmd>lua require('config.git').diff_staged()<CR>",       'Added diff')
+nmap_leader('gA', "<Cmd>lua require('config.git').diff_staged(0)<CR>",      'Added diff buffer')
+nmap_leader('gb', "<Cmd>lua require('config.git').toggle_blame()<CR>",      'Blame line (toggle)')
+nmap_leader('gc', '<Cmd>Git commit<CR>',                                    'Commit')
+nmap_leader('gC', '<Cmd>Git commit --amend<CR>',                            'Commit amend')
+nmap_leader('gd', "<Cmd>lua require('config.git').diff_unstaged()<CR>",     'Diff')
+nmap_leader('gD', "<Cmd>lua require('config.git').diff_unstaged(0)<CR>",    'Diff buffer')
+nmap_leader('gi', '<Cmd>lua MiniGit.show_at_cursor()<CR>',                  'Info at cursor')
+nmap_leader('gl', "<Cmd>lua require('config.git').log()<CR>",               'Log')
+nmap_leader('gL', "<Cmd>lua require('config.git').log(0)<CR>",              'Log buffer')
+nmap_leader('go', "<Cmd>lua require('config.git').toggle_overlay()<CR>",    'Toggle overlay')
+nmap_leader('gp', "<Cmd>lua require('config.git').diff_commit_only()<CR>",  'Commit patch')
+nmap_leader('gP', "<Cmd>lua require('config.git').diff_commit_only(0)<CR>", 'Commit patch buffer')
+nmap_leader('gr', "<Cmd>lua require('config.git').toggle_diff_ref()<CR>",   'Reference revision')
+nmap_leader('gR', "<Cmd>lua require('config.git').toggle_diff_ref(0)<CR>",  'Reference revision buffer')
+nmap_leader('gs', "<Cmd>lua require('config.git').diff_commit()<CR>",       'Since commit')
+nmap_leader('gS', "<Cmd>lua require('config.git').diff_commit(0)<CR>",      'Since commit buffer')
 
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 
@@ -320,10 +320,10 @@ nmap_leader('sw', '<Cmd>lua MiniSessions.write()<CR>',                          
 -- - `<Leader>tt` / `<Leader>tT` - terminal in vertical/horizontal split
 -- - `<Leader>tl` - 'lazygit' in a centered floating window. Quit it as usual
 --   (`q`) to close the window and reload files it changed on disk. It is the
---   Git client of this config, so it is set up in 'plugin/41_git.lua'.
-nmap_leader('tl', '<Cmd>lua Config.git.lazygit()<CR>', 'Lazygit')
-nmap_leader('tT', '<Cmd>horizontal term<CR>',          'Terminal (horizontal)')
-nmap_leader('tt', '<Cmd>vertical term<CR>',            'Terminal (vertical)')
+--   Git client of this config, so it lives in 'lua/config/git/lazygit.lua'.
+nmap_leader('tl', "<Cmd>lua require('config.git').lazygit()<CR>", 'Lazygit')
+nmap_leader('tT', '<Cmd>horizontal term<CR>',                     'Terminal (horizontal)')
+nmap_leader('tt', '<Cmd>vertical term<CR>',                       'Terminal (vertical)')
 
 -- v is for 'Visits'. Common usage:
 -- - `<Leader>vv` - add    "core" label to current file.

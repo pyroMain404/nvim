@@ -127,26 +127,21 @@ now(function() require('mini.starter').setup() end)
 -- - `:h MiniStatusline-example-content` - example of default content. Use it to
 --   configure a custom statusline by setting `config.content.active` function.
 --
--- The diff section is wrapped to put the label of 'plugin/41_git.lua' in front
--- of the diff counts: which revision they are read against (`@HEAD~`), whether
--- that is for this buffer only (`@HEAD~ (buf)`), and whether the overlay is on.
--- The default content calls `MiniStatusline.section_diff()` at every redraw, so
--- wrapping it leaves the rest of the statusline and its truncation to the
--- module: the label stays when the counts are dropped for lack of width.
--- NOTE: this depends on the default `config.content.active` calling
--- `section_diff()` (`H.default_content_active()` in mini.nvim's
--- 'lua/mini/statusline.lua'); a custom `content.active` that does not call it
--- loses the label without any message. The default function is kept in
--- `Config.section_diff_default` so that sourcing this file again wraps it once.
+-- The diff section is wrapped to put the label of 'lua/config/git/diffref.lua'
+-- in front of the diff counts: the revision they are read against, its scope and
+-- whether the overlay is on. Wrapping `section_diff()` leaves the rest of the
+-- statusline and its truncation to the module.
+-- NOTE: a custom `config.content.active` that does not call `section_diff()` loses
+-- the label without any message. The label is read only once the Git modules are
+-- loaded, so that a redraw never loads them.
 now(function()
   require('mini.statusline').setup()
 
-  Config.section_diff_default = Config.section_diff_default
-    or MiniStatusline.section_diff
+  local default = MiniStatusline.section_diff
   MiniStatusline.section_diff = function(args)
-    local diff = Config.section_diff_default(args)
-    local git = Config.git
-    local label = git and git.diff_ref_label(vim.api.nvim_get_current_buf())
+    local diff = default(args)
+    local diffref = package.loaded['config.git.diffref']
+    local label = diffref and diffref.label(vim.api.nvim_get_current_buf())
     if not label then return diff end
     return diff == '' and label or (label .. ' ' .. diff)
   end
@@ -535,7 +530,7 @@ Config.new_autocmd(
 -- - `gHgh` - reset (`gH`) hunk at cursor (`gh`)
 -- - `<Leader>go` - toggle overlay
 --
--- Nothing about the source is passed here: 'plugin/41_git.lua' attaches its own
+-- Nothing about the source is passed here: 'lua/config/git/diffref.lua' attaches its own
 -- when a revision is referenced (`<Leader>gr`), and the default one is what
 -- reading against the Git index means.
 --
@@ -563,8 +558,8 @@ later(function() require('mini.git').setup() end)
 -- - and what makes them answer it together is a whole area of its own: the
 -- revision used as diff reference, the navigation inside the output of `:Git`,
 -- the blame of the line under the cursor. That code is not a module setup, so
--- it is not here: it is 'plugin/41_git.lua', which builds on the two `setup()`
--- calls above and exposes `Config.git`. Their configuration stays here.
+-- it is not here: it is 'lua/config/git', which builds on the two `setup()`
+-- calls above. Their configuration stays here.
 
 -- Highlight patterns in text. Like `TODO`/`NOTE` or color hex codes.
 -- Example usage:
