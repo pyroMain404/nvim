@@ -12,18 +12,13 @@
 -- It is used by `:h vim.lsp.enable()` and `:h vim.lsp.config()`.
 -- See `:h vim.lsp.Config` and `:h vim.lsp.ClientConfig` for all available fields.
 --
--- `cmd` is deliberately absent from what this file returns. Every
--- 'lsp/jdtls.lua' found on 'runtimepath' is merged with
--- `vim.tbl_deep_extend('force')`, which merges tables but *replaces* functions,
--- and the one in 'nvim-lspconfig' defines `cmd` as a function: it builds the
--- `-data` workspace directory under `:h stdpath()` cache from the project root
--- and adds the JVM arguments of `$JDTLS_JVM_ARGS`. Writing `cmd` here as the
--- usual list would delete all of that and make every project share one
--- workspace. Its `root_markers` are two ordered groups (`mvnw`, `gradlew`,
--- '.git' first, then 'pom.xml' and the Gradle build files), which is what keeps
--- a multi-module build on one client instead of one per module. Run
--- `:=vim.lsp.config['jdtls']` to read the merged result; buffer-local behavior
--- belongs in an `:h LspAttach` autocommand.
+-- `cmd` is deliberately absent from what this file returns: the one in
+-- 'nvim-lspconfig' is a function that builds the `-data` workspace directory
+-- from the project root and adds `$JDTLS_JVM_ARGS`, and a `cmd` list here would
+-- replace it (see the `tbl_deep_extend` NOTE in 'after/lsp/ts_ls.lua') and make
+-- every project share one workspace.
+-- Run `:=vim.lsp.config['jdtls']` to read the merged result; buffer-local
+-- behavior belongs in an `:h LspAttach` autocommand.
 --
 -- Everything this file knows about which JDKs exist it asks `mise`, and
 -- everything it knows about which one a project needs it asks the server. No
@@ -114,8 +109,8 @@ end
 -- Java 21' there, and nothing at all in Neovim.
 --
 -- That last case is the trap, because it ties the server to the toolchain of
--- the project being opened. A repository pinning Java 11 through `mise` - every
--- PASS repository under '~/workspace/RGI' does - leaves no client attached,
+-- the project being opened. A repository pinning Java 11 through `mise`
+-- leaves no client attached,
 -- with nothing wrong in the project and no message anywhere the user is
 -- looking. `MISE_JAVA_VERSION` decouples the two for this process alone: the
 -- server starts on the JDK chosen here, while the same directory keeps
@@ -135,7 +130,13 @@ end
 -- `JAVA_HOME` here looks right, changes nothing, and fails silently. The exact
 -- installed version is what `mise` is asked for, because that string resolves
 -- from any directory, while an alias can be shadowed by a project's 'mise.toml'.
-local server_jdk = jdks[#jdks]
+local server_entry = mise.newest(
+  'java',
+  function(entry) return entry.path ~= nil and major_of(entry.version) ~= nil end
+)
+local server_jdk = server_entry
+    and { major = major_of(server_entry.version), version = server_entry.version }
+  or nil
 if server_jdk == nil then
   vim.notify_once(
     'no JDK is installed through `mise`, so jdtls falls back to the JDK of the '
@@ -183,8 +184,8 @@ end
 -- unreachable repository, a parent POM that does not resolve - jdtls keeps
 -- answering: it falls back to a bare JDK project at its own release, so the
 -- compliance it reports is its own and always has a runtime. Believing it turns
--- every failed import into a silent pass, and that is the state of every PASS
--- repository under '~/workspace/RGI' while the Maven credentials are unset.
+-- every failed import into a silent pass, and that is the state of a Maven
+-- project whose repository credentials are unset.
 -- Measured there: `java.project.getAll` empty, compliance answered as 21,
 -- 'pom.xml' saying 11, and one error on 'pom.xml' about the parent POM.
 --

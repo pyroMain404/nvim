@@ -43,4 +43,12 @@ function M.installed(tool)
   return vim.fn.reverse(installed)
 end
 
+-- First installed entry of `tool` (newest first) that `accept(entry)` takes, or
+-- the first one when `accept` is nil; `nil` when there is none.
+function M.newest(tool, accept)
+  for _, entry in ipairs(M.installed(tool) or {}) do
+    if accept == nil or accept(entry) then return entry end
+  end
+end
+
 return M

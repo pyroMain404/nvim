@@ -23,8 +23,8 @@ local mise = require('config.mise')
 --
 -- A `mise` shim resolves its tools from the current directory, so a repository
 -- pinning an old Node hands that one to every program started inside it, the
--- language server included. Node 14 is the ceiling of Angular 15 and the pin of
--- every PASS portal checkout, and on it this server does not start at all:
+-- language server included. Node 14 is the ceiling of Angular 15, and on it
+-- this server does not start at all:
 -- measured, `typescript-language-server` 6.0.0 dies while parsing its own code
 -- with `SyntaxError: Unexpected token '??='` - the nullish assignment, which
 -- Node gained in 15. Neovim reports none of that. The client simply never
@@ -43,14 +43,11 @@ local mise = require('config.mise')
 -- shim recomputes its own environment from the tools of its working directory
 -- and overwrites what it inherited, so anything pointing at an interpreter is
 -- read and then discarded - silently, which is the part that costs a day.
-local node = nil
-for _, entry in ipairs(mise.installed('node') or {}) do
-  local major = tonumber(tostring(entry.version):match('^(%d+)'))
-  if major ~= nil then
-    local known = node ~= nil and tonumber(node:match('^(%d+)')) or -1
-    if major > known then node = entry.version end
-  end
-end
+local node_entry = mise.newest(
+  'node',
+  function(entry) return tonumber(tostring(entry.version):match('^(%d+)')) ~= nil end
+)
+local node = node_entry and node_entry.version or nil
 
 if node == nil then
   vim.notify_once(
@@ -88,14 +85,16 @@ end
 -- file exists to prevent, wearing a different mask. Requiring `tsserver.js`
 -- itself, not just the `lib` directory, skips a TypeScript 7 install and
 -- keeps walking to an older one that still has it.
-local tsserver_fallback = nil
-for _, entry in ipairs(mise.installed('npm:typescript') or {}) do
-  local lib = vim.fs.joinpath(entry.path, 'node_modules', 'typescript', 'lib')
-  if vim.fn.filereadable(vim.fs.joinpath(lib, 'tsserver.js')) == 1 then
-    tsserver_fallback = lib
-    break
-  end
+local function lib_of(entry)
+  return vim.fs.joinpath(entry.path, 'node_modules', 'typescript', 'lib')
 end
+local ts_entry = mise.newest(
+  'npm:typescript',
+  function(entry)
+    return vim.fn.filereadable(vim.fs.joinpath(lib_of(entry), 'tsserver.js')) == 1
+  end
+)
+local tsserver_fallback = ts_entry and lib_of(ts_entry) or nil
 
 return {
   -- HACK: this whole function exists to pass one environment variable, and it
@@ -114,12 +113,15 @@ return {
   -- Delete this and go back to a plain `cmd_env` the day either the plugin
   -- forwards it or `cmd` stops being a function.
   --
+  -- NOTE: `vim.tbl_deep_extend('force')` merges tables but replaces functions,
+  -- so this `cmd` replaces the one of 'nvim-lspconfig' (and 'after/lsp/jdtls.lua'
+  -- leaves `cmd` out for the same reason).
+  --
   -- The preference for a `typescript-language-server` inside the project's own
   -- 'node_modules/.bin' is kept, because dropping it would be a second, silent
   -- change: it is what a monorepo pinning its own server relies on. It resolves
-  -- to nothing here - the PASS portal does not carry one - and a project that
-  -- does gets it launched on the same Node as the global one, which is the
-  -- point.
+  -- to nothing in a project that carries none - and a project that does gets it
+  -- launched on the same Node as the global one, which is the point.
   cmd = function(dispatchers, config)
     local cmd = 'typescript-language-server'
     local root = (config or {}).root_dir
