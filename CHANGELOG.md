@@ -1,14 +1,20 @@
 ## 2026-11-01
 
-- Fix go to definition on a class of the JDK or a jar opening nothing (jdtls answers an empty list): `jdtls` is told it can serve `java/classFileContents` and a `BufReadCmd` on `jdt://*` opens the class source as a read-only `java` buffer with jdtls attached, so `gd`, `K` and `K` in a hover window work inside it.
-
-- Fix typing in a Java buffer filling the screen with `jdtls: Validate documents` and `jdtls: Publish Diagnostics` notifications: 'mini.notify' no longer shows those two progress reports, which jdtls opens on every document change, while importing and building still show; they stay in the history of `<Leader>en`.
+- Fix `gf` on a Markdown link in a hover window (`jdt://` or `file://`) opening the file inside the floating window, and `gF` ignoring the `#<line>` of a `jdt://` link: both close the window and open the target in the window the hover started from, `gF` at the line. Add `<C-o>` and `<C-i>` in a hover window: they walk back and forward through the hovers opened with `K`, which replace one another and so leave the jump list nothing to go back to.
 
 - Fix a Markdown link that fits the window once its destination is hidden leaving an empty row after it in a floating window (the `See Also` links of a Java hover): Neovim sizes a wrapped line from its raw text, so such a window is now shown without 'wrap' and fitted to its lines; the text of the buffer is not touched.
 
 - Fix spell checking underlining words in the hover opened by `K` and in other floating Markdown windows: 'spell' is now off there.
 
 - Fix `j` not leaving a line in Markdown `reading` state when the line is long and mostly concealed (the `See Also` links of a Java hover): `gj` counts the cells of concealed text and stepped into screen rows that are never drawn, where the cursor was pulled back; `j` now goes to the next line when `gj` lands in one.
+
+- Fix go to definition on a class of the JDK or a jar opening nothing (jdtls answers an empty list): `jdtls` is told it can serve `java/classFileContents` and a `BufReadCmd` on `jdt://*` opens the class source as a read-only `java` buffer with jdtls attached, so `gd`, `K` and `K` in a hover window work inside it.
+
+- Fix `K` in a hover window not resolving a type the document does not mention (`PrintStream` in `System.out.println`): when the word is not in the document nor known by name to the server, it is looked up in the document that declares what the window is about, and a `workspace/symbol` hit placed at the top of its file is replaced by the first declaration found in the text.
+
+- Fix typing in a Java buffer filling the screen with `jdtls: Validate documents` and `jdtls: Publish Diagnostics` notifications: 'mini.notify' no longer shows those two progress reports, which jdtls opens on every document change, while importing and building still show; they stay in the history of `<Leader>en`.
+
+- Add `K` inside an LSP hover window: it replaces the window with the hover of the word under the cursor (`os` or `DirEntry` in `var entries []os.DirEntry`), focused, so `K` goes on from there; the word is looked up in the code of the document the window came from (comments and strings are skipped, through tree-sitter) and, failing that, or when that document has no parser, with `workspace/symbol`, then as the bare word without its qualifier (`println` for `PrintStream.println`), and `q` closes the window.
 
 - Add `:Run` for a C, C++ or Rust file in no project: it compiles the file with `clang`, `clang++` or `rustc --edition 2024` into `stdpath('cache')/run` and runs the result in the terminal split, compiler errors included; arguments go to the program, and a project (`Cargo.toml`, `CMakeLists.txt`, `Makefile`) behaves as before.
 
