@@ -215,17 +215,19 @@ function M.attach(buf)
 
     -- NOTE: render-markdown attaches in its own `FileType` autocmd, after the
     -- ftplugin, and `set_buf()` ignores unattached buffers; hence the schedule.
-    if renderer_available then
-      vim.schedule(function()
-        if vim.api.nvim_buf_is_valid(buf) then
-          vim.api.nvim_buf_call(buf, function()
-            local win = vim.fn.win_findbuf(buf)[1]
-            local floating = win and vim.api.nvim_win_get_config(win).relative ~= ''
-            set_state(vim.b.markdown_om_start or (floating and 'reading' or 'live'))
-          end)
+    vim.schedule(function()
+      if not vim.api.nvim_buf_is_valid(buf) then return end
+      vim.api.nvim_buf_call(buf, function()
+        local win = vim.fn.win_findbuf(buf)[1]
+        local floating = win and vim.api.nvim_win_get_config(win).relative ~= ''
+        if floating then
+          vim.wo[win][0].spell = false
+        end
+        if renderer_available then
+          set_state(vim.b.markdown_om_start or (floating and 'reading' or 'live'))
         end
       end)
-    end
+    end)
 
     vim.keymap.set('n', '<Leader>om', function()
       if guard() then

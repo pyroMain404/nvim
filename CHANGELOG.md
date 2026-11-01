@@ -1,5 +1,7 @@
 ## 2026-11-01
 
+- Fix spell checking underlining words in the hover opened by `K` and in other floating Markdown windows: 'spell' is now off there.
+
 - Fix `j` not leaving a line in Markdown `reading` state when the line is long and mostly concealed (the `See Also` links of a Java hover): `gj` counts the cells of concealed text and stepped into screen rows that are never drawn, where the cursor was pulled back; `j` now goes to the next line when `gj` lands in one.
 
 - Add `:Run` for a C, C++ or Rust file in no project: it compiles the file with `clang`, `clang++` or `rustc --edition 2024` into `stdpath('cache')/run` and runs the result in the terminal split, compiler errors included; arguments go to the program, and a project (`Cargo.toml`, `CMakeLists.txt`, `Makefile`) behaves as before.
