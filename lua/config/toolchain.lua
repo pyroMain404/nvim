@@ -41,12 +41,12 @@ M.external = {
   {
     exe = 'rg',
     why = '`<Leader>ff` and `<Leader>fg` get slower',
-    advice = winget('BurntSushi.ripgrep.GNU'),
+    advice = mise('ripgrep@latest'),
   },
   {
     exe = 'lazygit',
     why = '`<Leader>tl` warns and does nothing',
-    advice = winget('JesseDuffield.lazygit'),
+    advice = mise('lazygit@latest'),
   },
   {
     exe = 'stylua',
