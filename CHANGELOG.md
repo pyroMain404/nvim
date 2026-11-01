@@ -1,5 +1,7 @@
 ## 2026-11-01
 
+- Fix the Markdown shown by `K` (LSP hover) opening in `live` state: any Markdown buffer in a floating window now starts in `reading`, the nonmodifiable state, while `b:markdown_om_start` still overrides it.
+
 - Fix `<Tab>` and `<S-Tab>` doing nothing in a snippet session: they now jump to the next and previous tabstop of a 'mini.snippets' session (LSP snippets included) and fall back to the completion popup and to a literal tab as before; `<C-l>` and `<C-h>` keep working.
 
 - Add Go support: parsers `go`, `gomod` and `gowork`, `gopls` with the staticcheck analyzers, `gofmt` on `<Leader>lf`, `compiler/go.lua` so `:make build|vet|test ./...` fills the quickfix list (test failures and panic frames included), `:Run` for `go run`, and a `:checkhealth config` section; a tool whose version command is not `--version` names it in `toolchain.lua`.

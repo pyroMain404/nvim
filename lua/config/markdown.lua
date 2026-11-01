@@ -112,7 +112,8 @@ local function guard()
   )
 end
 
--- Attach to buffer `buf`: `live` by default, `b:markdown_om_start` overrides.
+-- Attach to buffer `buf`: `live` by default, `reading` in a floating window (the
+-- LSP hover opened by `K`), `b:markdown_om_start` overrides both.
 function M.attach(buf)
   buf = buf == 0 and vim.api.nvim_get_current_buf() or buf
   vim.api.nvim_buf_call(buf, function()
@@ -205,10 +206,11 @@ function M.attach(buf)
     if renderer_available then
       vim.schedule(function()
         if vim.api.nvim_buf_is_valid(buf) then
-          vim.api.nvim_buf_call(
-            buf,
-            function() set_state(vim.b.markdown_om_start or 'live') end
-          )
+          vim.api.nvim_buf_call(buf, function()
+            local win = vim.fn.win_findbuf(buf)[1]
+            local floating = win and vim.api.nvim_win_get_config(win).relative ~= ''
+            set_state(vim.b.markdown_om_start or (floating and 'reading' or 'live'))
+          end)
         end
       end)
     end
