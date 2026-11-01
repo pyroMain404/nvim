@@ -1,0 +1,185 @@
+-- ┌─────────────┐
+-- │  obsidian   │
+-- └─────────────┘
+-- Lazy multi-vault setup of obsidian.nvim, called from 'plugin/40_plugins.lua'.
+
+local M = {}
+
+-- A vault is the nearest ancestor directory named '.obsidian'.
+-- NOTE: `MiniMisc.find_root()` cannot match directories and shares its cache
+-- with `setup_auto_root()`, so call `vim.fs.find()` directly.
+local find_vault_root = function(buf_id)
+  local path = vim.api.nvim_buf_get_name(buf_id)
+  if path == '' then return nil end
+  local marker = vim.fs.find(
+    { '.obsidian' },
+    { path = vim.fs.dirname(path), upward = true, type = 'directory' }
+  )[1]
+  return marker and vim.fs.dirname(marker) or nil
+end
+
+-- Per-vault settings from '.obsidian/nvim.json', merged over `setup()` ones.
+-- NOTE: read once, when the vault is first seen; restart Neovim to apply it.
+local vault_overrides = function(root)
+  local path = root .. '/.obsidian/nvim.json'
+  if vim.fn.filereadable(path) == 0 then return nil end
+  local ok, overrides = pcall(
+    vim.json.decode,
+    table.concat(vim.fn.readfile(path), '\n'),
+    { luanil = { object = true, array = true } }
+  )
+  if ok and type(overrides) == 'table' then return overrides end
+  vim.notify(path .. ' is not a JSON object', vim.log.levels.WARN)
+end
+
+-- HACK: obsidian.nvim 4eec5b1 shows only `entry.text` when it is set, and
+-- for the notes of an ambiguous link `text` is their first line, so the
+-- picker offers rows that all read `---` (the frontmatter). Show the path
+-- and, for an entry at the top of a file, its first line after the
+-- frontmatter. Delete this when `make_display()` shows the path itself.
+local patch_make_display = function()
+  local first_body_line = function(path)
+    local ok, lines = pcall(vim.fn.readfile, path, '', 200)
+    if not ok then return nil end
+    local from = 1
+    if lines[1] == '---' then
+      from = vim.fn.index(lines, '---', 1) + 2
+      if from < 3 then return nil end
+    end
+    return vim
+      .iter(lines)
+      :skip(from - 1)
+      :find(function(line) return line:find('%S') end)
+  end
+  local picker_util = require('obsidian.picker.util')
+  local make_display = picker_util.make_display
+  picker_util.make_display = function(entry)
+    if type(entry) ~= 'table' or not entry.filename or not entry.text then
+      return make_display(entry)
+    end
+    local shown = vim.deepcopy(entry)
+    shown.text = nil
+    if entry.lnum == 1 then
+      shown.lnum, shown.col = nil, nil
+      entry = { text = first_body_line(entry.filename) or entry.text }
+    end
+    return make_display(shown) .. '  ' .. entry.text
+  end
+end
+
+local enter_note = function(note)
+  -- `<Leader>j`: picker of `:Obsidian` commands (selection ones in Visual mode).
+  for mode, rhs in pairs({ n = '<Cmd>Obsidian<CR>', x = ':Obsidian<CR>' }) do
+    vim.keymap.set(
+      mode,
+      '<Leader>j',
+      rhs,
+      { buf = note.bufnr, desc = 'Obsidian commands' }
+    )
+  end
+  -- 'includeexpr' cannot follow headings nor `[[#heading]]`.
+  vim.keymap.set(
+    'n',
+    'gf',
+    function()
+      return require('obsidian.api').cursor_link()
+          and '<Cmd>Obsidian follow_link<CR>'
+        or 'gf'
+    end,
+    { buf = note.bufnr, expr = true, desc = 'Follow Obsidian link or file' }
+  )
+  -- Replace the plugin's `]o` / `[o`; shadows 'mini.bracketed' conflict markers in vault notes.
+  for key, direction in pairs({ [']x'] = 'next', ['[x'] = 'prev' }) do
+    vim.keymap.set(
+      'n',
+      key,
+      function() require('obsidian.actions').nav_link(direction, true) end,
+      { buf = note.bufnr, desc = 'Obsidian ' .. direction .. ' link' }
+    )
+  end
+end
+
+local obsidian_loaded = false
+local obsidian_roots = {}
+
+-- Install/setup happens on the first vault seen; later vaults only register a
+-- workspace (obsidian.nvim switches the active one from its own `FileType` autocmd).
+local setup_obsidian = function(spec, ev)
+  local root = find_vault_root(ev.buf)
+  if not root or obsidian_roots[root] then return end
+
+  if not obsidian_loaded then
+    -- HACK: obsidian.nvim c25aa3d (upstream main) renames the whole note when
+    -- `vim.lsp.buf.rename()` runs on a block id, heading, footnote, tag or
+    -- attachment, instead of the element under the cursor, and has no way to
+    -- keep a `title` or a first heading equal to the `id` in step with it. This
+    -- branch of a fork fixes all of it (proposal:
+    -- obsidian-nvim/obsidian.nvim#1007; the rest is `frontmatter.sync_title`,
+    -- `note.sync_heading` and `note.sync_filename`). Go back to
+    -- 'https://github.com/obsidian-nvim/obsidian.nvim' once they are merged.
+    vim.pack.add({ spec })
+    if #vim.api.nvim_get_runtime_file('lua/obsidian/init.lua', false) == 0 then
+      vim.notify_once(
+        'obsidian.nvim is unavailable; run :checkhealth config',
+        vim.log.levels.ERROR
+      )
+      return
+    end
+    -- The plugin's `<CR>`, `]o`, `[o` maps stay off; it reads this flag once per note.
+    vim.g.obsidian_default_keymap = false
+    require('obsidian').setup({
+      legacy_commands = false,
+      -- See 'docs/Frontmatter.md' and 'docs/Note.md' of the plugin.
+      frontmatter = { sync_title = true },
+      note = { sync_heading = true, sync_filename = true },
+      picker = { name = 'mini.pick' },
+      templates = {
+        substitutions = {
+          -- Alias of 'tmpl_persona', which Obsidian's Templates cannot compute.
+          first_word = function(ctx)
+            local title = ctx.partial_note and ctx.partial_note:display_name()
+            return title and title:match('%S+') or ''
+          end,
+        },
+      },
+      callbacks = { enter_note = enter_note },
+      workspaces = {
+        { name = root, path = root, overrides = vault_overrides(root) },
+      },
+    })
+    patch_make_display()
+    obsidian_loaded = true
+  else
+    table.insert(
+      Obsidian.workspaces,
+      require('obsidian.workspace').new({
+        name = root,
+        path = root,
+        overrides = vault_overrides(root),
+      })
+    )
+  end
+  obsidian_roots[root] = true
+end
+
+---@param spec table vim.pack spec of obsidian.nvim
+function M.setup(spec)
+  -- NOTE: '*.base' is not matched: obsidian.nvim attaches only to `FileType` markdown/quarto.
+  Config.new_autocmd(
+    { 'BufReadPre', 'BufNewFile' },
+    { '*.md', '*.markdown', '*.qmd' },
+    function(ev) setup_obsidian(spec, ev) end,
+    'Setup obsidian.nvim for vault'
+  )
+
+  -- Buffers loaded at startup through `-c`/session/`--cmd` already fired `BufReadPre`.
+  vim.schedule(function()
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype == 'markdown' then
+        setup_obsidian(spec, { buf = buf })
+      end
+    end
+  end)
+end
+
+return M
