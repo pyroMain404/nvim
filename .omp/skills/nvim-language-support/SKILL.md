@@ -298,6 +298,9 @@ Un commit a sé, separato da quelli della config.
   macchina e l'assenza come stato legittimo; un `:make` che risponde a una
   domanda più piccola di quella che sembra; e un set di snippet già attivo e già
   sbagliato, che è il modo in cui la Fase 1 viene saltata senza accorgersene.
+- `references/go.md` — Go: un compiler plugin del runtime fermo al 2014 che si
+  eredita e si corregge invece di riscrivere, tool che non rispondono a `--version`,
+  e un server le cui analisi arrivano dopo le diagnostiche di tipo.
 - `assets/` — gli scheletri dei file da creare.
 
 ### La forma di una reference di linguaggio

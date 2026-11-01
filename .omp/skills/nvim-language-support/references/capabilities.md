@@ -441,6 +441,16 @@ CMake un errore di parsing del `CMakeLists.txt` e una build directory mai
 configurata, che il compilatore non vede perché non gira affatto. È l'opposto del
 ricopiare venti righe di formato, che invecchiano alla prima modifica a monte.
 
+**Dove si aggiungono le righe conta quanto cosa dicono.** Un formato si prova in ordine
+e vince la prima riga che combacia, e il formato ereditato di solito chiude con un
+`%-G%.%#` che scarta tutto il resto: un `errorformat+=` finisce **dopo** quel
+catch-all e non scatta mai, senza errore. Ciò che deve battere il formato ereditato
+(l'output di `go vet` con il nome dello strumento davanti, un test fallito con
+l'indentazione) si aggiunge con `errorformat^=`, che **antepone** — quindi le righe
+scritte per ultime sono le prime provate, e un filtro `%-G` che deve precedere una
+riga `%f:%l` va scritto *dopo* di essa (`compiler/go.lua`; misurato: scritti
+nell'ordine inverso, i frame della libreria standard entravano nella quickfix).
+
 ### L'output colorato è la causa più comune di una quickfix vuota
 
 Molti strumenti moderni colorano le diagnostiche, e **una sequenza di escape in
