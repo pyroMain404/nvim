@@ -1,5 +1,7 @@
 ## 2026-11-01
 
+- Fix `<Tab>` and `<S-Tab>` doing nothing in a snippet session: they now jump to the next and previous tabstop of a 'mini.snippets' session (LSP snippets included) and fall back to the completion popup and to a literal tab as before; `<C-l>` and `<C-h>` keep working.
+
 - Split `plugin/` into wiring and modules: `plugin/` files now only wire, and the behavior lives in `lua/config/` (`git/`, `format`, `review`, `winbar`, `make`, `lsp`, `markers`, `markdown`, `obsidian`, `ft`, `toolchain`), with the modules needed at startup switched on from the new `plugin/50_features.lua`; `plugin/41_git.lua`, `plugin/42_format.lua` and `plugin/43_review.lua` are gone.
 
 - Remove the `Config.git`, `Config.format`, `Config.review`, `Config.winbar`, `Config.pristine_path`, `Config.confirm`, `Config.report`, `Config.on_event` and `Config.on_filetype` globals: modules are required by name (`require('config.git')`), the global value of 'path' lives in `lua/config/path.lua`, and `Config` keeps `new_autocmd`, `on_packchanged`, `now`, `later` and `now_if_args`.

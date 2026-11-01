@@ -247,8 +247,9 @@ later(function() require('mini.jump2d').setup() end)
 -- Multistep and combo mappings (`:h MiniKeymap-examples`).
 later(function()
   require('mini.keymap').setup()
-  MiniKeymap.map_multistep('i', '<Tab>', { 'pmenu_next' })
-  MiniKeymap.map_multistep('i', '<S-Tab>', { 'pmenu_prev' })
+  -- NOTE: in a snippet session <Tab> jumps instead of inserting a tab; <C-v><Tab> still does.
+  MiniKeymap.map_multistep('i', '<Tab>', { 'minisnippets_next', 'pmenu_next' })
+  MiniKeymap.map_multistep('i', '<S-Tab>', { 'minisnippets_prev', 'pmenu_prev' })
   MiniKeymap.map_multistep('i', '<CR>', { 'pmenu_accept', 'minipairs_cr' })
 end)
 
