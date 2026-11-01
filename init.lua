@@ -108,29 +108,4 @@ Config.now = function(f) misc.safely('now', f) end
 Config.later = function(f) misc.safely('later', f) end
 Config.now_if_args = vim.fn.argc(-1) > 0 and Config.now or Config.later
 
--- Ask a yes/no question and run `on_yes` only on a clear 'y'. Used by any
--- part of the config that needs permission before acting, so the prompt shape
--- and the predicate live in one place.
-Config.confirm = function(prompt, on_yes)
-  vim.ui.input({ prompt = prompt .. ' (y/n) ' }, function(answer)
-    if (answer or ''):lower() == 'y' then on_yes() end
-  end)
-end
-
--- Report how many items of a batch operation succeeded and how many failed,
--- picking the notification level from the failure count. Used by review close,
--- review open and any future bulk operation that needs a single summary.
--- The two labels are required, not defaulted: what is 1 item of the batch is a
--- file when opening a review and a buffer when closing one, so a generic
--- default would read as a wrong count rather than as a missing argument.
-Config.report = function(message, done, failed, done_label, failed_label)
-  local msg = message .. ': ' .. done .. ' ' .. done_label
-  local level = vim.log.levels.INFO
-  if failed > 0 then
-    msg = msg .. ', ' .. failed .. ' ' .. failed_label
-    level = vim.log.levels.WARN
-  end
-  vim.notify(msg, level)
-end
-
 vim.o.exrc = true

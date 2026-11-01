@@ -296,14 +296,13 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',            'Zoom toggle')
 -- - `<Leader>rp` - open the files that commit changed by itself
 -- - `<Leader>rc` - close the review and drop the buffers it opened
 --
--- Everything these mappings call lives in 'plugin/43_review.lua', under
--- `Config.review`.
+-- The functions called here live in 'lua/config/review.lua'.
 
-nmap_leader('ra', '<Cmd>lua Config.review.staged()<CR>',       'Added files')
-nmap_leader('rc', '<Cmd>lua Config.review.close()<CR>',        'Close review')
-nmap_leader('rd', '<Cmd>lua Config.review.unstaged()<CR>',     'Diff files')
-nmap_leader('rp', '<Cmd>lua Config.review.commit_only()<CR>',  'Commit files')
-nmap_leader('rs', '<Cmd>lua Config.review.git()<CR>',          'Since commit files')
+nmap_leader('ra', "<Cmd>lua require('config.review').staged()<CR>",      'Added files')
+nmap_leader('rc', "<Cmd>lua require('config.review').close()<CR>",       'Close review')
+nmap_leader('rd', "<Cmd>lua require('config.review').unstaged()<CR>",    'Diff files')
+nmap_leader('rp', "<Cmd>lua require('config.review').commit_only()<CR>", 'Commit files')
+nmap_leader('rs', "<Cmd>lua require('config.review').git()<CR>",         'Since commit files')
 
 -- s is for 'Session'. Common usage:
 -- - `<Leader>sn` - start new session
