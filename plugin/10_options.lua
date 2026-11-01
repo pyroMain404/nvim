@@ -17,9 +17,10 @@ vim.o.shada = "'100,<50,s10,:1000,/100,@100,h" -- Limit ShaDa file (for startup)
 -- PowerShell 7 for `:!`, `:make`, `system()` and the terminal.
 -- NOTE: `shellquote`/`shellxquote` are cleared (`pwsh -Command` parses its own
 -- argument); `shellpipe`/`shellredir` write UTF8, UTF-16LE would corrupt quickfix.
+-- `-NonInteractive`: `system('echo')` (`:checkhealth`) makes pwsh prompt for input.
 if vim.fn.has('win32') == 1 then
   vim.o.shell = 'pwsh'
-  vim.o.shellcmdflag = '-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command'
+  vim.o.shellcmdflag = '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned -Command'
   vim.o.shellredir = '2>&1 | Out-File -Encoding UTF8 %s; exit $LastExitCode'
   vim.o.shellpipe = '2>&1 | Tee-Object %s; exit $LastExitCode'
   vim.o.shellquote = ''
