@@ -71,6 +71,18 @@ local function move_visible(direction)
     vim.cmd.normal({ args = { motion }, bang = true })
     local current = vim.api.nvim_win_get_cursor(0)
     if vim.deep_equal(current, before) then return end
+    -- `gj` counts the cells of concealed text, so a long concealed line has rows
+    -- that are never drawn. When it lands in one, `skip_hidden()` pulls the cursor
+    -- back and `j` would never leave the line: go to the next line instead.
+    if direction == 'j' and current[1] == before[1] then
+      require('config.mdlink').skip_hidden(before[2] + 1)
+      if vim.api.nvim_win_get_cursor(0)[2] < current[2] then
+        vim.api.nvim_win_set_cursor(0, before)
+        vim.cmd.normal({ args = { 'j' }, bang = true })
+      end
+      current = vim.api.nvim_win_get_cursor(0)
+      if vim.deep_equal(current, before) then return end
+    end
     if not line_is_hidden(current[1]) then remaining = remaining - 1 end
   end
 end
