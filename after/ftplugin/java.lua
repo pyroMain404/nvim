@@ -22,14 +22,10 @@
 vim.bo.shiftwidth = 4
 vim.bo.softtabstop = 4
 
--- Fold on classes and methods instead of on indentation, now that the parser
--- is installed (`:h vim.treesitter.foldexpr()`). Nothing is folded on opening,
--- because 'foldlevel' is 10 in 'plugin/10_options.lua'. The second index is
--- what keeps the two inside this buffer: plain `vim.wo` writes like `:set` and
--- moves the global value as well, so every window opened after the first Java
--- file would fold by this expression (`:h vim.wo`).
-vim.wo[0][0].foldmethod = 'expr'
-vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+local ft = require('config.ft')
+
+-- Fold on classes and methods (`:h vim.treesitter.foldexpr()`).
+ft.ts_fold()
 
 -- Build and test through `:h :make`, so that errors and failing tests land in
 -- the quickfix list and `]q` / `[q` of 'mini.bracketed' walk them. Which of
@@ -66,68 +62,25 @@ vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- `gradlew.bat`; `jobstart()` runs a '.bat' from a list just fine, while the
 -- extensionless POSIX `gradlew` next to it raises `E903: Process failed to
 -- start` - and raises rather than returning -1.
---
--- Walking up for the build file costs a handful of `stat` calls per buffer,
--- which is what the runtime does for `Cargo.toml`; nothing here reads a file
--- until `:Run` is called.
---
--- The `run` half of that tool - the Maven goal - is shared with
--- 'after/ftplugin/xml.lua' through 'lua/config/run.lua''s `java_builds`: that
--- file registers `:Run` on a `pom.xml` buffer opened directly, which this
--- ftplugin never loads for (Neovim detects it as `xml`, not `java`). Only
--- `compiler`, which selects what `:make` parses, stays here: it is
--- Java-specific and has no meaning on a plain XML buffer.
 
--- A file that belongs to no build at all: `javac` (`:h compiler-javac`) so
--- that `:make %` compiles just this one, and `java` on the file itself to run
--- it, which since Java 11 needs no compilation step first.
-local function single_file(args, _)
-  return vim.list_extend({ 'java', vim.api.nvim_buf_get_name(0) }, args)
-end
-
+-- `:make` and `:Run` follow the nearest 'pom.xml' ('ft.maven()' is shared with
+-- 'after/ftplugin/xml.lua'); a loose file falls back to `javac`.
 local found = vim.fs.find('pom.xml', {
   upward = true,
   path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
 })[1]
-local run = found and require('config.run').java_builds['pom.xml'].run or single_file
-local root = found and vim.fs.dirname(found) or nil
 
--- `:compiler` defines its options through a command it creates and deletes
--- while sourcing, so it has no Lua API and `vim.cmd()` is the only way here.
-vim.cmd('compiler ' .. (found and 'maven' or 'javac'))
+if found then
+  ft.maven(found)
+else
+  -- A file that belongs to no build: `:make %` compiles just this one and
+  -- `:Run` runs it directly, which since Java 11 needs no compilation step.
+  ft.build('javac')
+  require('config.run').command(
+    function(args)
+      return vim.list_extend({ 'java', vim.api.nvim_buf_get_name(0) }, args)
+    end
+  )
+end
 
--- `mvn` prints paths relative to the project, while Neovim resolves
--- quickfix `%f` entries against its own directory - kept at the repository
--- root by 'setup_auto_root()' in 'plugin/30_mini.lua', not necessarily the
--- POM's own directory in a multi-module checkout. Same remedy the GDScript
--- ftplugin needed first, shared through 'lua/config/run.lua''s `make_root()`.
--- A loose file (no build found) has nothing to root against.
-if found ~= nil then require('config.run').make_root({ 'pom.xml' }) end
-
--- Running the application is not what `:make` does, and the two are worth
--- keeping apart. `:make` asks a question that ends - does it compile, do the
--- tests pass - fills the quickfix list and returns; running is a process that
--- lives, writes until it is stopped, and produces nothing to navigate. Handing
--- it to `:make`, which is synchronous, would freeze the editor for exactly as
--- long as the application is useful.
---
--- The command, its name and its shape are the contract of 'lua/config/run.lua',
--- kept by every filetype that has something to run. What belongs to Java is
--- only the resolver: which build tool answers, and which goal it is given.
---
--- Anything more specific than the default Maven goal - a Spring profile, a
--- main class, JVM arguments - belongs to the project and not to the language,
--- so it is passed as arguments here or it lives in the project's '.nvim.lua'
--- (`:h 'exrc'`).
-require('config.run').command(function(args) return run(args, found), nil, root end)
-
--- Undo what this file sets when the filetype changes away from `java`
--- (`:h b:undo_ftplugin`). `:Run` undoes itself, registered inside
--- 'lua/config/run.lua''s `M.command()`.
-vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
-  .. '\n'
-  .. table.concat({
-    'setlocal shiftwidth< softtabstop< foldmethod< foldexpr<',
-    'setlocal makeprg< errorformat<',
-    'unlet! b:current_compiler',
-  }, ' | ')
+ft.undo('setlocal shiftwidth< softtabstop<')

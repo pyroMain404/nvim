@@ -30,15 +30,10 @@
 -- - the second copy of its `b:undo_ftplugin` line registers `delcommand Run`
 -- twice, and the second one raises `E184` on the next filetype change.
 
--- Fold on functions and classes instead of on indentation, now that the parser
--- is installed (`:h vim.treesitter.foldexpr()`), the same way
--- 'after/ftplugin/java.lua' does it. Nothing is folded on opening, because
--- 'foldlevel' is 10 in 'plugin/10_options.lua'. The second index is what keeps
--- both options inside this buffer: plain `vim.wo` writes like `:set` and moves
--- the global value as well, so every window opened after the first C/C++ file
--- would fold by this expression (`:h vim.wo`).
-vim.wo[0][0].foldmethod = 'expr'
-vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+local ft = require('config.ft')
+
+-- Fold on functions and classes (`:h vim.treesitter.foldexpr()`).
+ft.ts_fold()
 
 -- Which build drives `:make`, and where a built program is looked for. Walking
 -- up costs a handful of `stat` calls per buffer, which is what
@@ -62,17 +57,8 @@ local root = build and vim.fs.dirname(build) or nil
 --   'errorformat' and no 'makeprg', which is exactly right here: the default
 --   `make` is already the command to run, and the format of GCC is also the
 --   format of clang.
---
--- A file that belongs to no build at all gets neither, and `:make` then runs
--- plain `make` and says there is no makefile - which is the loud failure, not a
--- silence. Compiling one loose file is `:!clang++ %` (or `:!clang %`), and
--- a project of one file is a 'CMakeLists.txt' away from being a project.
---
--- `:compiler` defines its options through a command it creates and deletes
--- while sourcing, so it has no Lua API and `vim.cmd()` is the only way here.
 if build ~= nil then
-  local compiler = vim.fs.basename(build) == 'CMakeLists.txt' and 'cmake' or 'gcc'
-  vim.cmd('compiler ' .. compiler)
+  ft.build(vim.fs.basename(build) == 'CMakeLists.txt' and 'cmake' or 'gcc')
 end
 
 -- `gf` on an `#include`, and with it `[I` and `:checkpath` (`:h 'path'`). The
@@ -162,18 +148,4 @@ require('config.run').command(function(args)
   return nil, 'several programs here, name one: ' .. table.concat(names, ', '), root
 end)
 
--- Undo what this file sets when the filetype changes away from `c`/`cpp`
--- (`:h b:undo_ftplugin`). `:Run` undoes itself, registered inside
--- 'lua/config/run.lua''s `M.command()`. The compiler selection and the
--- project `'path'` entries only exist when a build was found.
-local undo_parts = { 'setlocal foldmethod< foldexpr<' }
-if build ~= nil then
-  vim.list_extend(
-    undo_parts,
-    { 'setlocal makeprg< errorformat<', 'unlet! b:current_compiler' }
-  )
-end
-if root ~= nil then table.insert(undo_parts, 'setlocal path<') end
-vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
-  .. '\n'
-  .. table.concat(undo_parts, ' | ')
+if root ~= nil then ft.undo('setlocal path<') end

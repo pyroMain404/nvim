@@ -6,8 +6,7 @@
 
 vim.wo[0][0].spell = true
 vim.wo[0][0].wrap = true
-vim.wo[0][0].foldmethod = 'expr'
-vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+require('config.ft').ts_fold()
 
 -- Follow a `[label](target)` link from its label too; 'lua/config/mdlink.lua'.
 vim.bo.includeexpr = "v:lua.require'config.mdlink'.target(v:fname)"
@@ -18,10 +17,8 @@ pcall(vim.keymap.del, 'n', 'gO', { buf = 0 })
 require('config.markdown').attach(0)
 
 -- `:lua` consumes the remainder of its source, so it has to be the final command.
-vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
-  .. '\n'
-  .. table.concat({
-    'setlocal spell< wrap< foldmethod< foldexpr< includeexpr<',
-    'unlet! b:minisurround_config',
-    "lua require('config.markdown').detach()",
-  }, ' | ')
+require('config.ft').undo(
+  'setlocal spell< wrap< includeexpr<',
+  'unlet! b:minisurround_config',
+  "lua require('config.markdown').detach()"
+)

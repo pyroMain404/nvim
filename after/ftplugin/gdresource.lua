@@ -133,5 +133,4 @@ vim.api.nvim_buf_create_user_command(0, 'GodotTree', function()
   end, { buffer = tree_buf, desc = 'Jump to this node in the scene file' })
 end, { desc = 'Open the node tree of the current .tscn/.tres as a scratch buffer' })
 
--- Undo what this file sets when the filetype changes away from `gdresource`.
-vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '') .. '\n' .. 'delcommand GodotTree'
+require('config.ft').undo('delcommand GodotTree')

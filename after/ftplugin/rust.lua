@@ -42,9 +42,4 @@ require('config.run').command(
   function(args) return vim.list_extend({ 'cargo', 'run' }, args), nil, root end
 )
 
--- Undo what this file sets when the filetype changes away from `rust`
--- (`:h b:undo_ftplugin`). `:Run` undoes itself, registered inside
--- 'lua/config/run.lua''s `M.command()`.
-vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
-  .. '\n'
-  .. "silent! iunmap <buffer> '"
+require('config.ft').undo("silent! iunmap <buffer> '")

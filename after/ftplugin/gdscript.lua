@@ -14,6 +14,8 @@
 -- follows: `:make`, `:Run`, the documentation with the editor closed, and the
 -- way back after the editor is restarted.
 
+local ft = require('config.ft')
+
 -- The project this buffer belongs to, read once and HERE: `:Run` resolves after
 -- `:vertical new` may have made a nameless buffer current, so a resolver that
 -- asked then would read an empty name.
@@ -24,20 +26,9 @@ local root = vim.fs.root(0, { 'project.godot' })
 -- can and cannot answer is in 'compiler/godot.lua'; only the project gate is
 -- here, because a '.gd' file outside a project has no engine to ask.
 if root ~= nil then
-  vim.cmd('compiler godot')
-
-  -- `:make` has to run from the project root, and a compiler plugin cannot put
-  -- it there: it sets options, and this is a directory. The engine's own
-  -- `--path` is not enough either, and that is the part worth remembering -
-  -- it tells Godot which project to open, while the file names it prints stay
-  -- relative to that project (`res://scripts/broken.gd`) and Neovim resolves
-  -- quickfix names against ITS OWN directory. Measured from 'scripts/': every
-  -- entry pointed at '<root>/scripts/scripts/broken.gd', and `]q` opened an
-  -- empty buffer with that name - no error, no message, and the natural
-  -- reading is that the quickfix list is wrong rather than the directory.
-  -- The remedy is 'lua/config/run.lua''s `make_root()`, needed here first and
-  -- by Angular and Maven since.
-  require('config.run').make_root({ 'project.godot' })
+  -- NOTE: Godot prints file names relative to the project while Neovim resolves
+  -- quickfix names against its own directory, hence the `make_root()` marker.
+  ft.build('godot', { 'project.godot' })
 
   -- `gf` on a `preload('res://...')` or `load(...)` reference.
   --
@@ -178,18 +169,11 @@ if root ~= nil then
   map('<Leader>oG', '<Cmd>GodotReconnect<CR>', 'Godot server reattach')
 end
 
--- Undo what this file sets when the filetype changes away from `gdscript`
--- (`:h b:undo_ftplugin`). The commands are always defined; the compiler
--- selection, `'include'` and the two mappings only exist inside a project.
-local undo_parts = { 'delcommand GodotDoc', 'delcommand GodotReconnect' }
+ft.undo('delcommand GodotDoc', 'delcommand GodotReconnect')
 if root ~= nil then
-  vim.list_extend(undo_parts, {
-    'setlocal makeprg< errorformat< include<',
-    'unlet! b:current_compiler',
+  ft.undo(
+    'setlocal include<',
     'silent! nunmap <buffer> <Leader>og',
-    'silent! nunmap <buffer> <Leader>oG',
-  })
+    'silent! nunmap <buffer> <Leader>oG'
+  )
 end
-vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '')
-  .. '\n'
-  .. table.concat(undo_parts, ' | ')

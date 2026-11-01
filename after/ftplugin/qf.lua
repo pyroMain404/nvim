@@ -2,30 +2,11 @@
 -- │ Quickfix and location list window │
 -- └───────────────────────────────────┘
 --
--- One filetype answers for both lists: `:copen` and `:lopen` build the same
--- kind of window, and a location list is told apart only by belonging to the
--- window it was filled for (`:h quickfix-window`). So this file is what
--- `<Leader>eq` and `<Leader>eQ` of 'plugin/20_keymaps.lua' open.
---
--- On top of '$VIMRUNTIME/ftplugin/qf.vim', which sets the 'statusline' showing
--- the command that produced the list. Nothing of that is repeated here.
---
--- 'list' is on for every window in 'plugin/10_options.lua', where it pays for
--- itself in a file being edited: a tab among spaces or a non breaking space
--- changes what the text means and is invisible without it. A quickfix entry is
--- neither edited nor the file's own text - it is a line rendered from a
--- position and a message, and 'listchars' marks the whitespace of that
--- rendering rather than of the code it points at. `tab:> ` in particular hits
--- the messages that arrive already indented, like the stack frames the `maven`
--- compiler collects under a failing test (see 'after/ftplugin/java.lua').
---
--- NOTE: 'list' belongs to the window, not to the buffer. `vim.wo.list` writes
--- like `:set`, which also moves the global value every window opened afterwards
--- inherits, so the whole session would end up without indicators after one
--- `:copen`. The second index writes like `:setlocal` and keeps the value on
--- this buffer inside this window (`:h vim.wo`).
+-- One filetype answers for both `:copen` and `:lopen` (`:h quickfix-window`),
+-- on top of '$VIMRUNTIME/ftplugin/qf.vim'.
+
+-- 'list' is on globally ('plugin/10_options.lua'); its marks would hit the
+-- indented messages of a quickfix entry, which is rendered text, not code.
 vim.wo[0][0].list = false
 
--- Undo what this file sets when the filetype changes away from `qf`
--- (`:h b:undo_ftplugin`).
-vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '') .. '\n' .. 'setlocal list<'
+require('config.ft').undo('setlocal list<')
