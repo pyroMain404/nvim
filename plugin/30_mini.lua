@@ -126,7 +126,31 @@ now(function() require('mini.starter').setup() end)
 -- See also:
 -- - `:h MiniStatusline-example-content` - example of default content. Use it to
 --   configure a custom statusline by setting `config.content.active` function.
-now(function() require('mini.statusline').setup() end)
+--
+-- The diff section is wrapped to put the label of 'plugin/41_git.lua' in front
+-- of the diff counts: which revision they are read against (`@HEAD~`), whether
+-- that is for this buffer only (`@HEAD~ (buf)`), and whether the overlay is on.
+-- The default content calls `MiniStatusline.section_diff()` at every redraw, so
+-- wrapping it leaves the rest of the statusline and its truncation to the
+-- module: the label stays when the counts are dropped for lack of width.
+-- NOTE: this depends on the default `config.content.active` calling
+-- `section_diff()` (`H.default_content_active()` in mini.nvim's
+-- 'lua/mini/statusline.lua'); a custom `content.active` that does not call it
+-- loses the label without any message. The default function is kept in
+-- `Config.section_diff_default` so that sourcing this file again wraps it once.
+now(function()
+  require('mini.statusline').setup()
+
+  Config.section_diff_default = Config.section_diff_default
+    or MiniStatusline.section_diff
+  MiniStatusline.section_diff = function(args)
+    local diff = Config.section_diff_default(args)
+    local git = Config.git
+    local label = git and git.diff_ref_label(vim.api.nvim_get_current_buf())
+    if not label then return diff end
+    return diff == '' and label or (label .. ' ' .. diff)
+  end
+end)
 
 -- Tabline. Sets `:h 'tabline'` to show all listed buffers in a line at the top.
 -- Buffers are ordered as they were created. Navigate with `[b` and `]b`.

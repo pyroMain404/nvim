@@ -32,6 +32,8 @@
 --   in a single one.
 -- - `Config.git.toggle_diff_ref(buf_id, rev)` - reference a revision, or restore
 --   the Git index when one is already referenced.
+-- - `Config.git.diff_ref_label(buf_id)` - what the statusline says about the
+--   diff of a buffer: reference, scope and whether the overlay is on.
 -- - `Config.git.toggle_overlay()` - turn the in-buffer overlay of the reference
 --   text on and off, guarded against a buffer where it does not apply.
 -- - `Config.git.blame` - whether the line under the cursor is blamed.
@@ -296,6 +298,7 @@ Config.git.set_diff_ref = function(buf_id, rev)
   else
     buf_id = buf_id == 0 and vim.api.nvim_get_current_buf() or buf_id
     vim.b[buf_id].diff_ref = rev
+    vim.b[buf_id].diff_ref_index = rev == nil
     -- A per-buffer restore (`rev == nil`) must write the Git index source
     -- EXPLICITLY: leaving `minidiff_config` unset falls back to whatever the
     -- GLOBAL config's source currently is, which is the referenced revision
@@ -332,11 +335,88 @@ Config.git.set_diff_ref = function(buf_id, rev)
 
   local suffix = buf_id ~= nil and ' (buffer)' or ''
   vim.notify('Diff reference' .. suffix .. ': ' .. (rev or 'Git index'))
+  -- The statusline shows the reference (`diff_ref_label()`), and redraws only
+  -- when something asks it to.
+  vim.cmd.redrawstatus({ bang = true })
+end
+
+-- What the statusline says about the diff of `buf_id`, `nil` when there is
+-- nothing to say: 'mini.diff' is not enabled there, or the reference is the Git
+-- index and the overlay is off - which is what 'mini.diff' shows by default.
+-- It says which revision is the reference, at which scope, and whether the
+-- overlay that draws it in the buffer is on:
+-- - `@HEAD~` - a revision referenced in every buffer (`<Leader>gr`)
+-- - `@HEAD~ (buf)` - a revision referenced in this buffer only (`<Leader>gR`)
+-- - `@index (buf)` - this buffer restored to the Git index while a revision
+--   is still referenced everywhere else (`<Leader>gR` on a buffer that
+--   `<Leader>gr` had already moved)
+-- - `@index` - the overlay is on over the Git index (`<Leader>go`)
+-- - `(off)` after any of them - the reference is set but the overlay is hidden
+-- NOTE: `vim.b.diff_ref_index` is what tells the `@index (buf)` case from a
+-- buffer that follows the global reference: both have `vim.b.diff_ref == nil`,
+-- while `set_diff_ref()` writes the index source into the second one explicitly.
+Config.git.diff_ref_label = function(buf_id)
+  local data = _G.MiniDiff ~= nil and MiniDiff.get_buf_data(buf_id) or nil
+  if data == nil then return nil end
+
+  local ref, label = Config.git.diff_ref, nil
+  if vim.b[buf_id].diff_ref ~= nil then
+    label = '@' .. vim.b[buf_id].diff_ref .. ' (buf)'
+  elseif ref ~= nil and vim.b[buf_id].diff_ref_index then
+    label = '@index (buf)'
+  elseif ref ~= nil then
+    label = '@' .. ref
+  elseif data.overlay then
+    label = '@index'
+  else
+    return nil
+  end
+  return data.overlay and label or (label .. ' (off)')
+end
+
+-- The revision to reference once `commit` has been chosen: `commit` itself, or
+-- its parent when nothing has changed since it. The second is what the commit
+-- at `HEAD` is on a clean tree, which would reference a state every file
+-- already is in and show an overlay with nothing in it; the parent is the
+-- reading that commit was picked for, the change it made. Asked of Git the way
+-- `show_patch()` asks it, restricted to the file when `buf_id` names one.
+-- NOTE: the first commit of a repository has no parent to reference, so there
+-- the commit itself is kept and the overlay stays empty - the statusline then
+-- names the revision that is really in use instead of a `<commit>~` that is not.
+local reference_for = function(buf_id, commit, on_done)
+  local root = Config.git.require_root(buf_id)
+  if root == nil then return end
+  local cmd = { 'git', 'diff', '--quiet', commit }
+  if buf_id ~= nil then
+    local path = buf_path(buf_id)
+    if path == nil then return end
+    vim.list_extend(cmd, { '--', path })
+  end
+  Config.git.run(cmd, { cwd = root }, function(out)
+    if out.code == 1 then return on_done(commit) end
+    if out.code ~= 0 then
+      local cmd_desc = '`git diff --quiet ' .. commit .. '` failed'
+      return vim.notify(Config.git.fail(out, cmd_desc), vim.log.levels.ERROR)
+    end
+    local parent = commit .. '~'
+    local probe =
+      { 'git', 'rev-parse', '--verify', '--quiet', parent .. '^{commit}' }
+    Config.git.run(probe, { cwd = root }, function(p)
+      if p.code ~= 0 then
+        vim.notify('Nothing changed since ' .. commit .. ', which has no parent')
+        return on_done(commit)
+      end
+      vim.notify('Nothing changed since ' .. commit .. ': referencing its parent')
+      on_done(parent)
+    end)
+  end)
 end
 
 -- Reference the revision `rev`, or one picked from the Git log when it is not
 -- given. Restore the Git index instead when a revision is already referenced,
--- which is what makes this a toggle. Example usage:
+-- which is what makes this a toggle. When nothing has changed since the
+-- revision, its parent is referenced instead (`reference_for()`), so that the
+-- commit at `HEAD` shows what it changed rather than nothing. Example usage:
 -- - `:lua Config.git.toggle_diff_ref()` - what `<Leader>gr` does
 -- - `:lua Config.git.toggle_diff_ref(0)` - what `<Leader>gR` does
 -- - `:lua Config.git.toggle_diff_ref(nil, 'HEAD~3')` - skip the picker
@@ -350,14 +430,21 @@ Config.git.toggle_diff_ref = function(buf_id, rev)
     cur_ref = vim.b[buf_id].diff_ref
   end
   if cur_ref ~= nil then return Config.git.set_diff_ref(buf_id, nil) end
-  if rev ~= nil then return Config.git.set_diff_ref(buf_id, rev) end
+
+  local apply = function(commit)
+    reference_for(
+      buf_id,
+      commit,
+      function(target) Config.git.set_diff_ref(buf_id, target) end
+    )
+  end
+  if rev ~= nil then return apply(rev) end
 
   local path = nil
   if buf_id ~= nil then
     path = buf_path(buf_id)
     if path == nil then return end
   end
-  local apply = function(commit) Config.git.set_diff_ref(buf_id, commit) end
   Config.git.pick_commit(path, apply)
 end
 
@@ -373,6 +460,8 @@ Config.git.toggle_overlay = function()
     return vim.notify('mini.diff is not enabled here', vim.log.levels.WARN)
   end
   MiniDiff.toggle_overlay(buf_id)
+  -- The statusline says whether the overlay is on (`diff_ref_label()`).
+  vim.cmd.redrawstatus({ bang = true })
 end
 
 -- Patch navigation ===========================================================
@@ -670,7 +759,11 @@ end
 -- NOTE: asking costs a second run of Git, which is what buys the difference
 -- between "nothing changed" and "nothing happened". It is `--quiet`, so Git
 -- stops at the first difference it finds instead of formatting a patch.
-local show_patch = function(buf_id, diff_args, label)
+--
+-- `fallback` is a function run in place of the "No change to show" warning when
+-- the patch is empty. The commit picker uses it to turn "nothing since" into
+-- "what the commit changed", by calling `Config.git.diff_commit_only()`.
+local show_patch = function(buf_id, diff_args, label, fallback)
   local root = Config.git.require_root(buf_id)
   if root == nil then return end
 
@@ -687,6 +780,7 @@ local show_patch = function(buf_id, diff_args, label)
   local args = table.concat(diff_args, ' ')
   local on_done = function(out)
     if out.code == 0 then
+      if fallback ~= nil then return fallback() end
       return vim.notify('No change to show ' .. label, vim.log.levels.WARN)
     end
     if out.code ~= 1 then
@@ -732,12 +826,18 @@ local pick_commit_patch = function(buf_id, rev, patch_of)
 end
 
 -- Patch of everything changed since a commit, of the repository or of one file.
--- Example usage:
+-- When nothing has changed since it - the commit at `HEAD` on a clean tree - the
+-- patch of what the commit changed by itself is shown instead, which is what
+-- picking it was for. Example usage:
 -- - `:lua Config.git.diff_commit()` - what `<Leader>gs` does
 -- - `:lua Config.git.diff_commit(0, 'HEAD~3')` - the buffer since `HEAD~3`
 Config.git.diff_commit = function(buf_id, rev)
   local patch_of = function(id, commit)
-    show_patch(id, { commit }, 'since ' .. commit)
+    local own = function()
+      vim.notify('Nothing changed since ' .. commit .. ': showing what it changed')
+      Config.git.diff_commit_only(id, commit)
+    end
+    show_patch(id, { commit }, 'since ' .. commit, own)
   end
   pick_commit_patch(buf_id, rev, patch_of)
 end
