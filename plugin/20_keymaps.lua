@@ -25,6 +25,14 @@ nmap('<C-S-J>', '<C-w>J', 'Move to very bottom')
 nmap('<C-S-K>', '<C-w>K', 'Move to very top')
 nmap('<C-S-L>', '<C-w>L', 'Move to very right')
 
+-- Toggle 'mini.completion' for the current buffer only, next to the toggles of
+-- 'mini.basics' (`\b`, `\w`, ...). Example: `\a` in a markdown note.
+-- See `:h mini.nvim-disabling-recipes`.
+nmap('\\a', function()
+  vim.b.minicompletion_disable = not vim.b.minicompletion_disable
+  vim.notify('Autocompletion ' .. (vim.b.minicompletion_disable and 'off' or 'on'))
+end, "Toggle 'mini.completion' (buffer)")
+
 -- Many general mappings are created by 'mini.basics'. See 'plugin/30_mini.lua'
 
 -- stylua: ignore start

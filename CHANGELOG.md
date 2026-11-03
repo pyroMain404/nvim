@@ -1,5 +1,7 @@
 ## 2026-11-03
 
+- Add `\a` to toggle autocompletion ('mini.completion') in the current buffer only, next to the 'mini.basics' toggles (`plugin/20_keymaps.lua`).
+
 - Move the menu of `:Obsidian` commands in a vault note from `<Leader>j` to `<Leader>eo` (`plugin/40_plugins.lua`), also in Visual mode. In a vault note it shadows the global `<Leader>eo` ('Options config'), which is unchanged elsewhere.
 
 ## 2026-10-30
