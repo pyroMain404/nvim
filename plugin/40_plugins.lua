@@ -233,6 +233,14 @@ now_if_args(function()
     -- OTHER game, silently. 'after/lsp/gdscript.lua' narrows the root markers
     -- so at least an unrelated file cannot attach.
     'gdscript',
+    -- Installed with `mise` (npm:basedpyright), configured in
+    -- 'after/lsp/basedpyright.lua'. Types, completion, definition, rename; the
+    -- interpreter (venv or global) is chosen there.
+    'basedpyright',
+    -- Installed with `mise`. Lint diagnostics and quick fixes only, and no
+    -- file in 'after/lsp/' because the 'nvim-lspconfig' default is already
+    -- right; formatting goes through 'conform.nvim' below, not this server.
+    'ruff',
   })
 
   -- `res://` is Godot's own scheme for "relative to this project", and it is
