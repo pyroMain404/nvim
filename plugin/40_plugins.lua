@@ -130,6 +130,9 @@ now_if_args(function()
     -- at all, without which this parser would never reach it.
     'gdshader',
     'godot_resource',
+    -- Python is not one of the parsers bundled with Neovim, so it is listed
+    -- to be installed.
+    'python',
   }
   local isnt_installed = function(lang)
     return #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0
