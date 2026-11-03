@@ -720,6 +720,42 @@ local function check_cpp()
   check_parsers({ 'cpp', 'c', 'cmake', 'make' })
 end
 
+local function check_python()
+  health.start('config: Python')
+
+  -- The interpreter `:Run` and basedpyright would use for a file in the
+  -- current directory ('lua/config/python.lua').
+  local cwd = vim.fn.getcwd()
+  local python = require('config.python').interpreter(cwd)
+  if python == nil then
+    health.warn('no Python interpreter found', {
+      'Install one with `mise use -g python@3.12`',
+      '`:Run` refuses and basedpyright resolves no imports',
+    })
+  elseif python:find('WindowsApps', 1, true) then
+    health.warn('interpreter is the Microsoft Store alias: ' .. python, {
+      'Put a real Python before it on PATH (`mise use -g python@3.12` and the mise shims directory), or disable the alias in Settings > Apps > App execution aliases',
+      'the alias opens the Store instead of running scripts',
+    })
+  else
+    health.ok('interpreter for ' .. cwd .. ': ' .. python)
+    local version = first_line({ python, '--version' })
+    if version then health.info(version) end
+  end
+
+  report(
+    'basedpyright',
+    'Python buffers lose completion, type diagnostics, rename and go to definition',
+    'Install it with `mise use -g npm:basedpyright@latest`'
+  )
+  report(
+    'ruff',
+    '`<Leader>lf` falls back to nothing and lint diagnostics are gone',
+    'Install it with `mise use -g ruff@latest`'
+  )
+  check_parsers({ 'python' })
+end
+
 -- Godot is the only section that reports on nothing when it does not apply, and
 -- the reason is that its whole toolchain is a game's, not the machine's: a
 -- section saying "no Godot project here" is not a check, it is noise in every
@@ -798,6 +834,7 @@ function M.check()
   check_angular()
   check_java()
   check_cpp()
+  check_python()
   check_godot()
 end
 
