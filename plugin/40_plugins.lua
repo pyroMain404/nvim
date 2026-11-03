@@ -673,6 +673,10 @@ later(function()
       -- indents with tabs, which is what '$VIMRUNTIME/ftplugin/gdscript.vim'
       -- already sets in the buffer.
       gdscript = { 'gdformat' },
+      -- `ruff` reads the project's 'pyproject.toml' or 'ruff.toml', which
+      -- `basedpyright` would not (it does not format at all), so `<Leader>lf`,
+      -- the command line and CI agree.
+      python = { 'ruff_format' },
     },
   })
 end)
