@@ -194,8 +194,21 @@ end
 local function check_markdown()
   health.start('config: Markdown')
 
+  -- 'plugin/40_plugins.lua' adds it with `now_if_args()`, so a session started
+  -- without a file argument has it on disk but not on the runtime path: that
+  -- is not a problem to report.
+  local installed = vim.uv.fs_stat(
+    vim.fs.joinpath(
+      vim.fn.stdpath('data'),
+      'site/pack/core/opt/render-markdown.nvim'
+    )
+  )
   if #vim.api.nvim_get_runtime_file('lua/render-markdown/init.lua', false) > 0 then
-    health.ok('render-markdown.nvim: installed')
+    health.ok('render-markdown.nvim: installed and loaded')
+  elseif installed then
+    health.info(
+      'render-markdown.nvim: installed, not yet loaded (loads when Neovim starts with a file)'
+    )
   else
     health.warn('render-markdown.nvim is not available', {
       'Start Neovim with network access so vim.pack can install the locked plugin',
