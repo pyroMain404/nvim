@@ -298,6 +298,9 @@ Un commit a sé, separato da quelli della config.
   macchina e l'assenza come stato legittimo; un `:make` che risponde a una
   domanda più piccola di quella che sembra; e un set di snippet già attivo e già
   sbagliato, che è il modo in cui la Fase 1 viene saltata senza accorgersene.
+- `references/python.md` — Python: un interprete scelto dal venv più vicino o dal
+  globale e condiviso da server, `:Run` e health check; un `before_init` che deve
+  modificare le `settings` sul posto; REPL e Jupyter rimandati con il primo passo scritto.
 - `assets/` — gli scheletri dei file da creare.
 
 ### La forma di una reference di linguaggio

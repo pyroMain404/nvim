@@ -1,5 +1,7 @@
 ## 2026-11-03
 
+- Add Python support: `basedpyright` (types, completion, rename) and `ruff` (lint) as language servers, `ruff_format` in `<Leader>lf`, the `python` parser, `:Run [args]` to run the script and a `config: Python` section in `:checkhealth config`. The interpreter is the one inside the nearest `.venv` or `venv` above the file, else the `python` on PATH (`lua/config/python.lua`), the same for the server and `:Run`; a venv created after the server started needs `:lsp restart basedpyright`. Install with `mise use -g npm:basedpyright@latest ruff@latest`. REPL and Jupyter are deferred, see `.omp/skills/nvim-language-support/references/python.md`.
+
 - Add `\a` to toggle autocompletion ('mini.completion') in the current buffer only, next to the 'mini.basics' toggles (`plugin/20_keymaps.lua`).
 
 - Move the menu of `:Obsidian` commands in a vault note from `<Leader>j` to `<Leader>eo` (`plugin/40_plugins.lua`), also in Visual mode. In a vault note it shadows the global `<Leader>eo` ('Options config'), which is unchanged elsewhere.
