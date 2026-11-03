@@ -486,13 +486,14 @@ local setup_obsidian = function(ev)
         },
       },
       callbacks = {
-        -- `<Leader>j` opens the picker of `:Obsidian` commands that fit the
+        -- `<Leader>eo` opens the picker of `:Obsidian` commands that fit the
         -- context; in Visual mode it also lists those that take a selection.
+        -- In a vault note it shadows the global 'Options config' mapping.
         enter_note = function(note)
           for mode, rhs in pairs({ n = '<Cmd>Obsidian<CR>', x = ':Obsidian<CR>' }) do
             vim.keymap.set(
               mode,
-              '<Leader>j',
+              '<Leader>eo',
               rhs,
               { buf = note.bufnr, desc = 'Obsidian commands' }
             )

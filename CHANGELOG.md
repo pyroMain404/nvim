@@ -1,3 +1,7 @@
+## 2026-11-03
+
+- Move the menu of `:Obsidian` commands in a vault note from `<Leader>j` to `<Leader>eo` (`plugin/40_plugins.lua`), also in Visual mode. In a vault note it shadows the global `<Leader>eo` ('Options config'), which is unchanged elsewhere.
+
 ## 2026-10-30
 
 - Show the diff in the statusline, in front of the diff counts: which revision they are read against, at which scope, and whether the overlay is on. `@HEAD~` is a revision referenced in every buffer (`<Leader>gr`), `@HEAD~ (buf)` one referenced in the current buffer only (`<Leader>gR`), `@index (buf)` a buffer restored to the Git index while a revision is still referenced elsewhere, `@index` the overlay on over the index (`<Leader>go`), and `(off)` after any of them a reference whose overlay is hidden. Nothing is shown while the reference is the index and the overlay is off. The label is `Config.git.diff_ref_label()` in `plugin/41_git.lua`; the wrapper of `MiniStatusline.section_diff()` that prints it is in `plugin/30_mini.lua`, so the default statusline content and its truncation stay untouched.
