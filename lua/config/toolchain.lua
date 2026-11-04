@@ -302,6 +302,33 @@ M.languages = {
     },
   },
   {
+    name = 'Python',
+    parsers = { 'python' },
+    -- `basedpyright` for types, `ruff` for lint; the interpreter is chosen in
+    -- 'after/lsp/basedpyright.lua'
+    servers = { 'basedpyright', 'ruff' },
+    -- Reads the project's 'pyproject.toml' or 'ruff.toml', as CI does; `ruff
+    -- server` is enabled for lint only
+    formatters = { python = { 'ruff_format' } },
+    tools = {
+      {
+        exe = 'python',
+        why = '`:Run` refuses and basedpyright resolves no imports',
+        advice = mise('python@3.12'),
+      },
+      {
+        exe = 'basedpyright',
+        why = 'Python buffers lose completion, type diagnostics, rename and go to definition',
+        advice = mise('npm:basedpyright@latest'),
+      },
+      {
+        exe = 'ruff',
+        why = '`<Leader>lf` has nothing to call and lint diagnostics are gone',
+        advice = mise('ruff@latest'),
+      },
+    },
+  },
+  {
     name = 'Godot',
     -- `gdshader` also carries `gdshaderinc`; `godot_resource` reads '.tscn' and '.tres'
     parsers = { 'gdscript', 'gdshader', 'godot_resource' },
