@@ -387,9 +387,29 @@ local function extra_godot()
   end
 end
 
+-- The interpreter `:Run` and basedpyright use for a file here, not just the
+-- `python` on PATH. The Microsoft Store alias is on PATH but runs nothing.
+local function hook_python(tool)
+  local cwd = vim.fn.getcwd()
+  local python = require('config.python').interpreter(cwd)
+  if python == nil then
+    health.warn('no Python interpreter found', { tool.advice, tool.why })
+  elseif python:find('WindowsApps', 1, true) then
+    health.warn('interpreter is the Microsoft Store alias: ' .. python, {
+      'Put a real Python before it on PATH (`mise use -g python@3.12` and the mise shims directory), or disable the alias in Settings > Apps > App execution aliases',
+      'The alias opens the Store instead of running scripts',
+    })
+  else
+    health.ok('interpreter for ' .. cwd .. ': ' .. python)
+    local version = first_line({ python, '--version' })
+    if version then health.info(version) end
+  end
+end
+
 local sections = {
   Markdown = { extra = extra_markdown },
   Rust = { hooks = { rustup = hook_rustup } },
+  Python = { hooks = { python = hook_python } },
   Angular = { hooks = { node = hook_node }, extra = extra_angular },
   Java = { hooks = { java = hook_java, jdtls = hook_jdtls } },
   ['C++'] = { extra = extra_cpp },
