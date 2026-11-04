@@ -41,7 +41,9 @@ Nel PATH di questa macchina c'è `WindowsApps\python.exe`, lo stub di Microsoft 
 
 ## 4. Fase 5 — cosa implementare
 
-- **Parser**: `'python'` nella tabella `languages` di `plugin/40_plugins.lua`.
+- **Dichiarazione**: una voce `Python` in `lua/config/toolchain.lua`: parser `python`,
+  server `basedpyright` e `ruff`, formatter `ruff_format`, e i tre programmi che l'health
+  check verifica. Da lì la leggono `plugin/40_plugins.lua` e `health.lua`.
 - **Interprete**: `lua/config/python.lua`, `interpreter(start)`. Cerca `.venv` e `venv` con
   un solo `vim.fs.find` verso l'alto, così vince il **più vicino** qualunque sia il nome;
   controlla `Scripts/python.exe` e `bin/python` senza rami per piattaforma; un venv senza
@@ -56,7 +58,7 @@ Nel PATH di questa macchina c'è `WindowsApps\python.exe`, lo stub di Microsoft 
   isolato, quindi si usa il buffer corrente. L'interprete è fissato all'avvio del client:
   un venv creato dopo richiede `:lsp restart basedpyright`. `ruff` non ha file in
   `after/lsp/`: il default di lspconfig è già giusto, e non formatta (lo fa conform).
-- **Formato**: `python = { 'ruff_format' }` in `formatters_by_ft`.
+- **Formato**: `ruff_format` per `python`, dichiarato nella stessa voce.
 - **Esecuzione**: `after/ftplugin/python.lua`, `:Run [args]` esegue
   `<interprete> <file> <args>` con cwd la cartella del file. L'interprete si risolve a ogni
   chiamata, quindi un venv creato a sessione aperta è visto subito.
@@ -68,8 +70,9 @@ Se crei il venv dopo aver aperto il file: `:lsp restart basedpyright`.
 
 ## 6. Health check
 
-`check_python()` in `lua/config/health.lua`: interprete per la cwd (avvisa se manca o se è
-l'alias di Store) e la sua versione, `basedpyright`, `ruff`, parser `python`.
+`hook_python()` in `lua/config/health.lua` sostituisce il controllo di `python`:
+interprete per la cwd (avvisa se manca o se è l'alias di Store) e la sua versione. Gli
+altri programmi e il parser li controlla il ciclo generico di `check_language()`.
 
 ## 7. Verifica
 

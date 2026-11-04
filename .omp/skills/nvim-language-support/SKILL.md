@@ -301,6 +301,9 @@ Un commit a sé, separato da quelli della config.
 - `references/go.md` — Go: un compiler plugin del runtime fermo al 2014 che si
   eredita e si corregge invece di riscrivere, tool che non rispondono a `--version`,
   e un server le cui analisi arrivano dopo le diagnostiche di tipo.
+- `references/python.md` — Python: un interprete scelto dal venv più vicino o dal
+  globale e condiviso da server, `:Run` e health check; un `before_init` che deve
+  modificare le `settings` sul posto; REPL e Jupyter rimandati con il primo passo scritto.
 - `assets/` — gli scheletri dei file da creare.
 
 ### La forma di una reference di linguaggio

@@ -1,3 +1,7 @@
+## 2026-11-04
+
+- Add Python support: `basedpyright` (types, completion, rename) and `ruff` (lint) as language servers, `ruff_format` in `<Leader>lf`, the `python` parser, `:Run [args]` to run the script and a `Python` section in `:checkhealth config`, all declared in `lua/config/toolchain.lua`. The interpreter is the one inside the nearest `.venv` or `venv` above the file, else the `python` on PATH (`lua/config/python.lua`), the same for the server and `:Run`; a venv created after the server started needs `:lsp restart basedpyright`. REPL and Jupyter are deferred, see `.omp/skills/nvim-language-support/references/python.md`.
+
 ## 2026-11-01
 
 - Fix `gF` on a `file://` link of a Go hover (`...dir.go#114,6`) opening the file at the top: gopls writes `#<line>,<col>`, which the hover-window `gF` did not parse. It now goes to the line and the column.
