@@ -14,6 +14,28 @@ vim.o.path = require('config.path').default
 
 vim.o.shada = "'100,<50,s10,:1000,/100,@100,h" -- Limit ShaDa file (for startup)
 
+-- Copy to the system clipboard with OSC 52; paste back what Nvim last copied.
+-- HACK: the `win32yank.exe` bundled with Nvim flashes a console window on every yank to `+`
+-- (neovim/neovim#25928, nvim v0.12.5, locked 2026-11-06, not retested). OSC 52 starts no
+-- process, but Windows Terminal never answers its read query, so `"+p` would wait 10 s.
+-- NOTE: reading `+` through the unnamed register loops back into this provider and returns
+-- nothing, hence the cache. The OS clipboard comes in with the terminal's `<C-S-v>`.
+local osc52 = require('vim.ui.clipboard.osc52')
+local copied = { { '' }, 'v' }
+local function copy(reg)
+  local send = osc52.copy(reg)
+  return function(lines, regtype)
+    copied = { lines, regtype }
+    send(lines)
+  end
+end
+local function paste() return copied end
+vim.g.clipboard = {
+  name = 'OSC 52 (copy only)',
+  copy = { ['+'] = copy('+'), ['*'] = copy('*') },
+  paste = { ['+'] = paste, ['*'] = paste },
+}
+
 -- PowerShell 7 for `:!`, `:make`, `system()` and the terminal.
 -- NOTE: `shellquote`/`shellxquote` are cleared (`pwsh -Command` parses its own
 -- argument); `shellpipe`/`shellredir` write UTF8, UTF-16LE would corrupt quickfix.

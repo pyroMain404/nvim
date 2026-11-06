@@ -1,3 +1,7 @@
+## 2026-11-06
+
+- Fix a console window flashing on every yank to the `+` register: the `win32yank.exe` bundled with Nvim (neovim/neovim#25928) is replaced by the OSC 52 provider, which starts no process. Copying works as before; `"+p` pastes what Nvim last copied, not the Windows clipboard, which comes in with the terminal's `<C-S-v>`.
+
 ## 2026-11-04
 
 - Add Python support: `basedpyright` (types, completion, rename) and `ruff` (lint) as language servers, `ruff_format` in `<Leader>lf`, the `python` parser, `:Run [args]` to run the script and a `Python` section in `:checkhealth config`, all declared in `lua/config/toolchain.lua`. The interpreter is the one inside the nearest `.venv` or `venv` above the file, else the `python` on PATH (`lua/config/python.lua`), the same for the server and `:Run`; a venv created after the server started needs `:lsp restart basedpyright`. REPL and Jupyter are deferred, see `.omp/skills/nvim-language-support/references/python.md`.
