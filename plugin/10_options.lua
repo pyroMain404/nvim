@@ -14,26 +14,18 @@ vim.o.path = require('config.path').default
 
 vim.o.shada = "'100,<50,s10,:1000,/100,@100,h" -- Limit ShaDa file (for startup)
 
--- Copy to the system clipboard with OSC 52; paste back what Nvim last copied.
--- HACK: the `win32yank.exe` bundled with Nvim flashes a console window on every yank to `+`
--- (neovim/neovim#25928, nvim v0.12.5, locked 2026-11-06, not retested). OSC 52 starts no
--- process, but Windows Terminal never answers its read query, so `"+p` would wait 10 s.
--- NOTE: reading `+` through the unnamed register loops back into this provider and returns
--- nothing, hence the cache. The OS clipboard comes in with the terminal's `<C-S-v>`.
+-- Copy to the system clipboard with OSC 52, paste from it with `win32yank.exe`.
+-- HACK: the stock provider copies through a detached `win32yank.exe` whose console window
+-- flashes on every yank to `+` (neovim/neovim#25928, nvim v0.12.5, locked 2026-11-06, not
+-- retested). OSC 52 starts no process; pasting stays on `win32yank.exe -o`, run by
+-- `system()` as in the stock provider, because Windows Terminal never answers the OSC 52
+-- read query and `"+p` would wait 10 s.
 local osc52 = require('vim.ui.clipboard.osc52')
-local copied = { { '' }, 'v' }
-local function copy(reg)
-  local send = osc52.copy(reg)
-  return function(lines, regtype)
-    copied = { lines, regtype }
-    send(lines)
-  end
-end
-local function paste() return copied end
+local win32yank_paste = { 'win32yank.exe', '-o', '--lf' }
 vim.g.clipboard = {
-  name = 'OSC 52 (copy only)',
-  copy = { ['+'] = copy('+'), ['*'] = copy('*') },
-  paste = { ['+'] = paste, ['*'] = paste },
+  name = 'OSC 52 copy, win32yank paste',
+  copy = { ['+'] = osc52.copy('+'), ['*'] = osc52.copy('*') },
+  paste = { ['+'] = win32yank_paste, ['*'] = win32yank_paste },
 }
 
 -- PowerShell 7 for `:!`, `:make`, `system()` and the terminal.
