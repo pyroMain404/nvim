@@ -21,11 +21,13 @@ esiste più; lo spostamento ha anche invalidato la fiducia di `:h 'exrc'` di ogn
 `.nvim.lua`, che è indicizzata per percorso assoluto — la trappola è in
 `SKILL.md`.
 
-NOTE: `:Run` non legge più `vim.g.run_command`: i `.nvim.lua` descritti sotto che lo
-impostano (`assimoco-pass-platform`, `assimoco-passportal-client`) vanno riscritti con
-`require('config.project').set('run', …)` e riautorizzati con `:trust`, sulla macchina
-che li ha. Le righe di questo registro dicono ancora `vim.g.run_command` finché non lo
-si fa.
+NOTE: `:Run` legge il contratto `run` (`require('config.project').set('run', …)`) e non
+più `vim.g.run_command`. Le righe sotto descrivono la forma che i due `.nvim.lua` per
+repo (`assimoco-pass-platform`, `assimoco-passportal-client`) **devono** avere; i file
+veri stanno sulla macchina che ha quei checkout e, finché non sono riscritti e
+riautorizzati con `:trust`, `:Run` ricade sul comando del linguaggio. Da `W:` non sono
+raggiungibili dalla sessione che ha cambiato il codice (2026-11-09: sotto `W:\` non ci
+sono i checkout), quindi la migrazione è **non verificata**.
 
 ## `W:\GDPR\riesame-privacy-be`
 
@@ -126,7 +128,7 @@ la distinzione è tutta la lezione.
 | `[tasks]` | `verify`, `platform:build-first`, `platform:build`, `platform:run`, `portal:build`, `portal:serve-local`, `portal:serve-trt`, `batch:build`, `bom:build` |
 | `mise.toml` per repo | uno in ciascuno dei quattro, `java = "temurin-11"` (più `node` nel portale), ognuno in `.git/info/exclude` |
 | `.nvim.lua` alla radice | **Uno che copre tutti e quattro i repo** perché `exrc` risale le directory padre. Le settings Maven PASS (sotto) e, dal 2026-09-30, `vim.env.JDTLS_JVM_ARGS = '-javaagent:~/.local/share/java/lombok-1.18.36.jar'`: senza, `jdtls` riporta ogni getter/setter Lombok come inesistente (`getMicroTheme()` su `FundSearchFilter` in `assimoco-pass-platform-ext-rest`). Misurato headless su `FundsResourceService.java`: 0 errori con l'agent, `jdtls` attaccato. Il jar è fuori dal repository (stesso di `riesame-privacy-be`) |
-| `.nvim.lua` per repo | **Due**, solo per `:Run`: `assimoco-pass-platform` (launcher Docker) e `assimoco-passportal-client` (`npm run`). Non duplicano quello padre: impostano `vim.g.run_command`, che il padre non tocca, e valgono solo se Neovim parte **da dentro** quel repo |
+| `.nvim.lua` per repo | **Due**, solo per `:Run`: `assimoco-pass-platform` (launcher Docker) e `assimoco-passportal-client` (`npm run`). Non duplicano quello padre: dichiarano il contratto `run`, che il padre non dichiara (se lo facesse vincerebbe comunque il `set()` del file più vicino), e valgono solo se Neovim parte **da dentro** quel repo |
 
 **La storia, perché è il tipo di errore che si ripete**: qui `jdtls` non partiva —
 nessun client, nessun errore, progetto sano. Il primo rimedio è stato dichiarare
@@ -201,7 +203,7 @@ silenzioso.
 
 | Dove | Cosa | Perché |
 |---|---|---|
-| `.nvim.lua` | `vim.g.run_command = function(args) … end` che restituisce `{ 'C:/Program Files/Git/bin/bash.exe', '-c', 'cd "$1" && exec sh run.sh "$2"', '_', <jib>, args[1] or 'local' }` | `:Run` esegue con cwd = directory del buffer (il resolver del linguaggio non ha dato una radice, e un contratto di progetto non può darla), e `run.sh` va lanciato **dentro** `assimoco-pass-platform-jib`: la `cd` sta nella shell. `:Run test` passa `test` come ambiente. Git Bash per nome assoluto, così non serve `bash` nel PATH |
+| `.nvim.lua` | `require('config.project').set('run', function(args) … end)` che restituisce `{ 'C:/Program Files/Git/bin/bash.exe', '-c', 'cd "$1" && exec sh run.sh "$2"', '_', <jib>, args[1] or 'local' }` | `:Run` esegue con cwd = directory del buffer (il resolver del linguaggio non ha dato una radice, e un contratto di progetto non può darla), e `run.sh` va lanciato **dentro** `assimoco-pass-platform-jib`: la `cd` sta nella shell. `:Run test` passa `test` come ambiente. Git Bash per nome assoluto, così non serve `bash` nel PATH |
 
 **Fuori dal repository**: Git for Windows (`C:/Program Files/Git/bin/bash.exe`) e
 quello che `run.sh` richiede (Docker, non verificato qui).
@@ -235,7 +237,7 @@ una proprietà del checkout e di nessun altro:
 | `mise.toml` (non versionato) | `java = "temurin-11"`, `maven = "3.6.3"`, `node = "14.21.3"` | la toolchain dell'onboarding, invariata |
 | `mise.toml` | `"npm:@angular/language-server" = "15"` | `ngserver` carica `@angular/language-service` **dal progetto**. Il globale è la 17, che pretende `typescript/lib/tsserverlibrary` ≥ 5.0 mentre qui TypeScript è 4.9.5: misurato, `Error: Failed to resolve 'typescript/lib/tsserverlibrary' with minimum version '5.0'` |
 | `.nvim.lua` | quello di `W:\RGI`, con un `BufEnter` che porta la directory della finestra su `passportal-client/src/main/angular` | nessuna variabile d'ambiente c'entra: quello che serve è **la directory corrente**, vedi sotto |
-| `.nvim.lua` (proprio) | `vim.g.run_command = function(args) … end` → `npm --prefix <root>/passportal-client/src/main/angular run <args>` (percorso **assoluto**, da `root`), default `serve-int`; `nil, nil` per i buffer fuori dal repo | il `pom.xml` è un aggregatore senza main: il default Java di `:Run` diventerebbe `mvn exec:java`, che qui fallisce (di proposito, rumorosamente). Il comando vero è uno script npm, e `:Run test` diventa `npm run test` |
+| `.nvim.lua` (proprio) | `require('config.project').set('run', function(args) … end)` → `npm --prefix <root>/passportal-client/src/main/angular run <args>` (percorso **assoluto**, da `root`), default `serve-int`; `nil, nil` per i buffer fuori dal repo | il `pom.xml` è un aggregatore senza main: il default Java di `:Run` diventerebbe `mvn exec:java`, che qui fallisce (di proposito, rumorosamente). Il comando vero è uno script npm, e `:Run test` diventa `npm run test` |
 
 **La directory corrente è una configurazione, qui.** `MiniMisc.setup_auto_root()`
 la mette sulla radice del repository, che è quattro livelli sopra il progetto
