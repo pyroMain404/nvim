@@ -127,7 +127,7 @@ nmap_leader('es', '<Cmd>lua MiniStarter.open()<CR>',                           '
 
 -- HACK: `:Pick ... path="%"` fails on Windows: 'mini.pick' loads arguments as Lua, so path
 -- backslashes parse as escapes. Call the picker directly. Remove once fixed upstream
--- (still present in 'mini.nvim' ac5dffc, 2026-09-13).
+-- (still present in 'mini.nvim' f9ac12d, 2026-11-09).
 local pick_buf_path = function(picker, scope)
   return function()
     local path = vim.api.nvim_buf_get_name(0)

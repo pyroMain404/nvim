@@ -35,7 +35,7 @@ local vault_overrides = function(root)
   vim.notify(path .. ' is not a JSON object', vim.log.levels.WARN)
 end
 
--- HACK: obsidian.nvim 4eec5b1 shows only `entry.text` when it is set, and
+-- HACK: obsidian.nvim 9af605a shows only `entry.text` when it is set, and
 -- for the notes of an ambiguous link `text` is their first line, so the
 -- picker offers rows that all read `---` (the frontmatter). Show the path
 -- and, for an entry at the top of a file, its first line after the
@@ -115,8 +115,8 @@ local load_vault = function(spec, root)
     -- HACK: obsidian.nvim has no way to keep a `title` or a first heading equal
     -- to the `id` in step with a rename (`frontmatter.sync_title`,
     -- `note.sync_heading`, `note.sync_filename`). This branch of a fork adds
-    -- them; the element rename it also carried is upstream since
-    -- obsidian-nvim/obsidian.nvim#1009 (merged 2026-11-09, c25aa3d predates it).
+    -- them on top of upstream main; the element rename it carried is upstream
+    -- since obsidian-nvim/obsidian.nvim#1009, merged into it at 9af605a (2026-11-09).
     -- Go back to 'https://github.com/obsidian-nvim/obsidian.nvim' once the
     -- sync options are merged.
     vim.pack.add({ spec })

@@ -41,7 +41,7 @@ return {
   -- `cmd_env` is read by `vim.lsp.start()` only when `cmd` is a list, and the
   -- plugin's `cmd` function passes no `extra_spawn_params`: the variable shows
   -- in `:=vim.lsp.config['ts_ls']` and never reaches the process.
-  -- Still true in 'nvim-lspconfig' ac9d2f7 (2026-09-10) on Neovim v0.12.5.
+  -- Still true in 'nvim-lspconfig' 993d048 (2026-11-09) on Neovim v0.12.6.
   -- Delete it the day the plugin forwards `cmd_env` or `cmd` stops being a function.
   --
   -- NOTE: `vim.tbl_deep_extend('force')` merges tables but replaces functions,

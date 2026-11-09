@@ -26,7 +26,7 @@ local function restore()
   end
 end
 
--- HACK: render-markdown.nvim 8e87953 exposes hidden lines only through its
+-- HACK: render-markdown.nvim 9c235be exposes hidden lines only through its
 -- private extmark namespace, without identifying which feature concealed them.
 -- Reading needs `j`/`k` to skip concealed fence delimiters, but must visit every
 -- pipe-table source row. Delete this when it offers a visible-line motion.
@@ -89,7 +89,7 @@ end
 
 local function renderer_set(enabled) require('render-markdown').set_buf(enabled) end
 
--- HACK: render-markdown.nvim 8e87953 caches `anti_conceal` per buffer but has
+-- HACK: render-markdown.nvim 9c235be caches `anti_conceal` per buffer but has
 -- no public per-buffer override. Reading alone must keep its extmarks on the
 -- cursor line, so change that cache before the renderer refreshes. Delete this
 -- when the plugin exposes a per-buffer anti-conceal API.

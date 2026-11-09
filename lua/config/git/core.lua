@@ -52,7 +52,7 @@ end
 -- HACK: paths inside a patch are relative to the repository root, but 'mini.git'
 -- resolves them against the cwd (`:h MiniGit.show_diff_source()`), failing with
 -- E484 below the root. Run from the root and restore after. Remove once
--- 'mini.git' resolves them itself (still needed in 'mini.nvim' ac5dffc, 2026-09-13).
+-- 'mini.git' resolves them itself (still needed in 'mini.nvim' f9ac12d, 2026-11-09).
 M.at_repo_root = function(f, opts)
   local root = M.repo_root()
   if root == nil then return f(opts) end

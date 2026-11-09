@@ -37,7 +37,7 @@ end
 
 -- HACK: 'nvim-lspconfig' announces `rust-analyzer.showReferences` but registers
 -- only `runSingle`, so reference lenses end in "does not support command". Show
--- the locations client-side. Still missing in 'nvim-lspconfig' ac9d2f7 (2026-09-10).
+-- the locations client-side. Still missing in 'nvim-lspconfig' 993d048 (2026-11-09).
 local add_show_references = function()
   vim.lsp.commands['rust-analyzer.showReferences'] = function(command, ctx)
     local locations = command.arguments and command.arguments[3] or {}
