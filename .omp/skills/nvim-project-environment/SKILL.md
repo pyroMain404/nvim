@@ -94,17 +94,19 @@ Le due cose che ci finiscono più spesso:
   serve un autocomando `FileType`, non un'assegnazione: l'ftplugin gira **dopo**
   il `.nvim.lua`, e un valore assegnato al momento della lettura viene
   sovrascritto senza lasciare traccia;
-- **una variabile che un comando della config legge quando viene invocato**, e
-  qui l'ordine non è un problema: `:Run` (il contratto di `lua/config/run.lua`)
-  consulta `vim.g.run_command` al momento della chiamata, quindi una lista o una
-  funzione assegnata qui vince sul comando che il linguaggio avrebbe scelto,
-  senza autocomandi. Misurato su un progetto Maven: `{ 'mvn', 'spring-boot:run',
-  '-Dspring-boot.run.profiles=local' }` arriva intatta, e gli argomenti di
-  `:Run -X` le si aggiungono senza modificarla. La forma a funzione riceve quegli
+- **un contratto della config**, dichiarato con `require('config.project').set(nome,
+  spec)` (`lua/config/project.lua`, che ne elenca la forma): oggi `run`, il comando
+  di `:Run`, e `start`, il menu della schermata iniziale. `run` si legge quando
+  `:Run` viene invocato, quindi non serve nessun autocomando: una lista (a cui gli
+  argomenti della chiamata si aggiungono) o una funzione assegnata qui vince sul
+  comando che il linguaggio avrebbe scelto. La forma a funzione riceve quegli
   argomenti e risponde come un resolver, ma `nil` significa **"non è roba mia,
   usa il comando del linguaggio"**, non "rifiuta": il messaggio di un
   `return nil, '…'` viene scartato (`M.command` fa `project_command(args) or
-  resolved`, in `lua/config/run.lua`).
+  resolved`, in `lua/config/run.lua`). `start` si legge una volta all'avvio, prima
+  che la schermata sia costruita. Per ogni contratto vale il `set()` del file più
+  vicino: non c'è sovrascrittura da parte del padre, e un secondo `set()` dello
+  stesso contratto nello stesso file avvisa e viene ignorato.
 
 **La tabella dei campi**, per non dover rileggere la prosa sopra ogni volta:
 
@@ -112,7 +114,8 @@ Le due cose che ci finiscono più spesso:
 |---|---|---|
 | Una variabile che un server legge al proprio avvio | `vim.env.<NOME> = ...`, assegnazione diretta | Il file è letto **prima** di ogni server: quello che scrive arriva al `cmd` che lo lancia |
 | Un'opzione che un ftplugin della config imposta anche | `vim.api.nvim_create_autocmd('FileType', { pattern = '<ft>', callback = ... })` | L'ftplugin gira **dopo** il `.nvim.lua`: un'assegnazione diretta verrebbe sovrascritta senza lasciare traccia |
-| Il comando che `:Run` esegue | `vim.g.run_command = { ... }` (lista) o `function(args) ... end` (per dipendere dal buffer; `nil` = lascia al linguaggio) | `:Run` consulta `vim.g.run_command` **al momento della chiamata**, non alla lettura del file: nessun autocomando serve, l'assegnazione diretta basta |
+| Il comando che `:Run` esegue | `require('config.project').set('run', { ... })` (lista) o `set('run', function(args) ... end)` (per dipendere dal buffer; `nil` = lascia al linguaggio) | `:Run` consulta il contratto **al momento della chiamata**, non alla lettura del file: nessun autocomando serve |
+| La schermata iniziale di un progetto | `require('config.project').set('start', { strategy, header, items })`, forma in 'lua/config/project.lua' | Letta una volta all'avvio, dopo il `.nvim.lua` e prima che `mini.starter` costruisca il menu: nessun autocomando serve |
 | Un `makeprg`/`errorformat` diverso da quello che il compiler plugin sceglie | come l'opzione ftplugin: autocomando `FileType`, riscrivendo l'opzione **per intero** | `b:<compiler>_makeprg_params` dei compiler plugin del runtime **appende**, non sostituisce: non serve a mettere un prefisso davanti |
 | Una versione di tool o un task di build | **non qui** — `mise.toml` del progetto | Serve anche alla shell, alla CI, a chi non apre Neovim: un `.nvim.lua` la nasconderebbe a tutti loro |
 
@@ -154,12 +157,12 @@ legge con altri editor non lo vede.
 | In una directory che contiene più repository, il `mise.toml` di un repo è **più vicino** di quello padre e ne sovrascrive il tool: un rimedio messo al livello padre non si applica se Neovim viene aperto da dentro il repo, e il sintomo è identico a non averlo mai applicato | misurare da **entrambe** le directory prima di dire fatto (`mise exec -- java -version` nelle due). Se il rimedio regge solo da una, è al livello sbagliato: è un requisito del server, e va nella config |
 | Passare `JAVA_HOME` (o qualunque variabile che `mise` gestisce) a un programma lanciato da uno **shim** non serve a niente: lo shim la **ricalcola** dai tool della sua directory e sovrascrive quella ereditata. Misurato: `JAVA_HOME=<21> mise exec -- printenv JAVA_HOME` risponde con la 11 del progetto | usare la leva di `mise`, non quella del programma: `MISE_<TOOL>_VERSION=<versione>` nell'ambiente del figlio fa risolvere allo shim quella versione **per quel processo solo**, e `JAVA_HOME` ne segue coerente |
 | Neovim eredita l'ambiente della shell che l'ha avviato: una variabile esportata in un terminale rende un progetto "funzionante" lì e rotto se aperto da un'icona | ciò che serve al progetto va nel `.nvim.lua`, non nel profilo della shell; il sintomo "funziona solo dal terminale" è questo. Una variabile che il progetto non può contenere (una password) va invece resa **persistente a livello utente** — su Windows `[Environment]::SetEnvironmentVariable(…, 'User')` — che è l'unico modo perché la erediti anche un server LSP lanciato da un Neovim aperto da un'icona |
-| `:h 'exrc'` sorgenta **tutti** i `.nvim.lua` dalla directory corrente **e da tutte quelle padre** (da Neovim 0.11; fino alla 0.10 solo la corrente), il più vicino per primo. Chi ricorda la regola vecchia mette un loader in ogni checkout di un workspace multi-repo | un file solo alla radice del workspace basta, e i loader non sono neutri: quello che sorgentava il file padre lo faceva eseguire **due volte** (misurato, due `BufEnter` identici). Due file sulla stessa catena si sommano e su un globale singolo (`vim.g.run_command`, `vim.env.X`) **vince l'ultimo scritto, cioè il padre**: non assegnare la stessa variabile a più livelli. Il file di un repo vale solo se Neovim parte **da dentro** quel repo |
+| `:h 'exrc'` sorgenta **tutti** i `.nvim.lua` dalla directory corrente **e da tutte quelle padre** (da Neovim 0.11; fino alla 0.10 solo la corrente), il più vicino per primo. Chi ricorda la regola vecchia mette un loader in ogni checkout di un workspace multi-repo | un file solo alla radice del workspace basta, e i loader non sono neutri: quello che sorgentava il file padre lo faceva eseguire **due volte** (misurato, due `BufEnter` identici). Due file sulla stessa catena si sommano e su un globale singolo (`vim.g.X`, `vim.env.X`) **vince l'ultimo scritto, cioè il padre**: non assegnare la stessa variabile a più livelli. I contratti di `config.project` (`set('run', …)`, `set('start', …)`) fanno eccezione: vale il primo `set()`, cioè il file più vicino. Il file di un repo vale solo se Neovim parte **da dentro** quel repo |
 | Il file passato come argomento a `nvim` viene aperto **prima** che `exrc` sia sorgentato, quindi il suo primo `BufEnter`/`FileType` non passa mai da un autocomando del `.nvim.lua`. In headless non ne arriva un altro, e il rimedio sembra non applicato affatto | oltre all'autocomando, una passata iniziale sul buffer corrente, schedulata perché l'avvio sia finito: `vim.schedule(function() applica(vim.api.nvim_get_current_buf()) end)` |
 | Un `pattern` di autocomando è confrontato con il nome del buffer **come lo scrive Windows**, con i backslash, mentre ogni percorso costruito con `vim.fs` usa `/`. I due non si incontrano mai, e un pattern che non aggancia niente è silenzioso | confronta dentro la callback: `vim.startswith(vim.fs.normalize(vim.api.nvim_buf_get_name(args.buf)), dir .. '/')` |
 | Un `BufEnter` registrato dal `.nvim.lua` **non** vince su quello di un plugin caricato da `Config.later()`: quello parte da un timer dopo l'avvio, quindi è registrato dopo ed esegue dopo. È il caso di `MiniMisc.setup_auto_root()`, il cui `chdir()` disfa un `lcd` appena messo — e `chdir()` sovrascrive anche la directory **locale di finestra** | `vim.schedule()` dentro la callback, che sposta l'effetto al tick successivo, dove la catena dell'evento è finita. Misurato: il nostro handler è la voce 1 di `BufEnter`, `Find root and change current directory` la 3 |
 | Ciò che un server legge **una volta sola all'avvio** non arriva da `settings`: Neovim la usa per rispondere a `workspace/configuration` e per `didChangeConfiguration`, entrambi dopo `initialize`. La config si legge giusta (`:=vim.lsp.config['<server>']` la mostra) e non cambia niente | passala **anche** in `init_options`, che è ciò che viaggia dentro `initialize`. Il caso vero è `java.configuration.maven.userSettings` di `jdtls`; il dettaglio sta in `references/java.md` di `nvim-language-support` |
-| `vim.g.run_command` è un singolo globale, ma un Neovim può avere buffer di più repository (un workspace con file nel padre) | funzione, non lista, con guardia dentro: `if not vim.startswith(vim.fs.normalize(vim.api.nvim_buf_get_name(0)), root .. '/') then return nil, nil end`. Senza guardia il comando del repo parte per buffer di altri progetti |
+| Il contratto `run` è uno solo per Neovim, ma un Neovim può avere buffer di più repository (un workspace con file nel padre) | funzione, non lista, con guardia dentro: `if not vim.startswith(vim.fs.normalize(vim.api.nvim_buf_get_name(0)), root .. '/') then return nil, nil end`. Senza guardia il comando del repo parte per buffer di altri progetti |
 | Un file di progetto deve sapere dove abita (per costruire percorsi, guardie, `lcd`) e `vim.fn.getcwd()` è la directory da cui Neovim è partito, non quella del file | `local root = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))` (`:h lua-script-location`). Percorso assoluto, funziona anche quando il file è trovato risalendo dalle directory figlie |
 | `:Run` esegue il comando con cwd = directory del **buffer** (il resolver del progetto non restituisce una radice), quindi un percorso relativo nella lista (`npm --prefix a/b/c`) vale solo per i buffer che stanno nella directory in cui lo si è scritto | percorso assoluto costruito da `root`, oppure `cd "$root" && …` dentro una shell (`bash -c 'cd "$1" && exec …' _ <dir>`), come fa il `.nvim.lua` di `assimoco-pass-platform` (con `C:/Program Files/Git/bin/bash.exe` per non dipendere dal `bash` nel PATH) |
 

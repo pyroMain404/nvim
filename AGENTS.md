@@ -55,6 +55,8 @@ lua/config/markdown.lua  Markdown buffer behavior (attach/detach)
 lua/config/obsidian.lua  'obsidian.nvim' setup
 lua/config/ft.lua        ftplugin boilerplate: undo, tree-sitter folds, build, Maven
 lua/config/run.lua       `:Run` resolver
+lua/config/starter.lua   `mini.starter` menu: context (vault), then the project's `start` contract
+lua/config/project.lua   Contracts a project declares from its '.nvim.lua' (`start`, `run`): `set()` and `contract()`
 lua/config/mise.lua      Shared `mise` query, with `newest()`; required by `after/lsp/` files
 lua/config/health.lua    `:checkhealth config`; found by path, not required
 lua/config/              Also `path`, `pick`, `glance` and `mdlink`: small shared helpers

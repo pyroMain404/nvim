@@ -11,7 +11,7 @@
 -- - The default is READ from the project; where it cannot be read, fail loudly.
 -- - It is NOT `:make`: this starts something that lives.
 -- - Arguments replace the default.
--- - `vim.b.run_command` / `vim.g.run_command` (`:h 'exrc'`) replace the default.
+-- - `vim.b.run_command` or the project's `run` contract (`lua/config/project.lua`) replace the default.
 
 local M = {}
 
@@ -22,7 +22,7 @@ local M = {}
 -- NOTE: the override list is copied before extending, or each `:Run` would
 -- accumulate the arguments of the previous ones.
 local function project_command(args)
-  local project = vim.b.run_command or vim.g.run_command
+  local project = vim.b.run_command or (require('config.project').contract('run'))
   if type(project) == 'function' then return project(args) end
   if type(project) == 'table' then
     return vim.list_extend(vim.deepcopy(project), args)

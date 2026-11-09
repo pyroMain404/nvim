@@ -4,19 +4,27 @@
 --
 -- What a project may declare for this config, from its '.nvim.lua' (`:h 'exrc'`, trusted with `:trust`).
 --
--- A project calls `require('config.project').set(name, spec)`; the only contract today is `start`:
+-- A project calls `require('config.project').set(name, spec)`. Contracts:
 --
---   require('config.project').set('start', {
---     strategy = 'merge', -- or 'substitute' (default)
---     header = 'optional string; \n allowed',
---     items = {
---       { section = 'Build', name = 'Run', action = 'Run' }, -- an Ex command or a Lua function
---       { name = 'Readme', action = function() vim.cmd.edit('README.md') end }, -- section defaults to 'Project'
---     },
---   })
+--   `start`  the start screen, see 'lua/config/starter.lua':
+--
+--     set('start', {
+--       strategy = 'merge', -- or 'substitute' (default)
+--       header = 'optional string; \n allowed',
+--       items = {
+--         { section = 'Build', name = 'Run', action = 'Run' }, -- an Ex command or a Lua function
+--         { name = 'Readme', action = function() vim.cmd.edit('README.md') end }, -- section defaults to 'Project'
+--       },
+--     })
+--
+--   `run`    what `:Run` executes, see 'lua/config/run.lua': a list, to which the arguments of the
+--            call are appended, or `function(args)` returning a command, or `nil, nil` to leave it
+--            to the language.
+--
+--     set('run', { 'npm', 'run', 'dev' })
 --
 -- NOTE: 'exrc' sources the files of every parent directory, nearest first; the first valid `set()` wins.
--- NOTE: read once at startup, before the start screen is built; restart Neovim to apply a change.
+-- NOTE: read at startup (`start`) or when `:Run` is invoked (`run`); restart Neovim to apply a change.
 
 local M = {}
 
@@ -68,8 +76,22 @@ local function parse_start(spec)
   return { strategy = strategy, header = header, items = items }, problems
 end
 
+-- A non-empty list of strings, or a function; the contract of `:Run` ('lua/config/run.lua').
+local function parse_run(spec)
+  if type(spec) == 'function' then return spec, {} end
+  if type(spec) == 'table' and vim.islist(spec) and #spec > 0 then
+    for _, arg in ipairs(spec) do
+      if type(arg) ~= 'string' then
+        return nil, { '"run" list must hold only strings' }
+      end
+    end
+    return spec, {}
+  end
+  return nil, { '"run" needs a non-empty list of strings or a function' }
+end
+
 -- Closed set: `name -> parse(spec)`. A new contract is one function and one entry.
-local contracts = { start = parse_start }
+local contracts = { start = parse_start, run = parse_run }
 
 -- `name -> { value, root }`, filled by `set()`.
 local declared = {}
@@ -80,6 +102,8 @@ local function warn(msg)
 end
 
 --- Declares contract `name` for the project whose '.nvim.lua' calls this.
+-- NOTE: the declaring directory is that of the file calling `set()` itself, so a wrapper
+-- helper in another file would name its own directory.
 function M.set(name, spec)
   local source = debug.getinfo(2, 'S').source
   local file = source:sub(1, 1) == '@' and vim.fs.normalize(source:sub(2)) or nil
@@ -92,9 +116,19 @@ function M.set(name, spec)
   for _, problem in ipairs(problems) do
     warn(('%s: %s'):format(where, problem))
   end
-  if value and not declared[name] then
-    declared[name] =
-      { value = value, root = file and vim.fs.dirname(file) or vim.fn.getcwd() }
+  if not value then return end
+  local root = file and vim.fs.dirname(file) or vim.fn.getcwd()
+  local previous = declared[name]
+  if not previous then
+    declared[name] = { value = value, root = root }
+  elseif previous.root == root then
+    -- A nearer file shadowing a parent's is by design; the same file twice is a leftover.
+    warn(
+      ('%s: "%s" is already declared in this file, the first one wins'):format(
+        where,
+        name
+      )
+    )
   end
 end
 

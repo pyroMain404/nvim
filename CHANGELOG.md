@@ -1,5 +1,7 @@
 ## 2026-11-09
 
+- Replace `vim.g.run_command` with the `run` contract of 'lua/config/project.lua': a project's '.nvim.lua' calls `require('config.project').set('run', <list | function>)`, with the same meaning as before (a list gets the arguments of the call appended, a function answers like a resolver, `nil, nil` leaves it to the language). Every '.nvim.lua' that assigned `vim.g.run_command` has to be rewritten and trusted again, or `:Run` falls back to the language default; `vim.b.run_command` is unchanged. As for `start`, the nearest '.nvim.lua' wins instead of the last one read, and a second `set()` of the same contract in one file warns.
+
 - Add per-project start screens: a project's '.nvim.lua' calls `require('config.project').set('start', { items = { { name = ..., action = <Ex command or function> } }, ... })`, with optional `section`, `header` and `strategy`. `substitute` (default) replaces the start screen, `merge` adds to and overrides the vault menu. It rides on `:trust` and `:h 'exrc'` like the rest of '.nvim.lua' (the nearest file wins) and is read once at startup. 'lua/config/project.lua' owns the contracts, 'lua/config/starter.lua' applies `start`.
 
 - Add `<Leader>es` to open the start screen at any time (`MiniStarter.open()`).

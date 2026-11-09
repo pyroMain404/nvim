@@ -82,7 +82,7 @@ che servono. Il file è letto all'avvio (`:h 'exrc'`, già abilitato nella confi
   **solleva** — da qui il `pcall` nel template.
 - **`GDScript_Port`**, solo se questo gioco non è il primo Godot aperto sulla macchina
   (passo 5).
-- **`vim.g.run_command`**, solo se il gioco non si avvia con `godot --path <root>`.
+- **`set('run', …)`** (`require('config.project')`), solo se il gioco non si avvia con `godot --path <root>`.
 
 Poi, una volta sola: aprire il file e `:trust`. Senza, `exrc` non lo sorgenta e tutto
 ciò che imposta non esiste, **senza un errore**. Ogni modifica al file annulla la

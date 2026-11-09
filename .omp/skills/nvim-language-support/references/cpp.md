@@ -221,7 +221,7 @@ Quattro casi che appartengono al `.nvim.lua` del progetto (`:h 'exrc'`, skill
   compiler plugin condiviso;
 - **standard fuori dal database** (file sciolti, progetto non configurato):
   `.clangd` del progetto, o `fallbackFlags` ("Server");
-- **avvio non ovvio**: `vim.g.run_command`, che ha l'ultima parola su `:Run`.
+- **avvio non ovvio**: `set('run', …)` di `config.project`, che ha l'ultima parola su `:Run`.
 
 ## 7. Cosa deve dire l'health check
 

@@ -1072,12 +1072,12 @@ un comando solo, `:Run`, con un significato definito che ogni filetype rispetta:
    risposta senza che nessun file della config lo conosca.
 5. **Non è `:make`**, che chiude una domanda e riempie il quickfix. Questo avvia
    qualcosa che vive.
-6. **Il progetto ha l'ultima parola.** `vim.b.run_command` o `vim.g.run_command`,
-   impostate dal `.nvim.lua` di quel checkout (`:h 'exrc'`, skill
-   `nvim-project-environment`), sostituiscono ciò che il linguaggio avrebbe risolto:
-   una lista, a cui gli argomenti della chiamata si aggiungono, oppure una funzione
-   di quegli argomenti, che risponde come qualunque altro resolver — ed è la forma
-   per un monorepo, dove il comando dipende anche da `vim.bo.filetype`.
+6. **Il progetto ha l'ultima parola.** `vim.b.run_command`, o il contratto `run` che il
+   `.nvim.lua` di quel checkout dichiara con `require('config.project').set('run', …)`
+   (`:h 'exrc'`, skill `nvim-project-environment`), sostituiscono ciò che il linguaggio
+   avrebbe risolto: una lista, a cui gli argomenti della chiamata si aggiungono, oppure
+   una funzione di quegli argomenti, che risponde come qualunque altro resolver — ed è
+   la forma per un monorepo, dove il comando dipende anche da `vim.bo.filetype`.
 
 Il fatto che l'ecosistema offra già il comando non è un motivo per non definirlo: il
 runtime di Rust ha `:Crun`, e questa config definisce `:Run` accanto senza toglierlo.
@@ -1086,7 +1086,7 @@ La duplicazione è il punto — un nome che vale ovunque, invece di uno per buil
 La clausola 6 è ciò che rende il contratto sopportabile in un progetto che non
 somiglia agli altri, e funziona per una ragione di tempi: il resolver è chiamato
 **quando il comando viene invocato**, non quando il ftplugin si carica, quindi non
-importa che `exrc` sia letto prima o dopo (misurato: una `vim.g` del `.nvim.lua` è
+importa che `exrc` sia letto prima o dopo (misurato: un `set('run', …)` del `.nvim.lua` è
 già lì). È l'opposto del caso di un'opzione, dove il `.nvim.lua` perde contro
 l'ftplugin che gira dopo e serve un autocomando — la trappola che la skill
 `nvim-project-environment` documenta.

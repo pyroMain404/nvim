@@ -21,6 +21,12 @@ esiste più; lo spostamento ha anche invalidato la fiducia di `:h 'exrc'` di ogn
 `.nvim.lua`, che è indicizzata per percorso assoluto — la trappola è in
 `SKILL.md`.
 
+NOTE: `:Run` non legge più `vim.g.run_command`: i `.nvim.lua` descritti sotto che lo
+impostano (`assimoco-pass-platform`, `assimoco-passportal-client`) vanno riscritti con
+`require('config.project').set('run', …)` e riautorizzati con `:trust`, sulla macchina
+che li ha. Le righe di questo registro dicono ancora `vim.g.run_command` finché non lo
+si fa.
+
 ## `W:\GDPR\riesame-privacy-be`
 
 Backend Spring Boot 2.3.1, Maven, Java 8, Lombok ovunque (93 `@Getter`, 79
