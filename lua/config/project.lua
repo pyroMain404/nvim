@@ -48,7 +48,9 @@ local function parse_start(section, root)
     if type(item) == 'table' then
       if type(item.command) == 'string' then
         action = item.command
-      elseif type(item.file) == 'string' then
+      elseif
+        type(item.file) == 'string' and vim.fn.isabsolutepath(item.file) == 0
+      then
         action = 'edit ' .. vim.fn.fnameescape(vim.fs.joinpath(root, item.file))
       end
     end
@@ -66,7 +68,7 @@ local function parse_start(section, root)
     else
       table.insert(
         problems,
-        ('start: item %d needs a "name" and a non-empty "command" or "file"'):format(
+        ('start: item %d needs a "name" and a non-empty "command" or a relative "file"'):format(
           i
         )
       )

@@ -25,6 +25,8 @@ local function is_item(x) return type(x) == 'table' and x.name ~= nil end
 -- Project items replace the base item with the same section and name; the rest are
 -- inserted before the first entry that is not a plain item (`mini.starter` section
 -- functions such as recent files and builtin actions), so those stay last.
+-- NOTE: two project items with the same section and name that the base lacks are both added;
+-- the project file is the user's own, so the duplicate is theirs to see and fix.
 local function merge_items(base_items, project_items)
   local items, index = {}, {}
   for i, item in ipairs(base_items) do
@@ -60,6 +62,8 @@ end
 -- otherwise (`substitute`, or `merge` with no base: the default screen is never a base)
 -- the project menu alone, with no builtin tail: the project owns it.
 local function project_menu(base)
+  -- `mini.starter` shows the screen only without file arguments; skip the trust prompt then.
+  if vim.fn.argc() > 0 then return base end
   local start, root = require('config.project').contract('start')
   if not start then return base end
   if start.strategy == 'merge' and base then
