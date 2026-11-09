@@ -121,6 +121,7 @@ nmap_leader('eo', edit_plugin_file('10_options.lua'),                          '
 nmap_leader('ep', edit_plugin_file('40_plugins.lua'),                          'Plugins config')
 nmap_leader('eq', explore_quickfix,                                            'Quickfix list')
 nmap_leader('eQ', explore_locations,                                           'Location list')
+nmap_leader('es', '<Cmd>lua MiniStarter.open()<CR>',                           'Start menu')
 
 -- f is for 'Fuzzy Find' (`:h MiniPick-overview`).
 

@@ -1,5 +1,7 @@
 ## 2026-11-09
 
+- Add `<Leader>es` to open the start screen at any time (`MiniStarter.open()`).
+
 - Add a start screen for Obsidian vaults: opening Neovim with no file in a directory inside a vault (a parent holds `.obsidian`) shows daily notes, new notes, find and `:Obsidian` commands instead of the default screen. Elsewhere the default screen stays; 'lua/config/starter.lua' picks the menu, once at startup.
 
 ## 2026-11-06
