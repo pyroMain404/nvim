@@ -1,21 +1,24 @@
 -- ┌─────────────┐
 -- │  obsidian   │
 -- └─────────────┘
--- Lazy multi-vault setup of obsidian.nvim, called from 'plugin/40_plugins.lua'.
+-- Lazy multi-vault setup of obsidian.nvim and the vault start menu.
 
 local M = {}
 
 -- A vault is the nearest ancestor directory named '.obsidian'.
 -- NOTE: `MiniMisc.find_root()` cannot match directories and shares its cache
 -- with `setup_auto_root()`, so call `vim.fs.find()` directly.
-local find_vault_root = function(buf_id)
-  local path = vim.api.nvim_buf_get_name(buf_id)
-  if path == '' then return nil end
+local find_root = function(dir)
   local marker = vim.fs.find(
     { '.obsidian' },
-    { path = vim.fs.dirname(path), upward = true, type = 'directory' }
+    { path = dir, upward = true, type = 'directory' }
   )[1]
   return marker and vim.fs.dirname(marker) or nil
+end
+
+local find_vault_root = function(buf_id)
+  local path = vim.api.nvim_buf_get_name(buf_id)
+  return path ~= '' and find_root(vim.fs.dirname(path)) or nil
 end
 
 -- Per-vault settings from '.obsidian/nvim.json', merged over `setup()` ones.
@@ -101,12 +104,12 @@ end
 
 local obsidian_loaded = false
 local obsidian_roots = {}
+local plugin_spec
 
 -- Install/setup happens on the first vault seen; later vaults only register a
 -- workspace (obsidian.nvim switches the active one from its own `FileType` autocmd).
-local setup_obsidian = function(spec, ev)
-  local root = find_vault_root(ev.buf)
-  if not root or obsidian_roots[root] then return end
+local load_vault = function(spec, root)
+  if obsidian_roots[root] then return end
 
   if not obsidian_loaded then
     -- HACK: obsidian.nvim c25aa3d (upstream main) renames the whole note when
@@ -162,8 +165,22 @@ local setup_obsidian = function(spec, ev)
   obsidian_roots[root] = true
 end
 
+local setup_obsidian = function(spec, ev)
+  local root = find_vault_root(ev.buf)
+  if root then load_vault(spec, root) end
+end
+
+-- No note buffer exists on the start screen to trigger the lazy load.
+local command = function(root, subcommand)
+  load_vault(plugin_spec, root)
+  if not obsidian_loaded then return end -- load_vault() already reported why
+  if Obsidian.workspace.name ~= root then require('obsidian.workspace').set(root) end
+  vim.cmd('Obsidian ' .. subcommand)
+end
+
 ---@param spec table vim.pack spec of obsidian.nvim
 function M.setup(spec)
+  plugin_spec = spec
   -- NOTE: '*.base' is not matched: obsidian.nvim attaches only to `FileType` markdown/quarto.
   Config.new_autocmd(
     { 'BufReadPre', 'BufNewFile' },
@@ -180,6 +197,51 @@ function M.setup(spec)
       end
     end
   end)
+end
+
+-- 'mini.starter' config for the vault at the cwd; `nil` outside a vault (default screen).
+function M.starter_config()
+  local root = find_root(vim.fn.getcwd())
+  if not root then return nil end
+
+  -- { section, name, `:Obsidian` subcommand }
+  local rows = {
+    { 'Daily', 'Today', 'today' },
+    { 'Daily', 'Yesterday', 'yesterday' },
+    { 'Daily', 'Dailies', 'dailies' },
+    { 'Notes', 'New note', 'new' },
+    { 'Notes', 'Templated note', 'new_from_template' },
+    { 'Notes', 'Unique note', 'unique_note' },
+    { 'Find', 'Switch note', 'quick_switch' },
+    { 'Find', 'Search', 'search' },
+    { 'Find', 'Tags', 'tags' },
+    { 'Find', 'Properties', 'properties' },
+    { 'Find', 'Bookmarks', 'bookmarks' },
+    { 'Vault', 'Commands', '' },
+  }
+  local items = vim.tbl_map(function(row)
+    return {
+      section = row[1],
+      name = row[2],
+      action = function() command(root, row[3]) end,
+    }
+  end, rows)
+  table.insert(items, {
+    section = 'Vault',
+    name = 'Files',
+    action = function() MiniFiles.open(root) end,
+  })
+
+  local starter = require('mini.starter')
+  table.insert(items, starter.sections.recent_files(5, true, false))
+  table.insert(items, starter.sections.builtin_actions())
+  return {
+    header = 'Obsidian vault: '
+      .. vim.fs.basename(root)
+      .. '\n'
+      .. vim.fn.fnamemodify(root, ':~'),
+    items = items,
+  }
 end
 
 return M

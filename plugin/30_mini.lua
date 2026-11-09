@@ -51,8 +51,9 @@ end)
 
 now(function() require('mini.sessions').setup() end)
 
--- Start screen (`:h MiniStarter-example-config`).
-now(function() require('mini.starter').setup() end)
+-- Start screen (`:h MiniStarter-example-config`); 'lua/config/starter.lua' picks the menu for the context.
+-- NOTE: the context is evaluated once, at startup; a later `:cd` does not change the screen.
+now(function() require('mini.starter').setup(require('config.starter').config()) end)
 
 -- Statusline (`:h MiniStatusline-example-content`); 'lua/config/git/diffref.lua' labels the diff section.
 -- NOTE: a custom `config.content.active` that does not call `section_diff()` silently loses the label.

@@ -1,3 +1,7 @@
+## 2026-11-09
+
+- Add a start screen for Obsidian vaults: opening Neovim with no file in a directory inside a vault (a parent holds `.obsidian`) shows daily notes, new notes, find and `:Obsidian` commands instead of the default screen. Elsewhere the default screen stays; 'lua/config/starter.lua' picks the menu, once at startup.
+
 ## 2026-11-06
 
 - Fix a console window flashing on every yank to the `+` register: the `win32yank.exe` bundled with Nvim (neovim/neovim#25928) is replaced by the OSC 52 provider, which starts no process. Copying works as before; `"+p` pastes what Nvim last copied, not the Windows clipboard, which comes in with the terminal's `<C-S-v>`.
