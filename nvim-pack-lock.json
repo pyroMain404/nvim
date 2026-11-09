@@ -29,7 +29,7 @@
       "src": "https://github.com/nvim-treesitter/nvim-treesitter-textobjects"
     },
     "obsidian.nvim": {
-      "rev": "b813648bd25693edcd483fadca4b816f1a125a0d",
+      "rev": "9af605a33263abe85833469c289e3f0fe26f5c7a",
       "src": "https://github.com/pyroMain404/obsidian.nvim",
       "version": "'feat/frontmatter-sync-title'"
     },

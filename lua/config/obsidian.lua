@@ -112,14 +112,13 @@ local load_vault = function(spec, root)
   if obsidian_roots[root] then return end
 
   if not obsidian_loaded then
-    -- HACK: obsidian.nvim c25aa3d (upstream main) renames the whole note when
-    -- `vim.lsp.buf.rename()` runs on a block id, heading, footnote, tag or
-    -- attachment, instead of the element under the cursor, and has no way to
-    -- keep a `title` or a first heading equal to the `id` in step with it. This
-    -- branch of a fork fixes all of it (proposal:
-    -- obsidian-nvim/obsidian.nvim#1007; the rest is `frontmatter.sync_title`,
-    -- `note.sync_heading` and `note.sync_filename`). Go back to
-    -- 'https://github.com/obsidian-nvim/obsidian.nvim' once they are merged.
+    -- HACK: obsidian.nvim has no way to keep a `title` or a first heading equal
+    -- to the `id` in step with a rename (`frontmatter.sync_title`,
+    -- `note.sync_heading`, `note.sync_filename`). This branch of a fork adds
+    -- them; the element rename it also carried is upstream since
+    -- obsidian-nvim/obsidian.nvim#1009 (merged 2026-11-09, c25aa3d predates it).
+    -- Go back to 'https://github.com/obsidian-nvim/obsidian.nvim' once the
+    -- sync options are merged.
     vim.pack.add({ spec })
     if #vim.api.nvim_get_runtime_file('lua/obsidian/init.lua', false) == 0 then
       vim.notify_once(
