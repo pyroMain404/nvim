@@ -1,8 +1,6 @@
-## 2026-11-10
-
-- Add per-project start screens: a '.nvim-project.json' in the project root (found upward from the cwd) with a `start` object (`items` of `name` plus `command` or `file`, optional `section`, `header` and `strategy`) replaces the start screen (`substitute`, default) or adds to and overrides the vault menu (`merge`). The file runs Ex commands, so it goes through `:trust` like '.nvim.lua'; it is read once per session. 'lua/config/project.lua' owns the file and its contracts, 'lua/config/starter.lua' applies `start`.
-
 ## 2026-11-09
+
+- Add per-project start screens: a project's '.nvim.lua' calls `require('config.project').set('start', { items = { { name = ..., action = <Ex command or function> } }, ... })`, with optional `section`, `header` and `strategy`. `substitute` (default) replaces the start screen, `merge` adds to and overrides the vault menu. It rides on `:trust` and `:h 'exrc'` like the rest of '.nvim.lua' (the nearest file wins) and is read once at startup. 'lua/config/project.lua' owns the contracts, 'lua/config/starter.lua' applies `start`.
 
 - Add `<Leader>es` to open the start screen at any time (`MiniStarter.open()`).
 

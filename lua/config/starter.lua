@@ -62,8 +62,6 @@ end
 -- otherwise (`substitute`, or `merge` with no base: the default screen is never a base)
 -- the project menu alone, with no builtin tail: the project owns it.
 local function project_menu(base)
-  -- `mini.starter` shows the screen only without file arguments; skip the trust prompt then.
-  if vim.fn.argc() > 0 then return base end
   local start, root = require('config.project').contract('start')
   if not start then return base end
   if start.strategy == 'merge' and base then
