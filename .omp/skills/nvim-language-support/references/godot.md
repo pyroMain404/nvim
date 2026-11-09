@@ -247,7 +247,7 @@ I body usano `\t`: è ciò che il ftplugin del runtime impone già con `noexpand
 
 ## 6. Ambiente di progetto
 
-Tre casi appartengono al `.nvim.lua` del gioco (`:h 'exrc'`, skill
+Due casi appartengono al `.nvim.lua` del gioco (`:h 'exrc'`, skill
 `nvim-project-environment`) e non a questa config:
 
 - **un secondo gioco aperto insieme al primo.** La porta è una risorsa della
@@ -256,11 +256,11 @@ Tre casi appartengono al `.nvim.lua` del gioco (`:h 'exrc'`, skill
   un messaggio. Il rimedio ha due metà — `godot --lsp-port 6105` e `GDScript_Port`
   sullo stesso valore — e nessuna delle due sta qui, dove varrebbe per tutti i
   progetti insieme;
-- **nascondere i `.gd.uid`**, che da Godot 4.4 affiancano ogni script (vanno
-  committati: sono l'identità dello script attraverso le rinomine) e raddoppiano le
-  voci di ogni directory nei picker, insieme alla cache `.godot/`;
 - **la versione del motore**, che sta nel `mise.toml` del gioco e non in un file di
   Neovim.
+
+I `.gd.uid` (da Godot 4.4 affiancano ogni script, e vanno committati) sono invece già
+nascosti in 'mini.files' da `plugin/30_mini.lua`, per ogni progetto.
 
 ## 7. Cosa deve dire l'health check
 

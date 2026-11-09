@@ -66,10 +66,9 @@ Tre categorie, e due sono contro-intuitive:
 `git check-ignore -v .godot/uid_cache.bin` e con un `git status` pulito dopo un avvio
 del motore: se compare qualcosa di generato, va aggiunto lì e non ignorato a mano.
 
-In 'mini.files' e nei picker i `.gd.uid` raddoppiano le voci di ogni directory di
-codice. Nasconderli è legittimo ma è una preferenza di questo progetto, quindi la sede
-è il suo `.nvim.lua` (passo 3) e non la config condivisa — il filtro è
-`content.filter`, `:h MiniFiles.config`.
+In 'mini.files' i `.gd.uid` sono già nascosti **dalla config** (`content.filter` in
+'plugin/30_mini.lua', per ogni progetto): non serve nessuna riga nel `.nvim.lua`. I picker
+non hanno un filtro equivalente nella config, quindi li mostrano ancora.
 
 ## 3. Il `.nvim.lua` del progetto
 

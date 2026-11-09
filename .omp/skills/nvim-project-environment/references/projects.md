@@ -201,7 +201,7 @@ silenzioso.
 
 | Dove | Cosa | Perché |
 |---|---|---|
-| `.nvim.lua` | `vim.g.run_command = function(args) … end` che restituisce `{ 'C:/Program Files/Git/bin/bash.exe', '-c', 'cd "$1" && exec sh run.sh "$2"', '_', <jib>, args[1] or 'local' }` | `:Run` esegue con cwd = directory del buffer, e `run.sh` va lanciato **dentro** `assimoco-pass-platform-jib`: la `cd` sta nella shell perché il resolver di progetto non può restituire una radice. `:Run test` passa `test` come ambiente. Git Bash per nome assoluto, così non serve `bash` nel PATH |
+| `.nvim.lua` | `vim.g.run_command = function(args) … end` che restituisce `{ 'C:/Program Files/Git/bin/bash.exe', '-c', 'cd "$1" && exec sh run.sh "$2"', '_', <jib>, args[1] or 'local' }` | `:Run` esegue con cwd = directory del buffer (il resolver del linguaggio non ha dato una radice, e un contratto di progetto non può darla), e `run.sh` va lanciato **dentro** `assimoco-pass-platform-jib`: la `cd` sta nella shell. `:Run test` passa `test` come ambiente. Git Bash per nome assoluto, così non serve `bash` nel PATH |
 
 **Fuori dal repository**: Git for Windows (`C:/Program Files/Git/bin/bash.exe`) e
 quello che `run.sh` richiede (Docker, non verificato qui).

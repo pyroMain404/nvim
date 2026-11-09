@@ -45,8 +45,3 @@ end
 --    the default `:Run` a GDScript buffer already uses. A list replaces the
 --    whole command, and the arguments of the call are appended to it.
 -- require('config.project').set('run', { 'godot', '--path', vim.fn.getcwd(), 'res://scenes/dev.tscn' })
-
--- 4. ONLY if the '*.gd.uid' files next to every script get in the way in
---    pickers and in 'mini.files'. They are files to commit, not to delete:
---    this only hides them from view, and it is a preference of this project.
---    The field is `content.filter`, `:h MiniFiles.config`.
