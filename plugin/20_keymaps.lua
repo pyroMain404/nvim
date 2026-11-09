@@ -12,6 +12,20 @@ local nmap = function(lhs, rhs, desc) vim.keymap.set('n', lhs, rhs, { desc = des
 nmap('[p', '<Cmd>exe "iput! " . v:register<CR>', 'Paste Above')
 nmap(']p', '<Cmd>exe "iput "  . v:register<CR>', 'Paste Below')
 
+-- Put with the cursor after the text, from the system clipboard (`:h gp`, `:h gP`).
+vim.keymap.set(
+  { 'n', 'x' },
+  'gp',
+  '"+gp',
+  { desc = 'Paste after, move cursor (clipboard)' }
+)
+vim.keymap.set(
+  { 'n', 'x' },
+  'gP',
+  '"+gP',
+  { desc = 'Paste before, move cursor (clipboard)' }
+)
+
 nmap('<C-S-H>', '<C-w>H', 'Move to very left')
 nmap('<C-S-J>', '<C-w>J', 'Move to very bottom')
 nmap('<C-S-K>', '<C-w>K', 'Move to very top')

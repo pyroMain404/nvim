@@ -2,6 +2,8 @@
 
 - Fix a console window flashing on every yank to the `+` register: the `win32yank.exe` bundled with Nvim (neovim/neovim#25928) is replaced by the OSC 52 provider, which starts no process. Copying works as before; `"+p` pastes what Nvim last copied, not the Windows clipboard, which comes in with the terminal's `<C-S-v>`.
 
+- Add `gp`, `gP` (Normal and Visual) and `gr`, `grr`, Visual `gr` of 'mini.operators' reading the system clipboard instead of the unnamed register; `"+p` pastes from it too, through `win32yank.exe -o`. This replaces what the entry above says about `"+p` pasting what Nvim last copied. Yank and delete commands still write to the unnamed register only, and no `g` mapping copies.
+
 ## 2026-11-04
 
 - Add Python support: `basedpyright` (types, completion, rename) and `ruff` (lint) as language servers, `ruff_format` in `<Leader>lf`, the `python` parser, `:Run [args]` to run the script and a `Python` section in `:checkhealth config`, all declared in `lua/config/toolchain.lua`. The interpreter is the one inside the nearest `.venv` or `venv` above the file, else the `python` on PATH (`lua/config/python.lua`), the same for the server and `:Run`; a venv created after the server started needs `:lsp restart basedpyright`. REPL and Jupyter are deferred, see `.omp/skills/nvim-language-support/references/python.md`.

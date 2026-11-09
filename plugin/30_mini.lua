@@ -279,7 +279,30 @@ end)
 later(function() require('mini.move').setup() end)
 
 -- Text edit operators (`:h MiniOperators-overview`).
-later(function() require('mini.operators').setup() end)
+later(function()
+  require('mini.operators').setup()
+
+  -- Replace with the system clipboard: `gr`, `grr` (its `gr_` goes through the new `gr`) and
+  -- Visual `gr`. The register is read when the operator starts, so `"+` goes before it.
+  vim.keymap.set(
+    'n',
+    '<Plug>(ClipboardReplace)',
+    'v:lua.MiniOperators.replace()',
+    { expr = true, replace_keycodes = false }
+  )
+  vim.keymap.set(
+    'n',
+    'gr',
+    '"+<Plug>(ClipboardReplace)',
+    { remap = true, desc = 'Replace with clipboard' }
+  )
+  vim.keymap.set(
+    'x',
+    'gr',
+    '"+<Cmd>lua MiniOperators.replace("visual")<CR>',
+    { desc = 'Replace selection with clipboard' }
+  )
+end)
 
 -- Autopairs (`:h MiniPairs`); Insert mode only, prose is skipped in 'after/ftplugin/markdown.lua'.
 later(function() require('mini.pairs').setup() end)
