@@ -1,3 +1,7 @@
+## 2026-11-10
+
+- Add `\a` to toggle 'mini.completion' for the current buffer. It sits with the 'mini.basics' toggles and shows in the `\` clue window.
+
 ## 2026-11-09
 
 - Update 'obsidian.nvim' to the fork branch merged with upstream `main`, which now has the element rename of `<Leader>lr` (obsidian-nvim/obsidian.nvim#1009). The branch still carries `frontmatter.sync_title`, `note.sync_heading` and `note.sync_filename`, so the `HACK` in 'lua/config/obsidian.lua' stays until those are upstream.

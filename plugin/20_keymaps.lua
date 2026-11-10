@@ -31,6 +31,13 @@ nmap('<C-S-J>', '<C-w>J', 'Move to very bottom')
 nmap('<C-S-K>', '<C-w>K', 'Move to very top')
 nmap('<C-S-L>', '<C-w>L', 'Move to very right')
 
+-- Toggle 'mini.completion' for the current buffer, next to the toggles of
+-- 'mini.basics' (`\b`, `\w`, ...). See `:h mini.nvim-disabling-recipes`.
+nmap('\\a', function()
+  vim.b.minicompletion_disable = not vim.b.minicompletion_disable
+  vim.notify('Autocompletion ' .. (vim.b.minicompletion_disable and 'off' or 'on'))
+end, "Toggle 'mini.completion' (buffer)")
+
 -- Swap adjacent arguments ('mini.ai' `a`, 'mini.operators' `gx`); overrides `:h (` and `:h )`.
 vim.keymap.set('n', '(', 'gxiagxila', { remap = true, desc = 'Swap arg left' })
 vim.keymap.set('n', ')', 'gxiagxina', { remap = true, desc = 'Swap arg right' })
