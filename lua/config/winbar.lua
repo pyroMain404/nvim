@@ -72,7 +72,7 @@ local compute = function(bufnr, containers)
   -- `CursorMoved` can race the highlighting attach; `parse()` is cached.
   local lang = vim.treesitter.language.get_lang(vim.bo[bufnr].filetype)
   local ok_parser, parser = pcall(vim.treesitter.get_parser, bufnr, lang)
-  if not ok_parser then return '' end
+  if not ok_parser or parser == nil then return '' end
   parser:parse()
   local ok, node = pcall(vim.treesitter.get_node, { bufnr = bufnr })
   if not ok or node == nil then return '' end
