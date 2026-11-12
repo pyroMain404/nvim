@@ -2,7 +2,7 @@
 -- │ Health check │
 -- └──────────────┘
 --
--- Report external program versions and the features that need them.
+-- Report which external programs are installed, their versions, and which features stop working when one is missing.
 -- Run this check with `:checkhealth config`.
 --
 -- `:checkhealth` finds each 'lua/**/health.lua' on `:h 'runtimepath'`.
@@ -17,9 +17,11 @@
 -- Keep these rules when you add a section (see `:h health-dev`):
 -- - Start with `health.start()`.
 -- - Return before `health.start()` if the check does not apply.
--- - Give `warn()` and `error()` a second argument with advice and a command to correct the problem.
+-- - Always give `warn()` and `error()` a second argument with advice and a command to correct the problem.
 -- - End a section without problems with `health.ok()` to show that the check ran.
 -- - Report the version, not only the presence, because old tools can cause less clear failures.
+--
+-- A warning without a command sends the reader elsewhere.
 
 local M = {}
 local health = vim.health
@@ -67,6 +69,7 @@ end
 
 -- Language toolchains ========================================================
 -- Use one section for each supported language.
+-- Answer the questions a user asks when something does not work:
 -- Report the installed toolchain, its active version, language server access, and parser installation.
 --
 -- Neovim uses the environment of the shell that starts it.

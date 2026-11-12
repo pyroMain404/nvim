@@ -3,7 +3,7 @@
 -- └─────────────────┘
 --
 -- Use this template for 'compiler/<tool>.lua'.
--- Copy it with the build tool name, not the language name.
+-- Copy this file. Rename the copy after the build tool, not the language.
 -- A compiler plugin defines a command that several filetypes can select.
 --
 -- Add this file only if `vim.fn.getcompletion('', 'compiler')` shows no runtime compiler for this tool.
@@ -34,7 +34,7 @@ vim.cmd([[CompilerSet makeprg=mytool\ $*]])
 --
 -- `errorformat` also accepts Vim regular expressions for output such as colour escapes.
 -- Test these three escape rules against a real output line to prevent silent failures:
--- - `%#` repeats the preceding item; a bare `*` matches a literal asterisk.
+-- - `%#` is the regex star (zero or more of the preceding item); a bare `*` matches a literal asterisk.
 -- - `%[` matches a literal bracket; a bare `[` starts a character class.
 -- - `%\%(` starts a non-capturing group.
 --

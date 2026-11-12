@@ -3,7 +3,7 @@
 -- └───────────────────┘
 --
 -- Use this template for 'after/ftplugin/<ft>.lua'.
--- Copy it with the filetype name.
+-- Copy this file. Rename the copy after the filetype.
 -- Keep only behavior that the runtime does not supply.
 --
 -- See 'after/ftplugin/markdown.lua' for an example in this config.
@@ -11,7 +11,7 @@
 -- Keep it fast: do not scan the filesystem or run external commands.
 -- Its 'after/' location lets it correct the runtime ftplugin of the same name (`:h ftplugin-overrule`).
 --
--- Before you change an option, check which file sets it:
+-- Before you add a line here, check which file already sets the value:
 --   :verbose setlocal shiftwidth? commentstring? makeprg?
 -- If a file under $VIMRUNTIME supplies the value, no change is necessary.
 --
@@ -69,7 +69,8 @@ vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- end)
 --
 -- For languages with several build tools, use a resolver table with a `run` for each manifest.
--- Give each entry an optional `compiler`; a build tool does not always supply both features.
+-- Give each entry an optional `compiler`.
+-- An entry can have a `run` without a `compiler`, and the reverse.
 -- A `:compiler` missing from the runtime raises `E666` when this file loads.
 -- See 'after/ftplugin/java.lua' for an example.
 

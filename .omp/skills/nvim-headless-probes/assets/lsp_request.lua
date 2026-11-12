@@ -72,7 +72,7 @@ local resolvers = {
   ['textDocument/documentLink'] = 'documentLink/resolve',
 }
 
---- Supply method parameters. These methods use four parameter forms.
+--- Supply method parameters. Only these four parameter forms occur in practice.
 local function params_for(method, client)
   if method:find('codeLens') then
     return { textDocument = vim.lsp.util.make_text_document_params(0) }

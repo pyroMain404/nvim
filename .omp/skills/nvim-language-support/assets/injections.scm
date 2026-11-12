@@ -31,7 +31,7 @@
 ; `string_literal` passes quotes to the other parser, but `string_content` does not.
 ; Without the `.` anchor, the query also parses a second string argument as SQL.
 
-; This static language rule selects SQL for the macro.
+; Static language: the macro always contains SQL, so set the language directly.
 ((macro_invocation
    macro: [
      (identifier) @_name

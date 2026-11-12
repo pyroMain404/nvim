@@ -5,8 +5,7 @@
 --- session.
 --- A single manual test can miss this change. This probe measures it.
 ---
---- The probe starts a second Neovim with `--startuptime`.
---- The probe itself changes the timing of its own session.
+--- The probe starts a second Neovim with `--startuptime` because the probe itself changes the timing of its own session.
 ---
 --- Parameters:
 ---   file: Specify the file to open in the measured session. The default is none.

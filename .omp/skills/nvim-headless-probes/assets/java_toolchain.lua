@@ -8,13 +8,11 @@
 --- session.
 ---
 --- Failure meanings:
----   No client attached: The server refused to start, usually because its JDK is too old.
----   No `MISE_JAVA_VERSION`: 'after/lsp/jdtls.lua' found no JDK through `mise`.
----   The server then used the project JDK.
----   No runtime for the project release: The required JDK is absent.
----   The server thus checks against the wrong class library.
----   No build import: Import failed. The server uses a bare JDK for answers, including the
----   release.
+---   - No client attached: The server refused to start, usually because its JDK is too old.
+---   - No `MISE_JAVA_VERSION`: 'after/lsp/jdtls.lua' found no JDK through `mise`. The server used the project JDK.
+---   - No runtime for the project release: The required JDK is absent. The server checks against the wrong class library.
+---
+---   - No build import: Import failed. The server uses a bare JDK for answers, including the release.
 ---
 --- Parameters:
 ---   before: Run this snippet first when the buffer needs to open again.
@@ -106,7 +104,7 @@ P.run(function()
   --
   -- NOTE: `java.project.getSettings` is a jdtls delegate command outside LSP.
   -- It takes a project URI and keys; the client root identifies the project without a buffer.
-  -- Wait for `wait_lsp()` first, or the command reports an incomplete workspace.
+  -- Call `wait_lsp()` first, or the command reports an incomplete workspace.
   local settings = execute('java.project.getSettings', {
     vim.uri_from_fname(client.root_dir),
     { 'org.eclipse.jdt.core.compiler.source' },

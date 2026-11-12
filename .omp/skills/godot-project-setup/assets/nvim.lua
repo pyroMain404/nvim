@@ -24,8 +24,8 @@
 --    Two Neovim instances can open the same game; the first keeps the port.
 --
 -- NOTE: Use TCP, not a named pipe; Windows needs `//./pipe/<name>`, unlike other systems.
--- `--listen {project}/server.pipe` creates a file inside the repository.
--- That file needs version control exclusion and filters in every picker.
+--    `--listen {project}/server.pipe` creates a file inside the repository.
+--    Exclude that file from version control. Hide it in every picker.
 local ok, err = pcall(vim.fn.serverstart, '127.0.0.1:55432')
 if not ok then
   vim.notify('Godot editor port: ' .. tostring(err), vim.log.levels.WARN)

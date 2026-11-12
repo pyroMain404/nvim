@@ -45,6 +45,7 @@ vim.api.nvim_create_autocmd('FileType', {
 -- A list defines the complete command, and `:Run` adds the call arguments to it.
 require('config.project').set('run', { '<program>', '<argument>' })
 
+-- Use a list or a function, not both.
 -- Instead of a list, use a function when the command depends on the buffer.
 -- For example, monorepo parts can need different commands, or some parts must not run.
 -- Return the command, or `nil, nil` to use the language resolver.

@@ -1,4 +1,4 @@
---- 9. Make `:checkhealth` results available to script checks.
+--- 9. Let a script fail on `:checkhealth` results.
 ---
 --- A large green health report can hide one ERROR during visual inspection.
 --- Parsing the report gives a low-cost regression check.

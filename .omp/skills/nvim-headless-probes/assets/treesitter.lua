@@ -54,7 +54,7 @@ P.run(function()
   -- `:h LanguageTree:language_for_range()` uses `pairs()` and returns the first child that
   -- contains the range.
   -- A Rust macro body can have nested `rust` and `sql` injections at the same position.
-  -- The function thus returned either language unpredictably.
+  -- `pairs()` has no fixed order, so `language_for_range()` can return either language at random.
   local langs, found = {}, {}
   parser:for_each_tree(function(tree, ltree)
     local srow, scol, erow, ecol = tree:root():range()

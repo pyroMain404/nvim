@@ -3,7 +3,7 @@
 -- └────────────────────┘
 --
 -- Use this template for 'ftdetect/<lang>.lua'.
--- Copy it with the language name.
+-- Copy this file. Rename the copy after the language.
 -- Keep only the necessary rules.
 --
 -- Neovim loads files in 'ftdetect/' during filetype detection,

@@ -1,7 +1,7 @@
 --- 7. Check the language server and its configuration.
 ---
---- `:checkhealth vim.lsp` reports this in an interactive session. This probe makes the results
---- available to script checks.
+--- `:checkhealth vim.lsp` reports this in an interactive session.
+--- This probe lets a script fail on the results.
 --- Recurring failures include duplicate clients for one project and a configuration file that
 --- replaces `root_dir`.
 --- Both can look correct until a check counts clients or inspects the root.
@@ -16,10 +16,9 @@
 ---   wait: Specify the deferred configuration grace period, in ms.
 ---   timeout: Specify the attachment wait limit. The default is 10000 ms.
 ---   ready: Wait for loading to finish before reading capabilities. The default is false.
----          Servers such as `jdtls` register capabilities dynamically, not in the `initialize`
----   reply.
----          Before project import, `methods` reports false for definition, rename, and
----   formatting.
+---          Set this to true for every server that registers capabilities dynamically, not in the `initialize` reply.
+---          `jdtls` does.
+---          Before project import, `methods` reports false for definition, rename, and formatting.
 ---          This can look like a configuration failure.
 ---
 --- Give the file to open to the driver (`-File`).

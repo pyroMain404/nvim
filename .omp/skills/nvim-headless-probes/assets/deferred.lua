@@ -2,8 +2,7 @@
 ---
 --- Deferred loading can hide a wrong `setup()` at startup because the module does not yet exist.
 --- This probe waits and reads the value that reached the module.
---- A second `setup()` call or an upstream option rename can change the value from the
---- configuration file.
+--- A second `setup()` call or an upstream option rename can make the value differ from the one in the configuration file.
 ---
 --- Parameters:
 ---   module: Specify the required Lua module ('mini.git').

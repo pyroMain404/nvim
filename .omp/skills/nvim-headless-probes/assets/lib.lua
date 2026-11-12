@@ -7,8 +7,8 @@
 --- The probe does not hardcode the values to inspect.
 ---
 --- Results contain `PASS` / `FAIL` / `INFO` lines and a final count.
---- The caller reads an explicit exit code. Headless Neovim exits 0 even if `setup()` fails.
---- Printing alone cannot make a check fail.
+--- The probe must set an explicit exit code. Headless Neovim exits 0 even if `setup()` fails.
+--- A probe that only prints cannot fail a check.
 local M = {}
 
 M.params = {}
@@ -40,8 +40,8 @@ function M.list(name, default)
 end
 
 --- Read a required parameter.
---- Report missing parameters here to distinguish them from configuration defects that would cause
---- later errors.
+--- Fail here if the parameter is absent.
+--- This distinguishes a missing parameter from a configuration defect that would cause a later error.
 function M.need(name)
   local value = M.param(name)
   if value == nil or value == '' then
@@ -87,7 +87,7 @@ end
 --- This shared "locate one spot in the buffer" contract replaces identical code in
 --- 'treesitter.lua' and 'highlight.lua'.
 --- Return the cursor position (1-based row, 0-based col).
---- If `find` has no match, report the failed `check()` and return `nil`.
+--- If `find` has no match, the function runs a failing `check()` and returns `nil`.
 --- The caller then only needs to check for `nil` and return.
 function M.locate()
   local find = M.param('find')

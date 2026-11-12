@@ -1,7 +1,8 @@
 --- 11. Check that an autocommand exists and its event has an effect.
 ---
---- Most configuration changes use autocommands. "nothing happens" usually means registration
---- failed during file loading or the pattern excludes this buffer.
+--- Most configuration changes use autocommands.
+--- Thus, "nothing happens" usually means the autocommand is absent or its pattern excludes this buffer.
+--- Registration can fail during file loading.
 --- List autocommands to check registration. Trigger the event to check its effect.
 ---
 --- Parameters:
