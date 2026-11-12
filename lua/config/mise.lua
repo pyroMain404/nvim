@@ -2,12 +2,12 @@
 -- │ mise tools  │
 -- └─────────────┘
 --
--- Shared by 'after/lsp/ts_ls.lua' and `jdtls.lua`.
+-- 'after/lsp/ts_ls.lua' and `jdtls.lua` use these helpers.
 
 local M = {}
 
--- Installed versions of `tool` as `{ version, path }`, newest first; `nil` on any failure.
--- NOTE: no cache: each caller asks about a different tool once per session.
+-- Return installed versions of `tool` as `{ version, path }`, newest first, or `nil` on failure.
+-- NOTE: Each caller requests a different tool once per session, so no cache is necessary.
 function M.installed(tool)
   local ok, out = pcall(
     function() return vim.system({ 'mise', 'ls', tool, '--json' }):wait() end
@@ -27,7 +27,7 @@ function M.installed(tool)
     end
   end
 
-  -- `mise` reports oldest first
+  -- `mise` reports the oldest version first.
   return vim.fn.reverse(installed)
 end
 

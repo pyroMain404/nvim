@@ -2,7 +2,7 @@
 -- │ C behaviour │
 -- └─────────────┘
 --
--- Serves `c` and `cpp` ('$VIMRUNTIME/ftplugin/cpp.vim' sources this file).
+-- This file serves `c` and `cpp`; '$VIMRUNTIME/ftplugin/cpp.vim' loads it.
 
 local ft = require('config.ft')
 
@@ -14,12 +14,12 @@ local build = vim.fs.find({ 'CMakeLists.txt', 'Makefile', 'makefile' }, {
 })[1]
 local root = build and vim.fs.dirname(build) or nil
 
--- `:make` via 'compiler/cmake.lua' for CMake, `gcc` for a plain makefile. `:h :make`
+-- `:make` uses 'compiler/cmake.lua' for CMake and `gcc` for a plain makefile. See `:h :make`.
 if build ~= nil then
   ft.build(vim.fs.basename(build) == 'CMakeLists.txt' and 'cmake' or 'gcc')
 end
 
--- `gf`, `[I` and `:checkpath` on an `#include`: project directories only. `:h 'path'`
+-- `gf`, `[I` and `:checkpath` use only project directories for an `#include`. See `:h 'path'`.
 if root ~= nil then
   local dirs = {}
   for _, name in ipairs({ '', 'include', 'src', 'lib' }) do
@@ -28,20 +28,20 @@ if root ~= nil then
       table.insert(dirs, (dir:gsub('[ ,]', '\\%0')))
     end
   end
-  -- Built from the constant, not from a live read of 'path' (see 'lua/config/path.lua').
+  -- Use the constant, not the current 'path' value. See 'lua/config/path.lua'.
   vim.bo.path = require('config.path').with(dirs)
 end
 
--- `:Run` under the contract of 'lua/config/run.lua'.
--- NOTE: a project's `:Run` runs the program as the last `:make` left it and never
--- builds first: building inside the resolver would freeze the editor with no
--- quickfix list. A file in no project is compiled by the terminal job itself.
+-- `:Run` follows the contract in 'lua/config/run.lua'.
+-- NOTE: A project's `:Run` uses the last `:make` output without a new build.
+-- A build inside the resolver would freeze the editor without a quickfix list.
+-- The terminal job compiles a file outside a project.
 local function programs()
   local found = {}
   local collect = function(dir, depth)
     if dir == nil or vim.uv.fs_stat(dir) == nil then return end
     for name, kind in vim.fs.dir(dir, { depth = depth }) do
-      -- 'CMakeFiles' holds CMake's compiler probes, which are executables.
+      -- 'CMakeFiles' contains executable files that CMake uses to check the compiler.
       if kind == 'file' and not name:find('CMakeFiles') then
         local path = vim.fs.joinpath(dir, name)
         if vim.fn.executable(path) == 1 then table.insert(found, path) end

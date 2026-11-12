@@ -2,18 +2,20 @@
 -- │ Go build → quickfix  │
 -- └──────────────────────┘
 --
--- `:compiler go`: `:make build ./...`, `:make test ./...`, `:make vet ./...`
--- into quickfix (`:h write-compiler-plugin`).
+-- `:compiler go` sends results to quickfix for these commands:
+-- `:make build ./...`, `:make test ./...`, and `:make vet ./...`.
+-- See `:h write-compiler-plugin`.
 
--- NOTE: `:compiler` unlets `current_compiler` first, and `.vim` in the name keeps
--- `runtime` from finding this very file. The runtime one knows the build error shape.
+-- NOTE: `:compiler` unlets `current_compiler` first.
+-- `.vim` in the name stops `runtime` from finding this file.
+-- The runtime file handles the build error format.
 vim.cmd('runtime compiler/go.vim')
 
--- The runtime format misses three things `go` prints: `go vet` prefixes its
--- lines with the tool name (`vet.exe: file:1:2: msg`), a failed test reports
--- `    file_test.go:7: msg` indented, and a panic ends in the frames of the stack
--- (`\tfile.go:13 +0x28`), most of them inside the standard library.
--- NOTE: `^=` prepends, so the last line is tried first: the filters go last.
+-- The runtime format misses three kinds of `go` output.
+-- `go vet` adds the tool name before each line (`vet.exe: file:1:2: msg`).
+-- A failed test indents `    file_test.go:7: msg`.
+-- A panic ends with stack frames (`\tfile.go:13 +0x28`), mostly from the standard library.
+-- NOTE: `^=` adds entries at the start, so the last line takes priority. Put the filters last.
 vim.cmd([[CompilerSet errorformat^=%Avet%.%#:\ %f:%l:%c:\ %m]])
 vim.cmd([[CompilerSet errorformat^=%*\\s%f:%l:\ %m]])
 vim.cmd([[CompilerSet errorformat^=%*\\s%f:%l\ +0x%*\\x]])

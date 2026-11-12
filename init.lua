@@ -2,9 +2,9 @@
 -- │ Neovim 0.12 │
 -- └─────────────┘
 --
--- Entry point. 'plugin/NN_*.lua' are sourced in order (options, keymaps, MINI,
--- other plugins, features); 'lua/config/' holds feature modules, 'after/' the
--- filetype and LSP overrides, 'compiler/' the `:compiler` definitions.
+-- This file loads 'plugin/NN_*.lua' in order: options, keymaps, MINI, other plugins, then features.
+-- 'lua/config/' contains feature modules; 'after/' contains filetype and LSP overrides.
+-- 'compiler/' contains the `:compiler` definitions.
 
 _G.Config = {}
 
@@ -14,7 +14,7 @@ Config.new_autocmd = function(event, pattern, callback, desc)
   vim.api.nvim_create_autocmd(event, opts)
 end
 
--- `vim.pack.add()` hook helper (`:h vim.pack-events`); define hooks before the first add.
+-- Define `vim.pack.add()` hooks before the first add (`:h vim.pack-events`).
 Config.on_packchanged = function(plugin_name, kinds, callback, desc)
   local f = function(ev)
     local name, kind = ev.data.spec.name, ev.data.kind
@@ -27,7 +27,8 @@ end
 
 vim.pack.add({ 'https://github.com/nvim-mini/mini.nvim' })
 
--- `now`: needed by the first draw; `now_if_args`: only when a file is opened; `later`: the rest.
+-- `now` runs before the first draw; `now_if_args` does so only when opening a file.
+-- `later` runs the remaining work.
 local misc = require('mini.misc')
 Config.now = function(f) misc.safely('now', f) end
 Config.later = function(f) misc.safely('later', f) end

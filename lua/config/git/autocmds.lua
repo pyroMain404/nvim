@@ -1,9 +1,8 @@
 -- ┌──────────────────┐
 -- │ Git autocommands │
 -- └──────────────────┘
---
--- Registered at startup from 'plugin/50_features.lua'. Nothing of the other
--- modules loads until a callback needs it.
+-- 'plugin/50_features.lua' registers these autocommands at startup.
+-- Callbacks load the other modules only when needed.
 
 local M = {}
 
@@ -15,7 +14,7 @@ M.setup = function()
     'Navigable Git output'
   )
 
-  -- Blame can only be on once its module was loaded by the toggle.
+  -- Blame can be active only after the toggle loads its module.
   local blame_events = { 'CursorMoved', 'CursorMovedI', 'BufEnter' }
   Config.new_autocmd(blame_events, nil, function()
     local blame = package.loaded['config.git.blame']

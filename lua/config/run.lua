@@ -2,25 +2,28 @@
 -- │ Run the project │
 -- └─────────────────┘
 --
--- `:Run` starts *this project* with the command the project itself says to use,
--- one name for every language. Defined from 'after/ftplugin/<ft>.lua'. Contract:
+-- `:Run` starts the project with its declared command, under one command name for all languages.
+-- 'after/ftplugin/<ft>.lua' defines it with the contract below.
 --
--- - It runs the PROJECT, not the file (except for a file in no project).
--- - Output: a terminal split (`:h terminal-emulator`); a program with its own
---   window takes `{ detach = true }` (`:h vim.system()`) and outlives `:qa`.
--- - The default is READ from the project; where it cannot be read, fail loudly.
--- - It is NOT `:make`: this starts something that lives.
+-- - It runs the project, or the file if no project exists.
+-- - A terminal split shows output (`:h terminal-emulator`).
+-- - A program with its own window uses `{ detach = true }` (`:h vim.system()`) and continues after
+-- `:qa`.
+-- - Read the default from the project. Report an error if the default is unavailable.
+-- - Unlike `:make`, this command starts a running program.
+--
 -- - Arguments replace the default.
 -- - `vim.b.run_command` or the project's `run` contract (`lua/config/project.lua`) replace the default.
 
 local M = {}
 
--- Define `:Run` for the current buffer. `resolve(args)` returns a command, the
--- optional project root, or `nil` and the reason to report.
--- NOTE: `resolve` runs before the split is opened, even when an override wins:
--- `:new` makes an unnamed buffer current, and the override needs the original root.
--- NOTE: the override list is copied before extending, or each `:Run` would
--- accumulate the arguments of the previous ones.
+-- Define `:Run` for the current buffer.
+-- `resolve(args)` returns a command and optional project root, or `nil` and a reason to report.
+-- NOTE: `resolve` runs before the split opens, even with an override, which needs the original
+-- root.
+-- `:new` makes an unnamed buffer current.
+-- NOTE: Copy the override list before adding arguments so each `:Run` does not retain previous
+-- arguments.
 local function project_command(args)
   local project = vim.b.run_command or (require('config.project').contract('run'))
   if type(project) == 'function' then return project(args) end
@@ -30,11 +33,11 @@ local function project_command(args)
   return nil, nil
 end
 
--- NOTE: a failed detached start is otherwise invisible, so `on_exit` reports a
--- DIED process (status plus last output line).
--- NOTE: `stdout`/`stderr` are functions, not `true` (accumulates for as long as
--- the process lives): keep the last 2000 characters of BOTH, as Godot writes its
--- error on stdout. The exit callback is a fast context, hence `vim.schedule()`.
+-- NOTE: `on_exit` reports a failed detached process with its status and last output line;
+-- otherwise, the failure stays invisible.
+-- NOTE: Use functions for `stdout`/`stderr`; `true` accumulates output throughout the process.
+-- Keep the last 2000 characters of both because Godot writes errors on stdout.
+-- The exit callback uses a fast context, so use `vim.schedule()`.
 M.command = function(resolve, opts)
   local detach = (opts or {}).detach == true
   local desc = detach and 'Run the project as its own process'
@@ -91,8 +94,8 @@ M.command = function(resolve, opts)
   vim.b.undo_ftplugin = (vim.b.undo_ftplugin or '') .. '\n' .. 'delcommand Run'
 end
 
--- Default for npm projects (typescript, htmlangular): the declared script, not `ng serve`.
--- NOTE: `npm`, not `npm.cmd`: `npm.cmd` is not on the PATH here and raises `E475`.
+-- For npm projects (typescript, htmlangular), use the declared script, not `ng serve`.
+-- NOTE: Use `npm`, not `npm.cmd`, which is absent from PATH here and raises `E475`.
 M.npm = function(args)
   local manifest = vim.fs.find('package.json', {
     upward = true,
@@ -115,13 +118,13 @@ M.npm = function(args)
   return nil, reason:format(vim.fs.basename(manifest)), root
 end
 
--- Default for a C, C++ or Rust file in no project: compile it into the cache
--- directory and run the result. `compiler` is the argv up to the source file.
--- One shell command in the terminal job, so compiler errors and program output
--- share the split and the editor never waits on the compiler; `&&` means a
--- failed compile never starts a stale binary.
--- NOTE: the command name is bare (a quoted one is a parse error in pwsh) and the
--- `& ` call operator that pwsh needs to run a quoted path means "background" in `sh`.
+-- For a C, C++ or Rust file outside a project, compile into the cache directory.
+-- Run the result. `compiler` supplies argv up to the source file.
+-- One shell command in the terminal job shares the split between compiler errors and program output
+-- without blocking the editor.
+-- `&&` prevents a failed compilation from starting an old binary.
+-- NOTE: Use an unquoted command name because pwsh rejects a quoted name.
+-- The `& ` operator runs a quoted path in pwsh but means "background" in `sh`.
 M.compiled = function(compiler, args)
   local source = vim.api.nvim_buf_get_name(0)
   if source == '' then
@@ -155,10 +158,10 @@ M.compiled = function(compiler, args)
   return require('config.make').shell_argv(script)
 end
 
--- Run `:make`/`:lmake` from the project root (tools print project-relative paths).
--- NOTE: `QuickFixCmdPre` matches the COMMAND NAME (`:h QuickFixCmdPre`), so the
--- pair cannot be buffer-local; `vim.fn.chdir()` not `:lcd`, which would leave a
--- window-local directory that `setup_auto_root()` never moves again.
+-- Run `:make`/`:lmake` from the project root because tools print project-relative paths.
+-- NOTE: `QuickFixCmdPre` matches the command name (`:h QuickFixCmdPre`); the pair cannot be buffer-local.
+-- Use `vim.fn.chdir()`, not `:lcd`, which leaves a window-local directory
+-- that `setup_auto_root()` never changes.
 M.make_root = function(markers)
   local ft = vim.bo.filetype
   local group =
@@ -187,12 +190,14 @@ M.make_root = function(markers)
   })
 end
 
--- Maven run resolution for 'after/ftplugin/java.lua' and `xml.lua`; `:make` settings stay in `java.lua`.
+-- Resolve Maven run commands for 'after/ftplugin/java.lua' and `xml.lua`.
+-- `java.lua` keeps the `:make` settings.
 local function goal(args, default) return #args > 0 and args or { default } end
 
 M.java_builds = {
   ['pom.xml'] = {
-    -- `spring-boot:run` and `exec:java` each need their plugin: pick by POM, the other fails loudly.
+    -- `spring-boot:run` and `exec:java` need different plugins. Select by POM because the other
+    -- command reports an error.
     run = function(args, build_file)
       local boot = vim.iter(vim.fn.readfile(build_file)):any(
         function(line) return line:find('spring%-boot%-maven%-plugin') ~= nil end

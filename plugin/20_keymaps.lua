@@ -2,17 +2,17 @@
 -- │ Custom mappings │
 -- └─────────────────┘
 --
--- This file contains definitions of custom general and Leader mappings.
+-- This file defines custom general and Leader mappings.
 
 -- General mappings ===========================================================
 
 local nmap = function(lhs, rhs, desc) vim.keymap.set('n', lhs, rhs, { desc = desc }) end
 
--- Unindented linewise paste, replacing `:h ]p`.
+-- Paste lines without indentation instead of using `:h ]p`.
 nmap('[p', '<Cmd>exe "iput! " . v:register<CR>', 'Paste Above')
 nmap(']p', '<Cmd>exe "iput "  . v:register<CR>', 'Paste Below')
 
--- Put with the cursor after the text, from the system clipboard (`:h gp`, `:h gP`).
+-- Paste from the system clipboard with the cursor after the text (`:h gp`, `:h gP`).
 vim.keymap.set(
   { 'n', 'x' },
   'gp',
@@ -31,14 +31,15 @@ nmap('<C-S-J>', '<C-w>J', 'Move to very bottom')
 nmap('<C-S-K>', '<C-w>K', 'Move to very top')
 nmap('<C-S-L>', '<C-w>L', 'Move to very right')
 
--- Toggle 'mini.completion' for the current buffer, next to the toggles of
--- 'mini.basics' (`\b`, `\w`, ...). See `:h mini.nvim-disabling-recipes`.
+-- Toggle 'mini.completion' for the current buffer beside 'mini.basics' toggles (`\b`, `\w`, ...).
+-- See `:h mini.nvim-disabling-recipes`.
 nmap('\\a', function()
   vim.b.minicompletion_disable = not vim.b.minicompletion_disable
   vim.notify('Autocompletion ' .. (vim.b.minicompletion_disable and 'off' or 'on'))
 end, "Toggle 'mini.completion' (buffer)")
 
--- Swap adjacent arguments ('mini.ai' `a`, 'mini.operators' `gx`); overrides `:h (` and `:h )`.
+-- Swap adjacent arguments with 'mini.ai' `a` and 'mini.operators' `gx`.
+-- This replaces `:h (` and `:h )`.
 vim.keymap.set('n', '(', 'gxiagxila', { remap = true, desc = 'Swap arg left' })
 vim.keymap.set('n', ')', 'gxiagxina', { remap = true, desc = 'Swap arg right' })
 
@@ -53,9 +54,9 @@ nmap('#', '#zv' .. map_refresh, 'Hash')
 -- stylua: ignore start
 -- Leader mappings ============================================================
 
--- Two-key Leader mappings: first key is the group, second the action (`:h <Leader>`).
+-- The first Leader key selects the group; the second selects the action (`:h <Leader>`).
 
--- Leader group names for 'mini.clue'.
+-- Define Leader group names for 'mini.clue'.
 Config.leader_group_clues = {
   { mode = 'n', keys = '<Leader>b', desc = '+Buffer' },
   { mode = 'n', keys = '<Leader>e', desc = '+Explore/Edit' },
@@ -73,7 +74,7 @@ Config.leader_group_clues = {
   { mode = 'x', keys = '<Leader>l', desc = '+Language' },
 }
 
--- Leader mapping helpers; a `<Cmd>` RHS needs no module loaded at mapping time (`:h <Cmd>`).
+-- A `<Cmd>` RHS does not need its module when defining the Leader mapping (`:h <Cmd>`).
 local nmap_leader = function(suffix, rhs, desc)
   vim.keymap.set('n', '<Leader>' .. suffix, rhs, { desc = desc })
 end
@@ -90,9 +91,8 @@ nmap_leader('bw', '<Cmd>lua MiniBufremove.wipeout()<CR>',        'Wipeout')
 nmap_leader('bW', '<Cmd>lua MiniBufremove.wipeout(0, true)<CR>', 'Wipeout!')
 
 -- e is for 'Explore' and 'Edit'; `eg` is in 'lua/config/glance.lua'.
--- NOTE: resolve the config path: opened through the startup junction no root marker is
--- reachable and `lua_ls` starts rootless in single file mode, without diagnostics
--- (`:h resolve()`).
+-- NOTE: Resolve the config path (`:h resolve()`). The startup junction hides the root marker.
+-- Without a root marker, `lua_ls` starts in single file mode without diagnostics.
 local config_file = function(relative)
   local path = vim.fn.resolve(vim.fn.stdpath('config') .. '/' .. relative)
   return string.format('<Cmd>edit %s<CR>', vim.fn.fnameescape(path))
@@ -107,12 +107,13 @@ local explore_locations = function()
   vim.cmd(vim.fn.getloclist(0, { winid = true }).winid ~= 0 and 'lclose' or 'lopen')
 end
 
--- Open the history in its own tabpage, like the `<Leader>g` outputs; `q` closes it.
+-- Open the history in its own tabpage, like the `<Leader>g` outputs.
+-- `q` closes it.
 local show_notification_history = function()
-  -- `:tab split` keeps the current buffer, so no empty one is orphaned (`:h :tab`).
+  -- `:tab split` keeps the current buffer and leaves no unused empty buffer (`:h :tab`).
   vim.cmd('tab split')
   MiniNotify.show_history()
-  -- Created listed; unlist it, it is closed with `q`.
+  -- Remove the history buffer from the buffer list because `q` closes it.
   vim.bo.buflisted = false
   vim.keymap.set('n', 'q', '<Cmd>silent! close<CR>', { buffer = 0, desc = 'Close notification history' })
 end
@@ -132,9 +133,9 @@ nmap_leader('es', '<Cmd>lua MiniStarter.open()<CR>',                           '
 
 -- f is for 'Fuzzy Find' (`:h MiniPick-overview`).
 
--- HACK: `:Pick ... path="%"` fails on Windows: 'mini.pick' loads arguments as Lua, so path
--- backslashes parse as escapes. Call the picker directly. Remove once fixed upstream
--- (still present in 'mini.nvim' f9ac12d, 2026-11-09).
+-- HACK: `:Pick ... path="%"` fails on Windows because 'mini.pick' reads arguments as Lua.
+-- Lua reads path backslashes as escapes. Call the picker directly.
+-- Remove this workaround when upstream fixes it (still present in 'mini.nvim' f9ac12d, 2026-11-09).
 local pick_buf_path = function(picker, scope)
   return function()
     local path = vim.api.nvim_buf_get_name(0)
@@ -172,7 +173,7 @@ nmap_leader('fT', '<Cmd>HipatternsGrep<CR>',                         'Todo/Fixme
 nmap_leader('fv', '<Cmd>Pick visit_paths cwd=""<CR>',                'Visit paths (all)')
 nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                       'Visit paths (cwd)')
 
--- g is for 'Git'; functions live in 'lua/config/git', required lazily.
+-- g is for 'Git'; functions load on demand from 'lua/config/git'.
 
 nmap_leader('ga', "<Cmd>lua require('config.git').diff_staged()<CR>",       'Added diff')
 nmap_leader('gA', "<Cmd>lua require('config.git').diff_staged(0)<CR>",      'Added diff buffer')
@@ -195,8 +196,8 @@ nmap_leader('gS', "<Cmd>lua require('config.git').diff_commit(0)<CR>",      'Sin
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 
 -- l is for 'Language'; `lf` formats the changed lines ('lua/config/format.lua').
--- NOTE: `gr` is the 'mini.operators' replace operator, so LSP mappings live here
--- instead of `:h gra`. `:make` stays synchronous; `:Make` ('lua/config/make.lua') is async.
+-- NOTE: 'mini.operators' uses `gr` to replace text, so LSP mappings use this group, not `:h gra`.
+-- `:make` stays synchronous; `:Make` ('lua/config/make.lua') is asynchronous.
 nmap_leader('la', '<Cmd>lua vim.lsp.buf.code_action()<CR>',          'Actions')
 nmap_leader('ld', '<Cmd>lua vim.diagnostic.open_float()<CR>',        'Diagnostic popup')
 nmap_leader('lf', "<Cmd>lua require('config.format').changed()<CR>", 'Format changed')

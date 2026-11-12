@@ -2,17 +2,20 @@
 -- │ lua_ls │
 -- └────────┘
 --
--- Install: `mise use -g lua-language-server@latest`. Tuned for editing this config.
+-- Install with `mise use -g lua-language-server@latest`.
+-- These settings support edits to this config.
 
--- Read for definitions, never reported on; the whole 'runtimepath' is slow and trips the server.
+-- Read these files for definitions without diagnostics. The full 'runtimepath' slows the server and
+-- causes errors.
 local library = {
   vim.env.VIMRUNTIME,
   '${3rd}/luv/library',
 }
 vim.list_extend(library, vim.api.nvim_get_runtime_file('lua/mini', true))
 
--- NOTE: `$HOME` has a '.git' here, so a loose '.lua' would resolve to `$HOME` and scan
--- the whole profile; `root_dir` excludes it (`os_homedir()` uses backslashes).
+-- NOTE: `$HOME` contains '.git', so a separate '.lua' would use `$HOME` as its root and scan the
+-- full profile.
+-- `root_dir` excludes it; `os_homedir()` uses backslashes.
 local home = vim.fs.normalize(vim.uv.os_homedir())
 return {
   root_dir = function(bufnr, on_dir)
@@ -37,8 +40,8 @@ return {
         checkThirdParty = false,
       },
       diagnostics = { globals = { 'Config' } },
-      -- NOTE: the lens of 'nvim-lspconfig' are reference counters with an empty
-      -- `command`, so running one fails with "does not support command ``";
+      -- NOTE: Code lenses from 'nvim-lspconfig' count references but have an empty `command`.
+      -- Thus, execution fails with "does not support command ``".
       -- `<Leader>lR` goes to the references.
       codeLens = { enable = false },
     },

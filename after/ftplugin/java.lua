@@ -2,7 +2,7 @@
 -- │ Java behaviour │
 -- └────────────────┘
 --
--- Indentation, `:make` and `:Run` (`:h ft-java-plugin`).
+-- This file sets indentation and supports `:make` and `:Run` (`:h ft-java-plugin`).
 
 vim.bo.shiftwidth = 4
 vim.bo.softtabstop = 4
@@ -11,12 +11,13 @@ local ft = require('config.ft')
 
 ft.ts_fold()
 
--- NOTE: a Surefire failure entry carries the first stack frame, inside JUnit;
--- the test frame is a few entries below (Neovim 0.12.4).
+-- NOTE: A Surefire failure entry contains the first stack frame, inside JUnit (Neovim 0.12.4).
+-- The test frame is a few entries below.
 --
--- TODO: Gradle falls through to `javac` and leaves the quickfix list empty like
--- a green build. Needs 'compiler/gradle.lua'; first step: make `gradlew.bat
--- compileJava` fail on purpose and read the raw output (probably `--console=plain`).
+-- TODO: Add 'compiler/gradle.lua'; Gradle uses `javac` and leaves an empty quickfix list that
+-- suggests a successful build.
+-- First, make `gradlew.bat compileJava` fail deliberately.
+-- Then, read the raw output, probably with `--console=plain`.
 local found = vim.fs.find('pom.xml', {
   upward = true,
   path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),

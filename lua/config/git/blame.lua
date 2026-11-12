@@ -1,11 +1,11 @@
 -- ┌───────────────┐
 -- │ Blame of line │
 -- └───────────────┘
---
--- Who last changed the line under the cursor, written at its end. Off until
--- `toggle()`, so that no `git` runs on every pause of the cursor.
--- NOTE: `git blame` reads the file from disk, so nothing is shown while the
--- buffer is modified: line numbers would credit lines to the wrong commit.
+-- This module shows the last author at the end of the cursor line.
+-- `toggle()` enables it to avoid running `git` on every cursor pause.
+
+-- NOTE: `git blame` reads the disk file. Hide annotations in modified buffers because line numbers
+-- could identify the wrong commit.
 
 local core = require('config.git.core')
 
@@ -22,8 +22,7 @@ local clear = function(buf_id)
 end
 
 local show = function(buf_id, lnum)
-  -- The buffer can have been wiped while the timer waited, and
-  -- `MiniGit.get_buf_data()` raises on an invalid id.
+  -- The timer can outlive the buffer. `MiniGit.get_buf_data()` raises an error for invalid ids.
   if not vim.api.nvim_buf_is_valid(buf_id) then return end
   local root = (MiniGit.get_buf_data(buf_id) or {}).root
   if root == nil or vim.bo[buf_id].modified then return end
@@ -32,11 +31,11 @@ local show = function(buf_id, lnum)
   local path = vim.api.nvim_buf_get_name(buf_id)
   local cmd = { 'git', 'blame', '--porcelain', '-L', range, '--', path }
   core.run(cmd, { cwd = root }, function(out)
-    -- An answer for a line the cursor has left is of no interest anymore
+    -- Ignore results for a line that the cursor has left.
     local is_current = last.buf_id == buf_id and last.lnum == lnum
     if out.code ~= 0 or not is_current then return end
 
-    -- A line not committed yet is reported with a hash of only zeros
+    -- Git reports uncommitted lines with an all-zero hash.
     local text = 'Not committed yet'
     if out.stdout:find('^0+ ') == nil then
       local author = out.stdout:match('\nauthor ([^\n]*)') or '?'
@@ -45,8 +44,8 @@ local show = function(buf_id, lnum)
       local date = time ~= nil and os.date('%Y-%m-%d', time) or '?'
       text = author .. ' │ ' .. date .. ' │ ' .. summary
     end
-    -- NOTE: "combine" keeps the foreground of 'Comment' over the cursorline
-    -- background; the leading space keeps the text apart from the line it follows.
+    -- NOTE: "combine" keeps the 'Comment' foreground over the cursorline background.
+    -- The leading space separates the annotation from the source line.
     local opts = {
       virt_text = { { ' ' .. text, 'Comment' } },
       virt_text_pos = 'eol',
@@ -56,16 +55,15 @@ local show = function(buf_id, lnum)
   end)
 end
 
---- Blame a line only once the cursor rests on it: holding `j` would otherwise
---- start a `git` process for every line passed through.
+--- Wait for the cursor to stop before showing blame. Holding `j` would otherwise start `git` for
+--- each line.
 M.track = function()
   if not enabled then return end
   local buf_id, lnum = vim.api.nvim_get_current_buf(), vim.fn.line('.')
   local tick = vim.b[buf_id].changedtick
   local is_same = last.buf_id == buf_id and last.lnum == lnum
   if is_same and last.tick == tick then return end
-  -- Left as it is, the annotation of the previous buffer stays readable in
-  -- whatever split still shows it.
+  -- Clear the previous buffer annotation so it does not remain visible in another split.
   if last.buf_id ~= nil then clear(last.buf_id) end
   last = { buf_id = buf_id, lnum = lnum, tick = tick }
 
@@ -89,16 +87,16 @@ M.toggle = function()
   vim.notify('Blame line: ' .. (enabled and 'on' or 'off'))
 end
 
---- Align the output of `:vertical Git blame` with the window it was called from
---- and make both scroll together (`:h MiniGit-examples`).
+--- Align `:vertical Git blame` output with its source window.
+--- Make both windows scroll together (`:h MiniGit-examples`).
 M.align = function(au_data)
   if au_data.data.git_subcommand ~= 'blame' then return end
   local win_src = au_data.data.win_source
   vim.wo[0][0].wrap = false
   vim.fn.winrestview({ topline = vim.fn.line('w0', win_src) })
   vim.api.nvim_win_set_cursor(0, { vim.fn.line('.', win_src), 0 })
-  -- Written per window (second index, window id), as plain `vim.wo` would bind
-  -- every window opened afterwards (`:h vim.wo`).
+  -- Use the second index (window id) for window-local writes (`:h vim.wo`).
+  -- Plain `vim.wo` would bind every window opened later.
   vim.wo[win_src].scrollbind = true
   vim.wo[0][0].scrollbind = true
 end

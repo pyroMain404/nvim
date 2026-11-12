@@ -2,26 +2,25 @@
 -- │ Health check │
 -- └──────────────┘
 --
--- Reports what this config assumes about its environment: which programs are
--- installed, at which version, and what stops working without them. Run it with
--- `:checkhealth config` (`:h health-dev`); found by path, never `require`d.
+-- This check reports installed programs, their versions and features that need them.
+-- Run `:checkhealth config` (`:h health-dev`).
+-- Neovim finds this check by path, not through `require`.
 
 local M = {}
 local health = vim.health
 local toolchain = require('config.toolchain')
 
--- NOTE: the second `trim` removes the carriage return a Windows console tool
--- prints, which the first only reaches on the last line of a multi line answer
--- (`java --version`).
+-- NOTE: Windows console tools can print carriage returns (`java --version`).
+-- The first `trim` removes only the last one in multiline output; the second cleans the first line.
 local function first_line(cmd)
   local ok, out = pcall(function() return vim.system(cmd):wait() end)
   if not ok or out.code ~= 0 then return nil end
   return vim.trim(vim.split(vim.trim(out.stdout), '\n')[1] or '')
 end
 
--- Report a `toolchain` program: its version, or its path with `check = 'path'`.
--- A program on `PATH` whose `--version` fails (`rustc.exe` left behind by a
--- dropped rustup component) warns instead of reporting a healthy version-less `OK`.
+-- Report a `toolchain` program's version, or its path with `check = 'path'`.
+-- Warn if a program on `PATH` fails `--version`, instead of reporting `OK` without a version.
+-- This can occur with `rustc.exe` after removal of a rustup component.
 local function check_tool(tool)
   local name = tool.exe
   local advice = vim.iter({ tool.advice, tool.why }):flatten():totable()
@@ -48,8 +47,7 @@ local function find_tool(language, exe)
   return vim.iter(language.tools):find(function(tool) return tool.exe == exe end)
 end
 
--- Whether each parser of `language` is installed, the same check
--- 'plugin/40_plugins.lua' uses to decide what to install.
+-- Check each parser of `language` with the installation check from 'plugin/40_plugins.lua'.
 local function check_parsers(language)
   for _, lang in ipairs(language.parsers) do
     if #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0 then
@@ -71,9 +69,9 @@ local function check_parsers(language)
   end
 end
 
--- NOTE: `:checkhealth` runs every check inside its own nameless report buffer,
--- so the search starts from the buffer the reader came from (`#`), or from the
--- working directory when there is none.
+-- NOTE: `:checkhealth` runs each check in its own unnamed report buffer.
+-- Search from the previous buffer (`#`), or from the working directory if no previous buffer
+-- exists.
 local function source_root(markers)
   local source = vim.fn.bufnr('#')
   if source == -1 or vim.api.nvim_buf_get_name(source) == '' then
@@ -92,11 +90,11 @@ local function check_external_tools()
 end
 
 -- Language toolchains ========================================================
--- The generic part of every section is in `check_language()`. What is specific
--- to one language is in the `sections` table at the end of this block: `gate`
--- (return before `start()` when the check does not apply), `begin`, `hooks`
--- (replace the check of one program, keyed by `exe`; returning `false` ends the
--- section) and `extra` (after the programs, before the parsers).
+-- `check_language()` handles the common checks; `sections` below supplies language-specific checks.
+-- `gate` returns before `start()` if the check does not apply.
+-- `begin` starts the section.
+-- `hooks` replaces program checks by `exe`; returning `false` ends the section.
+-- `extra` runs after the program checks and before the parser checks.
 
 local function extra_markdown()
   if #vim.api.nvim_get_runtime_file('lua/render-markdown/init.lua', false) > 0 then
@@ -108,8 +106,8 @@ local function extra_markdown()
     })
   end
 
-  -- 'obsidian.nvim' is an `opt` plugin loaded by the gate in 'config.obsidian':
-  -- only its absence from the lockfile is a problem.
+  -- The gate in 'config.obsidian' loads 'obsidian.nvim' as an `opt` plugin.
+  -- Only its absence from the lockfile indicates a problem.
   local obsidian_locked = vim.iter(vim.pack.get(nil, { info = false })):any(
     function(plugin) return plugin.spec.name == 'obsidian.nvim' end
   )
@@ -127,7 +125,7 @@ local function extra_markdown()
   end
 end
 
--- Which toolchain answers here: a project's 'rust-toolchain.toml' can change it
+-- A project's 'rust-toolchain.toml' can select a different toolchain here.
 local function hook_rustup(tool, language)
   if vim.fn.executable('rustup') ~= 1 then
     health.warn('`rustup` is not available', { tool.advice, tool.why })
@@ -144,10 +142,10 @@ local function hook_rustup(tool, language)
   end
 end
 
--- The Node of *this directory* is not the one the servers run on: 'after/lsp/'
--- overrides it (`MISE_NODE_VERSION`) for the two servers alone. Below the floor
--- the server dies on its own source and no client ever attaches. Measured on
--- Node 14: `SyntaxError: Unexpected token '??='`, in a message no log reads.
+-- 'after/lsp/' sets `MISE_NODE_VERSION` for the two servers, independently of this directory's Node
+-- version.
+-- Below the minimum version, the server fails to parse its source, so no client attaches.
+-- Node 14 produced `SyntaxError: Unexpected token '??='` in a message that no log records.
 local function hook_node(tool, language)
   local project_node = check_tool(tool)
   local major = tonumber((project_node or ''):match('^v?(%d+)'))
@@ -166,8 +164,8 @@ local function hook_node(tool, language)
   end
 end
 
--- NOTE: the working directory is not the project root: 'angular.json' can sit
--- well below the repository root `MiniMisc.setup_auto_root()` chooses.
+-- NOTE: The working directory is not necessarily the project root.
+-- 'angular.json' can be below the repository root that `MiniMisc.setup_auto_root()` selects.
 local function extra_angular(language)
   local root = source_root(language.markers)
   if root == nil then
@@ -179,9 +177,9 @@ local function extra_angular(language)
     })
   else
     health.ok('project dependencies: installed in ' .. root)
-    -- NOTE: `ngserver` loads the project's language service, and Neovim starts
-    -- it through a `mise` shim that resolves from the current directory, so the
-    -- major is pinned in the project's own mise.toml, not in the global one.
+    -- NOTE: `ngserver` loads the project's language service through a `mise` shim in the current
+    -- directory.
+    -- The project's mise.toml pins the major version, not the global mise.toml.
     local manifest = vim.fs.joinpath(root, 'package.json')
     local ok, blob = pcall(vim.fn.readblob, manifest)
     local deps = ok and (vim.json.decode(blob) or {}).dependencies or {}
@@ -199,13 +197,12 @@ local function extra_angular(language)
   end
 end
 
--- The JDK of the *project* (`java`) is not the one jdtls runs on: 'after/lsp/jdtls.lua'
--- hands the server the newest JDK `mise` has, through `MISE_JAVA_VERSION`. What
--- has to hold is that such a JDK exists and is new enough, so the resolved
--- config is read instead of naming a version here.
+-- The project's JDK (`java`) can differ from the JDK for jdtls.
+-- 'after/lsp/jdtls.lua' supplies the newest JDK from `mise` through `MISE_JAVA_VERSION`.
+-- Read the resolved config to check that this JDK exists and meets the minimum version.
 --
--- NOTE: below the minimum jdtls says so only in its own log, so an unmet
--- requirement looks like a server that simply does not attach.
+-- NOTE: jdtls reports an older JDK only in its own log, so it looks like a server attachment
+-- failure.
 local function hook_java(tool, language)
   local minimum = language.minimum
   local version = first_line({ 'java', '--version' })
@@ -224,8 +221,8 @@ local function hook_java(tool, language)
         .. 'release then leaves no client attached',
     })
   else
-    -- A `mise` version string ('temurin-21.0.12+101.0.LTS'): the release is the
-    -- first number after the vendor name
+    -- In a `mise` version string ('temurin-21.0.12+101.0.LTS'), the first number after the vendor
+    -- names the release.
     local release = tonumber(server_jdk:gsub('^%D+', ''):match('^%d+'))
     if release ~= nil and release < minimum then
       health.warn(
@@ -247,9 +244,9 @@ local function hook_java(tool, language)
   end
 end
 
--- The execution environments 'after/lsp/jdtls.lua' declares, read from the
--- resolved config so they cannot drift from what the server is told. `jdtls`
--- has no `--version` and its Windows wrapper ends with a `pause`: path only.
+-- Read the execution environments from the resolved 'after/lsp/jdtls.lua' config to match the
+-- server settings.
+-- Check only the path: `jdtls` has no `--version`, and its Windows wrapper ends with a `pause`.
 local function hook_jdtls(tool)
   local declared = vim.tbl_get(
     vim.lsp.config['jdtls'] or {},
@@ -268,8 +265,8 @@ local function hook_jdtls(tool)
     for _, runtime in ipairs(declared) do
       health.ok(runtime.name .. ' runtime for jdtls: ' .. runtime.path)
     end
-    -- Not a warning: 'after/lsp/jdtls.lua' warns when the project it imported
-    -- compiles against a release that no runtime here answers for.
+    -- 'after/lsp/jdtls.lua' warns if an imported project targets a release without a runtime here.
+    -- Do not warn again here.
     health.info(
       'A project on a release missing from this list is checked against the '
         .. "server's own JDK, and says so when it is opened"
@@ -279,18 +276,17 @@ local function hook_jdtls(tool)
 end
 
 local function extra_cpp(language)
-  -- Without a compilation database clangd does not fail, it GUESSES: it assumes
-  -- `clang some_file.cc` and reports errors on perfectly valid `#include`s,
-  -- which is indistinguishable from a broken config.
+  -- Without a compilation database, clangd assumes `clang some_file.cc` instead of failing.
+  -- It then reports errors on valid `#include`s, which look like config errors.
   local root = source_root(language.markers)
   if root == nil then
     health.info('not inside a C or C++ project: nothing else to check here')
     return
   end
-  -- Where clangd looks: the file's parents and their 'build/' subdirectory,
-  -- where `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` writes it. Any other build
-  -- directory name is out of reach. `compile_flags.txt` is the hand written
-  -- alternative and has no background indexing.
+  -- clangd searches the file's parent directories and their 'build/' subdirectory.
+  -- `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` writes the database there. Other build directory names are
+  -- outside the search.
+  -- A manually written `compile_flags.txt` is an alternative, but it gives no background indexing.
   local database = vim
     .iter({
       vim.fs.joinpath(root, 'compile_commands.json'),
@@ -298,19 +294,16 @@ local function extra_cpp(language)
       vim.fs.joinpath(root, 'compile_flags.txt'),
     })
     :find(vim.uv.fs_stat)
-  -- TODO: the advice below names one build system, and a GDExtension
-  -- checkout may not be able to run it: 'godot-cpp' is historically built
-  -- with SCons (`scons compiledb=yes` writes the database), while recent
-  -- versions also ship a 'CMakeLists.txt'. A reader there is told to run a
-  -- command that may not apply, which is worse than silence because it
-  -- reads as authoritative.
-  -- Not now: there is no GDExtension project on this machine, so which of
-  -- the two that checkout actually uses would be a guess, and an advice
-  -- derived from a guess is the thing this branch exists to avoid.
-  -- First step, on the first real one: look for 'SConstruct' and
-  -- 'CMakeLists.txt' at its root before writing a line. Both or CMake only,
-  -- nothing to do here. SConstruct only, this branch grows a case that
-  -- names `scons compiledb=yes` instead.
+  -- TODO: Make the advice match the build system of a real GDExtension checkout.
+  -- 'godot-cpp' historically uses SCons (`scons compiledb=yes` writes the database); recent
+  -- versions also include 'CMakeLists.txt'.
+  -- The advice below names only CMake, so it can misleadingly prescribe an unsupported command.
+  -- No GDExtension project exists on this machine; defer changes to avoid guessing its build
+  -- system.
+  -- First, check a real project's root for 'SConstruct' and 'CMakeLists.txt' before changing this
+  -- branch.
+  -- Keep CMake advice if 'CMakeLists.txt' exists; use `scons compiledb=yes` only if 'SConstruct'
+  -- exists alone.
   if database == nil then
     health.warn(("no compilation database for '%s'"):format(root), {
       'Generate one with `cmake -S . -B build -G Ninja '
@@ -324,8 +317,8 @@ local function extra_cpp(language)
     })
     return
   end
-  -- The C++ standard of the flags, which nothing else shows. Only the head of
-  -- the file: the database of a real project is megabytes (`:h readblob()`).
+  -- Show the C++ standard from the flags; no other check shows it.
+  -- Read only the file's start because real project databases contain megabytes (`:h readblob()`).
   local standard = nil
   local ok, blob = pcall(vim.fn.readblob, database, 0, 8192)
   if ok then standard = tostring(blob):match('%-std=[%w%+]+') end
@@ -336,15 +329,15 @@ local function extra_cpp(language)
   )
 end
 
--- The whole toolchain of Godot is a game's, not the machine's: a section saying
--- "no Godot project here" would be noise in every other report, so this is the
--- one section that reports nothing when it does not apply.
+-- The Godot toolchain belongs to a game, not the machine.
+-- This section reports nothing outside a game to avoid "no Godot project here" in unrelated
+-- reports.
 local function gate_godot(language) return source_root(language.markers) end
 
 local function begin_godot(_, root) health.ok('Godot project: ' .. root) end
 
--- `vim.fn.executable()` alone calls a `mise` shim healthy whatever version it
--- resolves: a directory that declares none answers `No version is set for shim`.
+-- `vim.fn.executable()` accepts a `mise` shim without checking its version.
+-- A directory without a declared version answers `No version is set for shim`.
 local function hook_godot(tool, language, root)
   if vim.fn.executable('godot') ~= 1 then
     health.warn('`godot` is not available', { tool.advice, tool.why })
@@ -365,10 +358,9 @@ local function hook_godot(tool, language, root)
   end
 end
 
--- NOTE: the port is a machine resource: a second Godot opened on another game
--- gets no port at all, so a buffer attaches to the first editor and answers
--- with the other game's symbols. Reported, never tested: connecting would turn
--- "the editor is closed", a legitimate choice, into a failure.
+-- NOTE: A second Godot game cannot use the same machine port; buffers then attach to the first game
+-- and show its symbols.
+-- Report the port without testing a connection: "the editor is closed" is valid, not a failure.
 local function extra_godot()
   local port = vim.env.GDScript_Port
   if port == nil then
@@ -387,8 +379,8 @@ local function extra_godot()
   end
 end
 
--- The interpreter `:Run` and basedpyright use for a file here, not just the
--- `python` on PATH. The Microsoft Store alias is on PATH but runs nothing.
+-- Check the interpreter that `:Run` and basedpyright use here, not only `python` on PATH.
+-- The Microsoft Store alias exists on PATH but runs nothing.
 local function hook_python(tool)
   local cwd = vim.fn.getcwd()
   local python = require('config.python').interpreter(cwd)

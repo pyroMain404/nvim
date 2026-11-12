@@ -1,9 +1,9 @@
 -- ┌───────────────────────┐
 -- │ Git output navigation │
 -- └───────────────────────┘
---
--- Makes the scratch buffers of `:Git` (patches, logs) and of `:Pick git_commits`
--- navigable. See `:h MiniGit.show_at_cursor()` and `:h MiniGit.diff_foldexpr()`.
+-- This module enables navigation in scratch buffers from `:Git` (patches, logs)
+-- and `:Pick git_commits`.
+-- See `:h MiniGit.show_at_cursor()` and `:h MiniGit.diff_foldexpr()`.
 
 local core = require('config.git.core')
 
@@ -17,13 +17,13 @@ local fit_git_column = function(win_id)
 end
 
 -- `<CR>` shows a commit (full width below the log) or a file (far-right column).
--- NOTE: 'mini.git' decides from the word at cursor, so the test is repeated here.
+-- NOTE: Repeat the test because 'mini.git' decides from the word under the cursor.
 local is_commit_at_cursor = function()
   local cword = vim.fn.expand('<cword>')
   return cword:find('^%x%x%x%x%x%x%x+$') ~= nil and cword == cword:lower()
 end
 
--- NOTE: `<Leader>gR` there leaves no reference: a copy has no index entry.
+-- NOTE: `<Leader>gR` leaves no reference here because a copy has no index entry.
 local diff_ref_at_parent = function(buf_id)
   local name = vim.api.nvim_buf_get_name(buf_id)
   local commit = name:match(core.patterns.show_commit)
@@ -31,8 +31,8 @@ local diff_ref_at_parent = function(buf_id)
   require('config.git.diffref').set(buf_id, commit .. '~')
 end
 
--- Only the first file opened from a patch gets the far-right column; later files
--- open below it. Closing the column starts a new one.
+-- Open the first file from a patch in the far-right column. Open later files below it.
+-- Start a new column if the previous column closes.
 local win_file = nil
 local win_file_is_usable = function()
   return win_file ~= nil
@@ -40,8 +40,8 @@ local win_file_is_usable = function()
     and vim.api.nvim_win_get_tabpage(win_file) == vim.api.nvim_win_get_tabpage(0)
 end
 
--- NOTE: the window moves before it is drawn, so its view starts at line 1; set
--- the position again plus `zz`.
+-- NOTE: The window moves before drawing, so its view starts at line 1.
+-- Set the position again. Center it with `zz`.
 local place_win = function(win_init, direction)
   local pos = vim.api.nvim_win_get_cursor(0)
   if direction ~= 'L' then
@@ -63,16 +63,16 @@ local place_win = function(win_init, direction)
   vim.cmd('normal! zz')
 end
 
--- `MiniGit.show_diff_source()` shows a scratch copy: reuse it to resolve path and
--- line, then edit the file itself for a functional buffer ('mini.diff', LSP).
+-- `MiniGit.show_diff_source()` shows a scratch copy. Use it to resolve the path and line.
+-- Then edit the file itself for a functional buffer with 'mini.diff' and LSP.
 local show_at_cursor = function()
   local win_init = vim.api.nvim_get_current_win()
   local is_commit = is_commit_at_cursor()
   local split = is_commit and 'horizontal' or 'vertical'
 
-  -- The first call asks for the "after" state; the retry is only for a deleted
-  -- file. Any other failure repeats on identical input, so the first attempt is
-  -- silenced and its message replayed when no retry follows.
+  -- The first call requests the "after" state. Retry only for a deleted file.
+  -- Other failures repeat with identical input. Suppress the first warning and replay it when no
+  -- retry follows.
   local warning = nil
   local notify = vim.notify
   vim.notify = function(msg, level) warning = { msg, level } end
@@ -93,15 +93,15 @@ local show_at_cursor = function()
   -- NOTE: 'mini.git' stores the path escaped for a command and relative to the root.
   local path = vim.api.nvim_buf_get_name(0):match(core.patterns.edit_path)
   if path == nil then return diff_ref_at_parent(0) end
-  -- The buffer's own root: the cwd may be another repository than the patch's.
+  -- Use the buffer's root because the cwd can belong to a different repository from the patch.
   local root = (MiniGit.get_buf_data(0) or {}).root or core.repo_root()
   if root ~= nil then
     path = vim.fn.fnameescape(vim.fs.normalize(root)) .. '/' .. path
   end
   local lnum = vim.api.nvim_win_get_cursor(0)[1]
 
-  -- Drop the fold options inherited from the patch before the file loads: `<`
-  -- reads the global value, so run afterwards it would also undo the ftplugin's.
+  -- Clear inherited patch fold options before loading the file.
+  -- `<` reads global values, so running later would also undo the ftplugin settings.
   vim.cmd('setlocal foldmethod< foldexpr< foldlevel<')
   vim.cmd('keepalt edit ' .. path)
   vim.api.nvim_win_set_cursor(0, { lnum, 0 })
@@ -116,24 +116,24 @@ local show_diff_source = function()
   diff_ref_at_parent(0)
 end
 
---- `FileType git,diff` callback: `gf`, folds, and the scratch-buffer mappings.
+--- Configure `gf`, folds, and scratch-buffer mappings in the `FileType git,diff` callback.
 M.setup_buf = function()
   vim.bo.includeexpr = [[substitute(v:fname, '^[abciwo]/', '', '')]]
   local root = core.repo_root()
   if root ~= nil then
-    -- Escaped because space and comma separate the entries of 'path'.
+    -- Escape spaces and commas because they separate 'path' entries.
     root = vim.fn.escape(vim.fs.normalize(root), ' ,')
     vim.bo.path = root .. ',' .. require('config.path').default
   end
 
-  -- Start at the deepest fold level (the global 'foldlevel' of 10 makes the first
-  -- `zm` do nothing); the second index keeps window options from leaking.
+  -- Start at the deepest fold level. The global 'foldlevel' of 10 makes the first `zm` do nothing.
+  -- Use the second index to keep window options local.
   vim.wo[0][0].foldmethod = 'expr'
   vim.wo[0][0].foldexpr = 'v:lua.MiniGit.diff_foldexpr()'
   vim.wo[0][0].foldlevel = 3
 
-  -- Mapped only in scratch buffers of 'mini.nvim' ("minigit://", "miniextra://"):
-  -- it would shadow useful defaults inside a regular patch or commit file.
+  -- Map only in 'mini.nvim' scratch buffers ("minigit://", "miniextra://").
+  -- These mappings would hide useful defaults in regular patch or commit files.
   if not vim.api.nvim_buf_get_name(0):find('^mini%a+://') then return end
   local bmap = function(lhs, rhs, desc)
     vim.keymap.set('n', lhs, rhs, { buf = 0, desc = desc })

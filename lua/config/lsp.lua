@@ -2,14 +2,15 @@
 -- │ LSP client behaviour  │
 -- └───────────────────────┘
 --
--- Client-side fixes for no single server; switched on by `setup()` in 'plugin/50_features.lua'.
+-- `setup()` in 'plugin/50_features.lua' enables client fixes that are not limited to one server.
 
 local M = {}
 
--- HACK: on Windows `vim.lsp.util.rename()` splits the backslashed `fs_realpath()`
--- on `/`, so the renamed buffer keeps its old name and is written back at the old
--- path. Rename it with `:saveas!` without autocommands (the write would run the
--- 'obsidian.nvim' front matter hook mid-rename). Still present in Neovim 0.12.5.
+-- HACK: On Windows, `vim.lsp.util.rename()` splits `fs_realpath()` on `/`, despite its backslashes.
+-- The buffer keeps its old name, so writes use the old path.
+-- Rename with `:saveas!` without autocommands to prevent the 'obsidian.nvim' front matter hook from
+-- running during rename.
+-- Neovim 0.12.5 still has this defect.
 local patch_rename = function()
   local lsp_rename = vim.lsp.util.rename
   vim.lsp.util.rename = function(old_fname, new_fname, opts)
@@ -35,9 +36,9 @@ local patch_rename = function()
   end
 end
 
--- HACK: 'nvim-lspconfig' announces `rust-analyzer.showReferences` but registers
--- only `runSingle`, so reference lenses end in "does not support command". Show
--- the locations client-side. Still missing in 'nvim-lspconfig' 993d048 (2026-11-09).
+-- HACK: 'nvim-lspconfig' announces `rust-analyzer.showReferences` but registers only `runSingle`.
+-- Reference lenses report "does not support command". Show the locations on the client.
+-- 'nvim-lspconfig' 993d048 (2026-11-09) still lacks this command.
 local add_show_references = function()
   vim.lsp.commands['rust-analyzer.showReferences'] = function(command, ctx)
     local locations = command.arguments and command.arguments[3] or {}
@@ -54,14 +55,14 @@ local add_show_references = function()
   end
 end
 
--- A hover window is a read-only markdown buffer with no server attached, so `K` in
--- it finds nothing to ask. Resolve the word under the cursor against the document
--- the window came from (else `workspace/symbol`), then replace the window with its
--- hover, focused, so `K` goes on from there (`:h vim.lsp.buf.hover()`).
+-- A hover window uses a read-only markdown buffer without a server, so `K` cannot request another
+-- hover.
+-- Resolve the cursor word against the source document, or use `workspace/symbol`.
+-- Replace the window with the new hover. Focus it so `K` can continue (`:h vim.lsp.buf.hover()`).
 local word_pattern = '[%w_\128-\255]+'
-local pending -- ctx of the child window being opened, read by the `FileType` callback
+local pending -- The `FileType` callback reads this ctx for the new child window.
 
--- Word under the cursor, and the one before the `.` that qualifies it (`os` in `os.DirEntry`).
+-- Return the cursor word and its qualifier before `.` (`os` in `os.DirEntry`).
 local cursor_word = function()
   local line, col =
     vim.api.nvim_get_current_line(), vim.api.nvim_win_get_cursor(0)[2] + 1
@@ -72,9 +73,9 @@ local cursor_word = function()
   end
 end
 
--- Text of a class the project has no file for, which jdtls names with a `jdt://` URI:
--- the JDK, a jar. Nil when the server can not answer. Read by the `BufReadCmd` of
--- 'plugin/40_plugins.lua' too.
+-- Return text for a class without a project file, such as a JDK or jar class.
+-- jdtls names it with a `jdt://` URI. Return nil if the server cannot answer.
+-- `BufReadCmd` in 'plugin/40_plugins.lua' also reads this text.
 M.class_file_lines = function(client, uri)
   local response =
     client:request_sync('java/classFileContents', { uri = uri }, 10000)
@@ -95,9 +96,10 @@ local document_lines = function(client, uri)
   return vim.fn.filereadable(fname) == 1 and vim.fn.readfile(fname) or {}
 end
 
--- Tree-sitter root of the document. None when no parser is installed for its
--- filetype (Markdown, plain text): there a textual hit cannot be told from prose, so
--- `find_word()` finds nothing and `workspace/symbol` decides.
+-- Return the document's Tree-sitter root, or none without a parser for its filetype (Markdown,
+-- plain text).
+-- Without a parser, text matches can be prose, so `find_word()` finds nothing and
+-- `workspace/symbol` decides.
 local code_root = function(uri, lines)
   local fname = vim.uri_to_fname(uri)
   -- A `jdt://` URI carries its query after the name of the file.
@@ -116,8 +118,9 @@ local in_comment_or_string = function(root, row, col)
   return node_type:find('comment') ~= nil or node_type:find('string') ~= nil
 end
 
--- First 0-based `{ row, byte col }` of `word` (as `qual.word` when `qual` is given)
--- that is code: a comment or a string mentioning it (a Javadoc `{@link FileMode}`) is not.
+-- Return the first 0-based `{ row, byte col }` of `word` in code, using `qual.word` if `qual`
+-- exists.
+-- Exclude comments and strings, such as a Javadoc `{@link FileMode}`.
 local find_word = function(lines, root, word, qual)
   if not root then return end
   local pattern = '%f[%w_]'
@@ -138,11 +141,11 @@ local find_word = function(lines, root, word, qual)
   end
 end
 
--- `open_floating_preview()` sizes a window from the free rows around the cursor of
--- the current one, and a one-line hover window leaves none, so the new window opens
--- from the window of the source buffer, where the old one was, and takes its place.
--- `index` is the entry of `ctx.chain` being revisited (`<C-o>`, `<C-i>`); without it
--- the hover is a new entry, after the current one.
+-- `open_floating_preview()` uses free rows around the current cursor; a one-line hover window has
+-- none.
+-- Open the new hover from the source window to replace the old hover at the same position.
+-- `index` identifies the `ctx.chain` entry for `<C-o>` or `<C-i>`.
+-- Without `index`, add the hover after the current entry.
 local show_hover = function(ctx, uri, position, buf, index)
   ctx.client:request(
     'textDocument/hover',
@@ -172,8 +175,8 @@ local show_hover = function(ctx, uri, position, buf, index)
         table.insert(chain.history, { uri = uri, position = position })
         chain.index = #chain.history
       end
-      -- It would close the old window before the new one exists: the chain is registered
-      -- on the source buffer, which is also where the new window registers itself.
+      -- The source buffer holds the chain and the new window registration.
+      -- Clear its old registration to prevent closure of the old window before the new one exists.
       vim.b[ctx.bufnr].lsp_floating_preview = nil
       pending = {
         client = ctx.client,
@@ -195,9 +198,9 @@ local show_hover = function(ctx, uri, position, buf, index)
   )
 end
 
--- `ctx` is `{ client, uri, position, bufnr, win }`: the server, the document the
--- window's text is about and where in it, and the source buffer and window that
--- started the chain.
+-- `ctx` contains `{ client, uri, position, bufnr, win }`.
+-- These identify the server, hover document, position, and source buffer and window that started
+-- the chain.
 local hover_word = function(ctx, buf)
   local word, qual = cursor_word()
   if not word then return end
@@ -211,9 +214,8 @@ local hover_word = function(ctx, buf)
     local lines = document_lines(ctx.client, uri)
     return lines, code_root(uri, lines)
   end
-  -- Hover on the first code hit of the word in a scanned document: written as
-  -- `qual.word` unless `bare`, which is for a document that spells it through another
-  -- path (`out.println` for `PrintStream.println`). False when there is none.
+  -- Show hover for the first code match in the scanned document, or return false without a match.
+  -- Use `qual.word` unless `bare` permits another path (`out.println` for `PrintStream.println`).
   local hover_found = function(uri, lines, root, bare)
     local row, col = find_word(lines, root, word, not bare and qual or nil)
     if not row then return false end
@@ -224,9 +226,9 @@ local hover_word = function(ctx, buf)
   local lines, root = scan(ctx.uri)
   if hover_found(ctx.uri, lines, root) then return end
 
-  -- Not in the document, and the server does not know it by that name: follow the
-  -- definition of what the window is about to the document that declares it, and look
-  -- there (the `PrintStream` class of `println`).
+  -- The document has no match, and the server does not recognize the name.
+  -- Follow the hover subject's definition to its declaring document to search there (the
+  -- `PrintStream` class of `println` ).
   local from_definition = function()
     ctx.client:request(
       'textDocument/definition',
@@ -271,8 +273,8 @@ local hover_word = function(ctx, buf)
     local open = function(symbol)
       if not symbol then return end
       local uri, start = symbol.location.uri, symbol.location.range.start
-      -- jdtls places a class of the JDK or a jar at the top of its file, where nothing
-      -- can be hovered: look for the declaration in the text.
+      -- jdtls locates JDK or jar classes at the file start, which has no hover target.
+      -- Find the declaration in the text.
       if start.line == 0 and start.character == 0 then
         local symbol_lines, symbol_root = scan(uri)
         local row, col = find_word(symbol_lines, symbol_root, word)
@@ -290,8 +292,8 @@ local hover_word = function(ctx, buf)
   end, ctx.bufnr)
 end
 
--- `<C-o>` and `<C-i>` walk the hovers of the chain: each window replaces the last, so
--- the jump list of a window has nothing to go back to.
+-- `<C-o>` and `<C-i>` navigate the hover chain.
+-- Each window replaces the previous window, so its jump list cannot return to earlier hovers.
 local hover_jump = function(ctx, buf, step)
   local chain = ctx.chain
   local index = math.max(1, math.min(#chain.history, chain.index + step))
@@ -300,10 +302,11 @@ local hover_jump = function(ctx, buf, step)
   show_hover(ctx, entry.uri, entry.position, buf, index)
 end
 
--- `gf` on a Markdown link would open the file inside the floating window: close the
--- window and open it in the one the chain started from (`:h vim.lsp.util.show_document()`).
--- `gF` also goes to the line a `#<line>` or `#<line>,<col>` fragment names (gopls writes
--- the latter), which 'isfname' can not parse.
+-- `gf` on a Markdown link would open the file in the floating window.
+-- Close that window. Open the file in the chain's source window (`:h
+-- vim.lsp.util.show_document()`).
+-- `gF` also follows `#<line>` or `#<line>,<col>` fragments, which 'isfname' cannot parse; gopls
+-- writes the latter.
 local follow_link = function(ctx, with_line)
   local line, col =
     vim.api.nvim_get_current_line(), vim.api.nvim_win_get_cursor(0)[2] + 1
@@ -356,7 +359,7 @@ local add_hover_chain = function()
       if not ctx then
         local client =
           vim.lsp.get_clients({ bufnr = source, method = 'textDocument/hover' })[1]
-        -- The current window is the hover one while `FileType` runs, so look the source up.
+        -- `FileType` runs in the hover window, so find the source window.
         local source_win = vim.tbl_filter(
           function(w) return vim.api.nvim_win_get_config(w).relative == '' end,
           vim.fn.win_findbuf(source)
@@ -406,10 +409,12 @@ local add_hover_chain = function()
   })
 end
 
--- HACK: jdtls opens a progress report for every document change ('Validate
--- documents', 'Publish Diagnostics'), so typing in a Java buffer fills the screen with
--- notifications. Keep them out of the window of 'mini.notify' (`:h MiniNotify.config`),
--- as the `content.sort` set in 'plugin/30_mini.lua'; importing and building still show.
+-- HACK: jdtls reports progress for every document change ('Validate documents',
+-- 'Publish Diagnostics' ).
+-- Typing in a Java buffer then fills the screen with notifications.
+-- Use `content.sort` in 'plugin/30_mini.lua' to exclude these from 'mini.notify' (`:h
+-- MiniNotify.config`).
+-- Import and build notifications still appear.
 -- (jdtls 1.61.0, locked 2026-11-01, not retested)
 local noisy_progress = {
   jdtls = { 'Validate documents', 'Publish Diagnostics' },

@@ -4,9 +4,10 @@
 
 local mise = require('config.mise')
 
--- A Node too old for the server, pinned by a project, kills it silently through the
--- `mise` shim; `MISE_NODE_VERSION` points this process alone at the newest Node.
--- NOTE: not `PATH`: the shim recomputes its environment from the working directory.
+-- A project can pin a Node version too old for the server, which silently stops through the `mise`
+-- shim.
+-- `MISE_NODE_VERSION` selects the newest Node for this process only.
+-- NOTE: Do not use `PATH`; the shim recalculates its environment from the working directory.
 local node_entry = mise.newest(
   'node',
   function(entry) return tonumber(tostring(entry.version):match('^(%d+)')) ~= nil end
@@ -23,8 +24,8 @@ if node == nil then
   )
 end
 
--- `typescript` fallback for a plain `.ts` outside any Node project.
--- NOTE: TypeScript 7 drops `tsserver.js`, so require that file and skip such an install.
+-- This supplies a `typescript` fallback for a plain `.ts` outside a Node project.
+-- NOTE: TypeScript 7 removes `tsserver.js`, so require that file to exclude these installations.
 local function lib_of(entry)
   return vim.fs.joinpath(entry.path, 'node_modules', 'typescript', 'lib')
 end
@@ -37,16 +38,16 @@ local ts_entry = mise.newest(
 local tsserver_fallback = ts_entry and lib_of(ts_entry) or nil
 
 return {
-  -- HACK: copy of the `cmd` of 'nvim-lspconfig' with `env` added, because
-  -- `cmd_env` is read by `vim.lsp.start()` only when `cmd` is a list, and the
-  -- plugin's `cmd` function passes no `extra_spawn_params`: the variable shows
-  -- in `:=vim.lsp.config['ts_ls']` and never reaches the process.
-  -- Still true in 'nvim-lspconfig' 993d048 (2026-11-09) on Neovim v0.12.6.
-  -- Delete it the day the plugin forwards `cmd_env` or `cmd` stops being a function.
+  -- HACK: Copy `cmd` from 'nvim-lspconfig' and add `env`.
+  -- `vim.lsp.start()` reads `cmd_env` only when `cmd` is a list.
+  -- The plugin's `cmd` function passes no `extra_spawn_params`.
+  -- Thus, the variable appears in `:=vim.lsp.config['ts_ls']` but never reaches the process.
+  -- This still applies to 'nvim-lspconfig' 993d048 (2026-11-09) on Neovim v0.12.6.
+  -- Delete this copy when the plugin forwards `cmd_env` or `cmd` stops being a function.
   --
-  -- NOTE: `vim.tbl_deep_extend('force')` merges tables but replaces functions,
-  -- so this `cmd` replaces the one of 'nvim-lspconfig' (and 'after/lsp/jdtls.lua'
-  -- leaves `cmd` out for the same reason).
+  -- NOTE: `vim.tbl_deep_extend('force')` merges tables but replaces functions.
+  -- Thus, this `cmd` replaces the function from 'nvim-lspconfig'.
+  -- 'after/lsp/jdtls.lua' omits `cmd` for the same reason.
   cmd = function(dispatchers, config)
     local cmd = 'typescript-language-server'
     local root = (config or {}).root_dir

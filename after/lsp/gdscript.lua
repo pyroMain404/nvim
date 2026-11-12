@@ -2,8 +2,10 @@
 -- │ GDScript via Godot │
 -- └────────────────────┘
 --
--- Served by the Godot editor while it has a project open. `root_markers` drops
--- the inherited '.git' so a loose '.gd' never attaches to another game's editor.
--- NOTE: `cmd` stays inherited (a function, replaced if set); two editors at once
--- are not handled: the second gets no port and attaches to the first.
+-- The Godot editor supplies the server while a project is open.
+-- `root_markers` removes the inherited '.git', so a separate '.gd' never attaches to another game's
+-- editor.
+
+-- NOTE: Keep the inherited `cmd` function; a new value would replace it.
+-- Two editors cannot run together: the second gets no port and attaches to the first.
 return { root_markers = { 'project.godot' } }

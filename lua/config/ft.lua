@@ -2,7 +2,7 @@
 -- │ ftplugin helpers  │
 -- └───────────────────┘
 --
--- Shared by 'after/ftplugin/*.lua' (`:h b:undo_ftplugin`); required by name.
+-- 'after/ftplugin/*.lua' loads these helpers by name (`:h b:undo_ftplugin`).
 
 local M = {}
 
@@ -12,7 +12,7 @@ function M.undo(...)
     .. table.concat({ ... }, ' | ')
 end
 
--- NOTE: fold options belong to the window: `vim.wo.x` also moves the global value,
+-- NOTE: Fold options belong to the window. `vim.wo.x` also changes the global value.
 -- `vim.wo[0][0].x` writes like `:setlocal` (`:h vim.wo`).
 function M.ts_fold()
   vim.wo[0][0].foldmethod = 'expr'

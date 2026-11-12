@@ -2,17 +2,18 @@
 -- │ jdtls │
 -- └───────┘
 --
--- Install: `check_java()` in 'lua/config/health.lua'. 'bin/jdtls' needs `java`
--- and `python`, carried by the `mise` shim, so it is called by name.
--- `cmd` is absent: the inherited function builds a per-project `-data`
--- directory (see the `tbl_deep_extend` NOTE in 'after/lsp/ts_ls.lua').
+-- For installation, see `check_java()` in 'lua/config/health.lua'.
+-- Call 'bin/jdtls' by name because it needs `java` and `python` from the `mise` shim.
+
+-- The inherited `cmd` function creates a `-data` directory for each project.
+-- Keep `cmd` absent; see the `tbl_deep_extend` NOTE in 'after/lsp/ts_ls.lua'.
 --
--- NOTE: 'nvim-jdtls' replaces this file rather than adding to it; it brings the
--- test runner, debug adapter and refactorings.
+-- NOTE: 'nvim-jdtls' replaces this file instead of extending it.
+-- It supplies the test runner, debug adapter, and refactorings.
 
 local mise = require('config.mise')
 
--- Major release of any version spelling ('temurin-8.0.504+1' and '1.8' are 8).
+-- This returns the major release for each version format ('temurin-8.0.504+1' and '1.8' give 8).
 local function major_of(version)
   local digits = tostring(version):gsub('^%D+', '')
   local first, second = digits:match('^(%d+)%.?(%d*)')
@@ -21,16 +22,17 @@ local function major_of(version)
   return major
 end
 
--- Eclipse execution environment name; Java 8 is the one not spelled after its major.
+-- This returns the Eclipse execution environment name; only Java 8 uses a name different from its
+-- major release.
 local function execution_environment(major)
   return major == 8 and 'JavaSE-1.8' or ('JavaSE-' .. major)
 end
 
--- Installed JDKs, oldest first, one per release.
+-- This list contains installed JDKs, oldest first, with one JDK per release.
 --
--- NOTE: two JDKs of one release collapse to whichever `mise` lists first.
--- NOTE: `mise` absent makes `vim.system()` throw `ENOENT`, hence the `pcall`
--- inside `config.mise.installed()`.
+-- NOTE: For two JDKs of one release, use the first that `mise` lists.
+-- NOTE: Without `mise`, `vim.system()` throws `ENOENT`.
+-- Thus, `config.mise.installed()` uses `pcall`.
 local installed_jdks = mise.installed('java')
 local jdks = {}
 if installed_jdks ~= nil then
@@ -51,15 +53,15 @@ if installed_jdks ~= nil then
   table.sort(jdks, function(a, b) return a.major < b.major end)
 end
 
--- The JDK the server itself runs on: 'bin/jdtls.py' uses `$JAVA_HOME`, then
--- `java` on PATH, and refuses a too-old one only in its own log, so a project
--- pinning Java 11 leaves no client attached. `MISE_JAVA_VERSION` points this
--- process alone at the newest installed release; the health check reports an
--- unmet minimum.
+-- 'bin/jdtls.py' uses `$JAVA_HOME`, then `java` on PATH, to select the server JDK.
+-- It reports an old JDK only in its own log, so a project that pins Java 11 leaves no client
+-- attached.
+-- `MISE_JAVA_VERSION` selects the newest installed release for this process only; the health check
+-- reports an unmet minimum.
 --
--- NOTE: it must be this variable, not `JAVA_HOME`: the `mise` shim recomputes
--- `JAVA_HOME` from the working directory. Use the exact installed version, not
--- an alias a project's 'mise.toml' can shadow.
+-- NOTE: Use this variable, not `JAVA_HOME`.
+-- The `mise` shim recalculates `JAVA_HOME` from the working directory.
+-- Use the exact installed version, not an alias that a project's 'mise.toml' can override.
 local server_entry = mise.newest(
   'java',
   function(entry) return entry.path ~= nil and major_of(entry.version) ~= nil end
@@ -77,7 +79,8 @@ if server_jdk == nil then
   )
 end
 
--- Without these the class library is the server's own and accepts calls the build rejects.
+-- Without these runtimes, the server uses its own class library and accepts calls that the build
+-- rejects.
 local runtimes = {}
 for _, jdk in ipairs(jdks) do
   runtimes[#runtimes + 1] = {
@@ -86,14 +89,14 @@ for _, jdk in ipairs(jdks) do
   }
 end
 
--- Warn when the project targets a release no installed JDK provides, or when
--- its build was not imported (jdtls then answers as a bare JDK project at its
--- own release, so believing the compliance would be a silent pass). The
--- compliance is asked to the server, not parsed from the build file.
+-- Warn if no installed JDK supplies the target release, or if jdtls did not import the build.
+-- Without an imported build, jdtls reports its own JDK release; trusting this compliance value
+-- would silently accept the wrong release.
+-- Ask the server for compliance instead of parsing the build file.
 --
--- NOTE: `java.project.getAll` and `java.project.getSettings` are jdtls delegate
--- commands, not LSP (verified against jdtls 1.61). A multi-module build is
--- answered for by its root alone.
+-- NOTE: `java.project.getAll` and `java.project.getSettings` are jdtls delegate commands, not LSP
+-- (verified against jdtls 1.61).
+-- Only the root represents a multi-module build.
 local function warn_about_toolchain(client)
   local function execute(command, arguments, on_answer)
     client:request(
@@ -152,18 +155,19 @@ local function warn_about_toolchain(client)
 end
 
 return {
-  -- Nil without a JDK: the server stays on the project's JDK, warned above.
+  -- Without a JDK, this value is nil; the server uses the project's JDK, with the warning above.
   cmd_env = server_jdk ~= nil and { MISE_JAVA_VERSION = server_jdk.version } or nil,
 
-  -- Without it, definition answers nothing for a class that has no sources in the
-  -- project (the JDK, a jar), and with it a `jdt://` URI whose text is asked to the
-  -- server: 'plugin/40_plugins.lua' reads it (`java/classFileContents`).
+  -- Without this capability, definition returns nothing for a class without project sources, such
+  -- as a JDK or jar class.
+  -- With it, definition returns a `jdt://` URI.
+  -- 'plugin/40_plugins.lua' requests its text from the server through `java/classFileContents`.
   init_options = {
     extendedClientCapabilities = { classFileContentsSupport = true },
   },
 
   handlers = {
-    -- `ServiceReady` (jdtls notification) is the last status, after the import.
+    -- The jdtls notification `ServiceReady` is the final status after the import.
     ['language/status'] = function(_, result, ctx)
       if result == nil or result.type ~= 'ServiceReady' then return end
       local client = vim.lsp.get_client_by_id(ctx.client_id)
@@ -173,22 +177,22 @@ return {
     end,
   },
 
-  -- The `java.*` keys of the Eclipse JDT server, answered to `workspace/configuration`.
+  -- These Eclipse JDT server `java.*` keys supply the response to `workspace/configuration`.
   settings = {
     java = {
       configuration = {
-        -- The default 'interactive' asks a question Neovim answers with nothing,
-        -- so new dependencies stay unknown until a restart.
+        -- The default 'interactive' asks a question that Neovim does not answer.
+        -- Thus, new dependencies stay unknown until a restart.
         updateBuildConfiguration = 'automatic',
 
         runtimes = runtimes,
       },
 
-      -- Fetch the sources jar so `<Leader>ls` does not land in a decompiled stub.
+      -- Fetch the sources jar so `<Leader>ls` does not open a decompiled stub.
       maven = { downloadSources = true },
       eclipse = { downloadSources = true },
 
-      -- Feeds the signature window of 'mini.completion' (`:h MiniCompletion.config`).
+      -- This supplies the signature window of 'mini.completion' (`:h MiniCompletion.config`).
       signatureHelp = { enabled = true },
     },
   },

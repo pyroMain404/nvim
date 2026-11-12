@@ -1,12 +1,13 @@
 -- ┌─────────┐
 -- │ Starter │
 -- └─────────┘
---
--- Picks the 'mini.starter' menu: the first context in `menus`, then the project's `start` contract on top, else the default.
+-- Select the first context menu in `menus`. Apply the project's `start` contract over it.
+-- Use the default menu if neither applies.
 
 local M = {}
 
--- Each module exposes `starter_config()`: a `MiniStarter.config` table, or `nil` if its context does not apply.
+-- Each module exposes `starter_config()`, which returns a `MiniStarter.config` table or `nil` when
+-- its context does not apply.
 local menus = { 'config.obsidian' }
 
 local function context_menu()
@@ -22,11 +23,11 @@ end
 
 local function is_item(x) return type(x) == 'table' and x.name ~= nil end
 
--- Project items replace the base item with the same section and name; the rest are
--- inserted before the first entry that is not a plain item (`mini.starter` section
--- functions such as recent files and builtin actions), so those stay last.
--- NOTE: two project items with the same section and name that the base lacks are both added;
--- the project file is the user's own, so the duplicate is theirs to see and fix.
+-- Project items replace base items with the same section and name.
+-- Insert other items before the first entry that is not a plain item.
+-- Thus, `mini.starter` section functions, such as recent files and builtin actions, stay last.
+-- NOTE: Add both duplicate project items if the base has no matching section and name.
+-- The user owns the project file and can see and fix these duplicates.
 local function merge_items(base_items, project_items)
   local items, index = {}, {}
   for i, item in ipairs(base_items) do
@@ -57,10 +58,11 @@ local function merge_items(base_items, project_items)
   return items
 end
 
--- Applies the project's `start` contract (see 'lua/config/project.lua') to `base`, the
--- context menu or `nil`. `merge` with a base: project header if given, items merged;
--- otherwise (`substitute`, or `merge` with no base: the default screen is never a base)
--- the project menu alone, with no builtin tail: the project owns it.
+-- Apply the project's `start` contract from 'lua/config/project.lua' to `base`, the context menu or
+-- `nil`.
+-- With `merge` and a base, use the project header if present and merge items.
+-- Otherwise, use only the project menu without builtin items after it.
+-- This includes `substitute` and `merge` without a base. The default screen never serves as a base.
 local function project_menu(base)
   local start, root = require('config.project').contract('start')
   if not start then return base end
@@ -78,11 +80,11 @@ local function project_menu(base)
         .. '\n'
         .. vim.fn.fnamemodify(root, ':~')
       ),
-    items = vim.list_extend({}, start.items), -- a copy: the contract value is cached
+    items = vim.list_extend({}, start.items), -- Copy the cached contract value.
   }
 end
 
---- Argument for `MiniStarter.setup()`; `nil` gives the default screen.
+--- Return the argument for `MiniStarter.setup()`. `nil` selects the default screen.
 function M.config()
   local base = context_menu()
   local ok, config = pcall(project_menu, base)

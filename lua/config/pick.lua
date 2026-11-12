@@ -1,8 +1,7 @@
 -- ┌───────────────────┐
 -- │ Picker item shows │
 -- └───────────────────┘
---
--- `source.show` of 'mini.pick' (`:h MiniPick-source.show`), set in 'plugin/30_mini.lua'.
+-- 'plugin/30_mini.lua' sets this module as 'mini.pick' `source.show` (`:h MiniPick-source.show`).
 
 local M = {}
 
@@ -15,7 +14,7 @@ local shorten = function(s) return (s:gsub('^[^%z]+', shorten_path, 1)) end
 
 M.show = function(buf_id, items, query)
   local has_path = false
-  -- NOTE: the icon needs the real `path`, kept alongside the shortened `text`.
+  -- NOTE: Keep the real `path` beside the shortened `text` because the icon needs it.
   local short = vim.tbl_map(function(item)
     local text = type(item) == 'table' and item.text or item
     if type(text) ~= 'string' then return item end

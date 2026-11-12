@@ -2,12 +2,12 @@
 -- │ Godot resource behaviour │
 -- └──────────────────────────┘
 --
--- `:GodotTree` lists the `[node ...]` sections of a `.tscn`/`.tres` buffer as a
--- tree in a scratch buffer (`:h scratch-buffer`); `<CR>` jumps to the node.
--- Filetype from 'ftdetect/godot.lua'; parser `godot_resource` ('plugin/40_plugins.lua').
+-- `:GodotTree` shows `.tscn`/`.tres` `[node ...]` sections as a tree (`:h scratch-buffer`).
+-- `<CR>` jumps to the node. 'ftdetect/godot.lua' sets the filetype.
+-- 'plugin/40_plugins.lua' supplies the `godot_resource` parser.
 
--- NOTE: the identifier of a `section`/`attribute` is `named_child(0)`, not
--- `child(0)`, because the first child is an anonymous `[`/`=` token.
+-- NOTE: Use `named_child(0)`, not `child(0)`, for a `section`/`attribute` identifier.
+-- The first child is an anonymous `[`/`=` token.
 local query = vim.treesitter.query.parse(
   'godot_resource',
   [[
@@ -16,15 +16,15 @@ local query = vim.treesitter.query.parse(
 ]]
 )
 
--- Depth is the segment count of `parent=` plus one; the root has no `parent=`
--- (depth 0) and `parent="."` is depth 1.
+-- Depth equals the number of `parent=` segments plus one.
+-- The root has no `parent=` and has depth 0. `parent="."` has depth 1.
 local function depth_of(parent_path)
   if parent_path == nil then return 0 end
   if parent_path == '.' then return 1 end
   return #vim.split(parent_path, '/', { plain = true }) + 1
 end
 
--- `{ { name, type, depth, lnum }, ... }` in file order.
+-- The result contains `{ { name, type, depth, lnum }, ... }` in file order.
 local function scene_nodes(bufnr)
   local parser = vim.treesitter.get_parser(bufnr, 'godot_resource')
   local root = parser:parse()[1]:root()
@@ -66,7 +66,8 @@ local function scene_nodes(bufnr)
   return nodes
 end
 
--- Tree lines plus a parallel `lnum` table, so `<CR>` needs no re-parse.
+-- The result includes tree lines and a corresponding `lnum` table, so `<CR>` does not need to parse
+-- again.
 local function render(nodes)
   local lines, lnums = {}, {}
   for _, node in ipairs(nodes) do

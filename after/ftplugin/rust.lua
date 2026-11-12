@@ -2,15 +2,15 @@
 -- │ Rust behaviour │
 -- └────────────────┘
 --
--- On top of '$VIMRUNTIME/ftplugin/rust.vim': a lifetime-safe quote and `:Run`.
+-- This file adds a quote safe for lifetimes and `:Run` to '$VIMRUNTIME/ftplugin/rust.vim'.
 
--- 'mini.pairs' pairs `'`, which misfires on lifetimes; mapping the key to itself
--- undoes it per buffer (`:h MiniPairs.unmap_buf()`).
+-- 'mini.pairs' pairs `'`, which causes errors with lifetimes.
+-- Map the key to itself to disable pairing in this buffer (`:h MiniPairs.unmap_buf()`).
 vim.keymap.set('i', "'", "'", { buf = 0, desc = 'Insert a plain quote' })
 
--- `:Run` per 'lua/config/run.lua'; cargo refuses loudly when it cannot pick a
--- binary. A file with no 'Cargo.toml' above it is compiled with `rustc` (edition
--- 2024, what `cargo new` writes) and run.
+-- `:Run` follows 'lua/config/run.lua'; cargo reports an error if it cannot select a binary.
+-- Without a 'Cargo.toml' above the file, `:Run` compiles it with `rustc` and runs it.
+-- It uses edition 2024, which `cargo new` writes.
 local root = vim.fs.root(0, 'Cargo.toml')
 local run = require('config.run')
 

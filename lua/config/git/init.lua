@@ -1,10 +1,9 @@
 -- ┌──────────────┐
 -- │ Git workflow │
 -- └──────────────┘
---
--- Built on 'mini.diff' and 'mini.git'; mappings call the functions below, the
--- autocommands are in 'autocmds.lua'. `buf_id` is `nil` for the whole repository,
--- `0` for the current buffer or a number; `rev` is any revision Git knows.
+-- Mappings use this 'mini.diff' and 'mini.git' module. 'autocmds.lua' defines autocommands.
+-- `buf_id` selects the repository (`nil`) or a buffer (`0`: current, otherwise its number).
+-- `rev` accepts any revision that Git knows.
 
 local core = require('config.git.core')
 local diffref = require('config.git.diffref')

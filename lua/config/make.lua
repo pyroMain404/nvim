@@ -1,19 +1,16 @@
 -- ┌─────────────────────┐
 -- │ Async :Make, :LMake │
 -- └─────────────────────┘
---
--- `:make` and `:lmake` run synchronously and leave the result to the list; here
--- they get a report of the outcome, and `:Make`/`:LMake` run them without
--- blocking. Switched on by `setup()` from 'plugin/50_features.lua'.
+-- This module reports outcomes for synchronous `:make` and `:lmake`, which otherwise leave results
+-- in their lists.
+-- `:Make`/`:LMake` run without blocking. `setup()` in 'plugin/50_features.lua' enables this module.
 
 local M = {}
 
--- Language agnostic: every `:compiler` plugin fills the same two lists, so one
--- autocommand answers for all of them.
--- NOTE: `v:shell_error` is not relied on: it says whether the shell pipeline
--- failed, not whether the build did, and an `errorformat` that matches nothing
--- on a real failure still exits non-zero. Counting the `E` entries recognized
--- by `errorformat` covers both failure shapes.
+-- Every `:compiler` plugin fills the same two lists, so one autocommand serves all languages.
+-- NOTE: `v:shell_error` reports shell pipeline failure, not build failure.
+-- A failed build can exit non-zero even when `errorformat` matches nothing.
+-- Count `E` entries from `errorformat` to handle both failure forms.
 local report_outcome = function(args)
   local list = args.match == 'lmake' and vim.fn.getloclist(0) or vim.fn.getqflist()
   local typed = function(t)
@@ -38,8 +35,8 @@ local report_outcome = function(args)
   end
 end
 
--- `expandcmd()` expands the forms `:make` expands in 'makeprg'; `$*` is not one
--- of them, so it is replaced by hand if present and appended otherwise.
+-- `expandcmd()` expands the forms that `:make` expands in 'makeprg', except `$*`.
+-- Replace `$*` with arguments if present. Otherwise, append the arguments.
 local build_cmd = function(args)
   local prg = vim.fn.expandcmd(vim.o.makeprg)
   local extra = table.concat(args, ' ')
@@ -51,8 +48,8 @@ local build_cmd = function(args)
   return prg
 end
 
--- Run through the configured shell like `:make` does: `vim.system()` takes an
--- argv list and never goes through 'shell'.
+-- Run through the configured shell, like `:make`. `vim.system()` takes an argv list and does not
+-- use 'shell'.
 M.shell_argv = function(cmd)
   local argv = { vim.o.shell }
   vim.list_extend(argv, vim.split(vim.o.shellcmdflag, ' ', { plain = true }))
@@ -60,8 +57,8 @@ M.shell_argv = function(cmd)
   return argv
 end
 
--- One run at a time: a second one warns and refuses instead of killing the first,
--- as a build killed halfway may leave a partial object file.
+-- Run one job at a time. Warn and refuse a second job instead of stopping the first.
+-- Stopping a build halfway can leave a partial object file.
 local job = nil
 local run = function(args, is_loc)
   if job ~= nil then
@@ -89,7 +86,7 @@ local run = function(args, is_loc)
         else
           vim.fn.setqflist({}, ' ', opts)
         end
-        -- Fires the report below exactly as `:make` itself would.
+        -- Trigger the report below exactly as `:make` does.
         vim.cmd(
           'doautocmd <nomodeline> QuickFixCmdPost ' .. (is_loc and 'lmake' or 'make')
         )

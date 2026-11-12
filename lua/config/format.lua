@@ -1,15 +1,13 @@
 -- ┌────────────┐
 -- │ Formatting │
 -- └────────────┘
---
--- Formats the lines changed against the 'mini.diff' reference text, the same
--- hunks the gutter marks. Formatter choice: 'lua/config/toolchain.lua'.
+-- This module formats changed lines against the 'mini.diff' reference, as the gutter marks show.
+-- 'lua/config/toolchain.lua' selects the formatter.
 
 local M = {}
 
--- NOTE: the end column has to be a real column of a real line: `math.huge` is not
--- an integer and 'conform.nvim' silently formats nothing. A line gone by now is
--- skipped, as an empty range would silently do the same.
+-- NOTE: Use a real end column on an existing line. `math.huge` is not an integer.
+-- 'conform.nvim' silently formats nothing with it or an empty range, so skip missing lines.
 local format_range = function(from, to)
   local last = vim.api.nvim_buf_get_lines(0, to - 1, to, false)[1]
   if last == nil then
@@ -25,7 +23,7 @@ local format_range = function(from, to)
   return err, did_edit
 end
 
--- A CLI formatter or the LSP fallback must exist; warns once (`:h conform.list_formatters_to_run()`).
+-- Require a CLI formatter or LSP fallback. Warn once (`:h conform.list_formatters_to_run()`).
 local has_formatter = function(conform)
   local formatters, lsp = conform.list_formatters_to_run(0)
   if #formatters > 0 or lsp then return true end
@@ -50,17 +48,17 @@ M.buffer = function()
   conform.format()
 end
 
---- Format the lines that differ from the diff reference, bottom-up (line numbers below shift).
+--- Format changed lines from bottom to top because formatting shifts line numbers below.
 M.changed = function()
   local conform = conform_or_notify()
   if not conform then return end
   if not has_formatter(conform) then return end
 
-  -- Without a reference text nothing is "unchanged", so the whole buffer is the
-  -- honest answer: outside a repository 'mini.diff' does not attach, and a file
-  -- Git does not track has data with no reference text and no hunk.
-  -- NOTE: the reference text arrives asynchronously, around 130 ms after the file
-  -- opens (measured); waiting keeps a tracked file from being reformatted whole.
+  -- Without reference text, nothing is "unchanged", so format the whole buffer.
+  -- Outside a repository, 'mini.diff' does not attach. Untracked files have data but no reference
+  -- text or hunks.
+  -- NOTE: Reference text arrives asynchronously, about 130 ms after opening the file, as measured.
+  -- Wait to avoid formatting a whole tracked file.
   local data = MiniDiff.get_buf_data(0)
   if data ~= nil and data.ref_text == nil then
     local has_ref = function() return (MiniDiff.get_buf_data(0) or {}).ref_text end
@@ -77,7 +75,7 @@ M.changed = function()
 
   local ranges = {}
   for _, hunk in ipairs(data.hunks) do
-    -- A "delete" hunk has no buffer lines: there is nothing to format.
+    -- A "delete" hunk has no buffer lines to format.
     if hunk.buf_count > 0 then
       table.insert(ranges, { hunk.buf_start, hunk.buf_start + hunk.buf_count - 1 })
     end
@@ -103,11 +101,12 @@ M.changed = function()
 end
 
 --- Format a Visual selection.
--- HACK: `conform.format()` reads the selection itself but computes its last
--- column as `#line - 1` on top of an end-exclusive `#line`, so it edits nothing
--- through a `<Cmd>` mapping, where the `'<`/`'>` marks are stale too. Read the
--- live selection (`getpos('v')`, `getpos('.')`) and format the line span with
--- `format_range()` (conform.nvim 016802d, locked 2026-11-01, not retested).
+-- HACK: `conform.format()` uses `#line - 1` with an end-exclusive `#line` for the selection end
+-- column.
+-- Through a `<Cmd>` mapping, it edits nothing, and the `'<`/`'>` marks are stale.
+-- Read the live selection with `getpos('v')` and `getpos('.')`.
+-- Format its line span with `format_range()`
+-- (conform.nvim 016802d, locked 2026-11-01, not retested).
 M.selection = function()
   local conform = conform_or_notify()
   if not conform then return end

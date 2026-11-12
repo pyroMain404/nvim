@@ -2,16 +2,17 @@
 -- │ Python interpreter │
 -- └────────────────────┘
 --
--- Which interpreter a Python file uses, so the server and `:Run` agree. Required
--- by name from 'after/lsp/basedpyright.lua', 'after/ftplugin/python.lua' and
--- 'lua/config/health.lua'.
+-- This module selects the same Python interpreter for the server and `:Run`.
+-- 'after/lsp/basedpyright.lua', 'after/ftplugin/python.lua' and
+-- 'lua/config/health.lua' load it by name.
 local M = {}
 
--- The interpreter for `start` (a file or directory): the one in the nearest
--- '.venv' or 'venv' at or above it, else the `python` on PATH, else nil. One
--- `find` for both names, so the nearest wins (`uv venv` makes '.venv',
--- `python -m venv venv` the other). `VIRTUAL_ENV` is not read: an activated shell
--- already puts that `python` first on PATH.
+-- For `start` (a file or directory), use the nearest '.venv' or 'venv' at or above it.
+-- Otherwise, use `python` on PATH, or return nil if none exists.
+-- One `find` checks both names, so the nearest wins.
+-- `uv venv` makes '.venv'; `python -m venv venv` makes 'venv'.
+-- The code does not read `VIRTUAL_ENV`: an activated shell already puts that `python` first on
+-- PATH.
 function M.interpreter(start)
   local venv = vim.fs.find({ '.venv', 'venv' }, {
     upward = true,
@@ -19,7 +20,7 @@ function M.interpreter(start)
     type = 'directory',
   })[1]
   if venv then
-    -- Windows and POSIX layouts; a venv without an interpreter falls through
+    -- Check Windows and POSIX layouts. Continue to PATH if the venv has no interpreter.
     for _, exe in ipairs({ 'Scripts/python.exe', 'bin/python' }) do
       local python = vim.fs.joinpath(venv, exe)
       if vim.uv.fs_stat(python) then return python end

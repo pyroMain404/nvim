@@ -1,21 +1,21 @@
 -- ┌─────────────────────┐
 -- │ Git log and patches │
 -- └─────────────────────┘
---
--- `:Git log` and `:Git diff` of 'mini.git', run only when there is output: with
--- none they open no window and say nothing, which reads like a broken mapping.
+-- Run 'mini.git' `:Git log` and `:Git diff` only when output exists.
+-- With no output, they open no window and show no message, which makes mappings appear broken.
 
 local core = require('config.git.core')
 
 local M = {}
 
--- Layout shared with the blame annotation.
--- NOTE: the backslashes keep 'mini.git' from expanding `%h`, `%ad`, `%s` and the
--- `--date=format:` placeholders as file name modifiers (`:h cmdline-special`).
+-- Use the same layout as the blame annotation.
+-- NOTE: Backslashes prevent 'mini.git' from expanding `%h`, `%ad`, `%s`, and `--date=format:`
+-- placeholders
+-- as file name modifiers (`:h cmdline-special`).
 local git_log_cmd =
   [[Git log --pretty=format:\%h\ \%ad\ │\ \%s --date=format:\%Y-\%m-\%d\ \%H:\%M:\%S --topo-order]]
 
---- Git log of the repository (`buf_id == nil`) or of one file (`0`: current buffer).
+--- Show the repository log (`buf_id == nil`) or one file's log (`0`: current buffer).
 M.log = function(buf_id)
   local postfix, label, path = '', 'here', nil
   if buf_id ~= nil then
@@ -36,9 +36,9 @@ M.log = function(buf_id)
   end)
 end
 
--- Show `git diff <diff_args>` once `git diff --quiet` says there is something:
--- outside a repository 'mini.git' would print the usage of `git diff --no-index`.
--- `fallback` runs in place of the "No change to show" warning.
+-- Show `git diff <diff_args>` only when `git diff --quiet` reports changes.
+-- Outside a repository, 'mini.git' would show `git diff --no-index` usage.
+-- Run `fallback` instead of the "No change to show" warning.
 local show_patch = function(buf_id, diff_args, label, fallback)
   local root = core.require_root(buf_id)
   if root == nil then return end
@@ -62,13 +62,13 @@ local show_patch = function(buf_id, diff_args, label, fallback)
   end)
 end
 
---- Changes not staged yet / already staged.
+--- Show unstaged or staged changes.
 M.diff_unstaged = function(buf_id) show_patch(buf_id, {}, 'not staged') end
 M.diff_staged = function(buf_id) show_patch(buf_id, { '--cached' }, 'staged') end
 
--- The commit a patch is asked about: picked from the log or given as `rev`.
--- NOTE: the path is resolved and `0` made a real buffer before the picker starts:
--- by the time `choose` runs the current buffer is the picker's.
+-- Select the patch commit from `rev` or the log picker.
+-- NOTE: Resolve the path and replace `0` with a buffer id before opening the picker.
+-- The picker becomes the current buffer before `choose` runs.
 local pick_commit_patch = function(buf_id, rev, patch_of)
   if buf_id ~= nil then
     if core.buf_path(buf_id) == nil then return end
@@ -81,8 +81,8 @@ local pick_commit_patch = function(buf_id, rev, patch_of)
   core.pick_commit(path, show)
 end
 
---- Patch of what a commit changed by itself.
--- NOTE: `<rev>^!` and not `<rev>~..<rev>`: it works for the first commit too (`:h gitrevisions`).
+--- Show only the changes from one commit.
+-- NOTE: Use `<rev>^!`, not `<rev>~..<rev>`, to support the first commit (`:h gitrevisions`).
 M.diff_commit_only = function(buf_id, rev)
   local patch_of = function(id, commit)
     show_patch(id, { commit .. '^!' }, 'in ' .. commit)
@@ -90,7 +90,7 @@ M.diff_commit_only = function(buf_id, rev)
   pick_commit_patch(buf_id, rev, patch_of)
 end
 
---- Patch of everything changed since a commit, else of the commit alone.
+--- Show all changes since a commit, or only that commit's changes.
 M.diff_commit = function(buf_id, rev)
   local patch_of = function(id, commit)
     local own = function()

@@ -1,15 +1,14 @@
 -- ┌────────────────────────┐
 -- │ Container breadcrumb   │
 -- └────────────────────────┘
---
--- Names the tree-sitter containers (function, class, ...) enclosing the cursor
--- in 'winbar' (`:h 'winbar'`), e.g. `Outer > method`. Switched on by `setup()`
--- from 'plugin/50_features.lua'.
+-- This module shows tree-sitter containers around the cursor in 'winbar' (`:h 'winbar'`).
+-- Examples include functions and classes, such as `Outer > method`.
+-- `setup()` in 'plugin/50_features.lua' enables it.
 
 local M = {}
 
--- Node types per filetype. The value is the `:h vim.lsp.protocol.SymbolKind` name
--- closest to the node, which is also what `MiniIcons.get('lsp', ...)` indexes.
+-- Each filetype maps node types to the closest `:h vim.lsp.protocol.SymbolKind` name.
+-- `MiniIcons.get('lsp', ...)` uses the same name.
 local containers_by_ft = {
   lua = { function_declaration = 'Function', function_definition = 'Function' },
   rust = {
@@ -43,10 +42,10 @@ local containers_by_ft = {
   },
 }
 
--- Most grammars name a container through a `name` field; Rust's `impl` uses
--- `type`; C/C++'s `function_definition` has neither: the name is at the bottom of
--- a `declarator` chain. Lua's anonymous `function_definition` takes the name of
--- the `=` left-hand side, one level up through its `expression_list`.
+-- Most grammars use a `name` field for containers. Rust's `impl` uses `type`.
+-- C/C++'s `function_definition` uses neither. Its name ends a `declarator` chain.
+-- Lua's anonymous `function_definition` uses the `=` left-hand name, one level up through its
+-- `expression_list`.
 local container_label = function(node, bufnr)
   local target = node:field('name')[1] or node:field('type')[1]
   if target == nil then
@@ -68,8 +67,9 @@ local container_label = function(node, bufnr)
 end
 
 local compute = function(bufnr, containers)
-  -- `get_node()` answers nil for a buffer never parsed, and the first
-  -- `CursorMoved` can race the highlighting attach; `parse()` is cached.
+  -- `get_node()` returns nil for unparsed buffers. The first `CursorMoved` can precede highlighting
+  -- attachment.
+  -- `parse()` uses a cache.
   local lang = vim.treesitter.language.get_lang(vim.bo[bufnr].filetype)
   local ok_parser, parser = pcall(vim.treesitter.get_parser, bufnr, lang)
   if not ok_parser or parser == nil then return '' end
@@ -90,8 +90,8 @@ local compute = function(bufnr, containers)
   return table.concat(parts, ' > ')
 end
 
--- 'winbar' evaluates `%{...}` on every redraw, far too often to walk the syntax
--- tree in: the cursor line change refreshes this cache and 'winbar' only reads it.
+-- 'winbar' evaluates `%{...}` on every redraw, too often for syntax tree traversal.
+-- Cursor line changes refresh this cache. 'winbar' only reads it.
 local cache = {} ---@type table<integer, { line: integer, text: string }>
 local refresh = function(bufnr)
   local containers = containers_by_ft[vim.bo[bufnr].filetype]
@@ -102,7 +102,7 @@ local refresh = function(bufnr)
   cache[bufnr] = { line = line, text = compute(bufnr, containers) }
 end
 
---- The breadcrumb of the current buffer, as read by 'winbar'.
+--- Return the current buffer breadcrumb for 'winbar'.
 ---@return string
 M.render = function()
   local entry = cache[vim.api.nvim_get_current_buf()]
@@ -124,12 +124,12 @@ M.setup = function()
     'Drop the cached winbar breadcrumb'
   )
 
-  -- Only normal file buffers. `vim.wo[0][0]` keeps the write window-local
-  -- (`:h vim.wo`); `%{%...%}` is the stateful form needed to call `v:lua`.
+  -- Use only normal file buffers. `vim.wo[0][0]` keeps writes window-local (`:h vim.wo`).
+  -- `%{%...%}` supplies the stateful form that `v:lua` requires.
   Config.new_autocmd({ 'BufWinEnter', 'FileType' }, nil, function(args)
     if vim.bo[args.buf].buftype ~= '' then return end
     vim.wo[0][0].winbar = "%{%v:lua.require'config.winbar'.render()%}"
-    -- Without this the bar sits empty until the first cursor move.
+    -- Fill the bar before the first cursor move.
     refresh(args.buf)
   end, "Show the container breadcrumb in 'winbar'")
 end

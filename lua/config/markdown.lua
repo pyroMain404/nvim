@@ -1,9 +1,9 @@
 -- ┌─────────────────────────┐
 -- │ Markdown buffer modes   │
 -- └─────────────────────────┘
---
--- Source/live/reading state machine over render-markdown.nvim, plus the
--- buffer-local mini.* config. Called by 'after/ftplugin/markdown.lua'.
+-- This module manages source/live/reading states with render-markdown.nvim and buffer-local mini.*
+-- settings.
+-- 'after/ftplugin/markdown.lua' calls it.
 
 local M = {}
 
@@ -16,7 +16,7 @@ local function restore()
   local saved = vim.b.markdown_om_original
   vim.bo.readonly = saved.readonly
   vim.bo.modifiable = saved.modifiable
-  -- `b:` variables store dictionary keys as strings, so window ids come back as such.
+  -- `b:` variables store dictionary keys as strings, including window ids.
   for key, options in pairs(saved.windows) do
     local win = tonumber(key)
     if vim.api.nvim_win_is_valid(win) then
@@ -26,10 +26,12 @@ local function restore()
   end
 end
 
--- HACK: render-markdown.nvim 9c235be exposes hidden lines only through its
--- private extmark namespace, without identifying which feature concealed them.
--- Reading needs `j`/`k` to skip concealed fence delimiters, but must visit every
--- pipe-table source row. Delete this when it offers a visible-line motion.
+-- HACK: render-markdown.nvim 9c235be exposes hidden lines only through its private extmark
+-- namespace.
+-- It does not identify which feature conceals them.
+-- Reading requires `j`/`k` to skip concealed fence delimiters but visit every pipe-table source
+-- row.
+-- Delete this when the plugin offers a visible-line motion.
 local function line_is_pipe_table(line)
   local ok, node = pcall(vim.treesitter.get_node, {
     bufnr = 0,
@@ -71,9 +73,10 @@ local function move_visible(direction)
     vim.cmd.normal({ args = { motion }, bang = true })
     local current = vim.api.nvim_win_get_cursor(0)
     if vim.deep_equal(current, before) then return end
-    -- `gj` counts the cells of concealed text, so a long concealed line has rows
-    -- that are never drawn. When it lands in one, `skip_hidden()` pulls the cursor
-    -- back and `j` would never leave the line: go to the next line instead.
+    -- `gj` counts concealed text cells, so long concealed lines have rows that the renderer never
+    -- draws.
+    -- On these rows, `skip_hidden()` moves the cursor back, and `j` cannot leave the line.
+    -- Move to the next line instead.
     if direction == 'j' and current[1] == before[1] then
       require('config.mdlink').skip_hidden(before[2] + 1)
       if vim.api.nvim_win_get_cursor(0)[2] < current[2] then
@@ -89,10 +92,11 @@ end
 
 local function renderer_set(enabled) require('render-markdown').set_buf(enabled) end
 
--- HACK: render-markdown.nvim 9c235be caches `anti_conceal` per buffer but has
--- no public per-buffer override. Reading alone must keep its extmarks on the
--- cursor line, so change that cache before the renderer refreshes. Delete this
--- when the plugin exposes a per-buffer anti-conceal API.
+-- HACK: render-markdown.nvim 9c235be caches `anti_conceal` per buffer without a public per-buffer
+-- override.
+-- Only reading must keep extmarks on the cursor line. Change the cache before the renderer
+-- refreshes.
+-- Delete this when the plugin exposes a per-buffer anti-conceal API.
 local function set_anti_conceal(enabled)
   require('render-markdown.state').get(vim.api.nvim_get_current_buf()).anti_conceal.enabled =
     enabled
@@ -124,11 +128,11 @@ local function guard()
   )
 end
 
--- Neovim sizes a wrapped line from its raw text, concealed link destinations
--- included (`:h nvim_win_text_height()`), so a link that fits the window once its
--- destination is hidden still leaves empty rows after it. No option changes that
--- and the text is not ours to shorten: show such a float without 'wrap', fitted to
--- its lines.
+-- Neovim includes concealed link destinations when sizing wrapped lines
+-- (`:h nvim_win_text_height()`).
+-- Thus, a link that fits after concealment still leaves empty rows. No option changes this
+-- behavior.
+-- We cannot shorten the source text. Show the float without 'wrap' and fit it to its lines.
 local function unwrap_if_concealed(buf, win)
   local width = vim.api.nvim_win_get_width(win) - vim.fn.getwininfo(win)[1].textoff
   for _, line in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
@@ -148,8 +152,8 @@ local function unwrap_if_concealed(buf, win)
   end
 end
 
--- Attach to buffer `buf`: `live` by default, `reading` in a floating window (the
--- LSP hover opened by `K`), `b:markdown_om_start` overrides both.
+-- Attach to buffer `buf` in `live` state, or `reading` for a float such as the LSP hover from `K`.
+-- `b:markdown_om_start` overrides both defaults.
 function M.attach(buf)
   buf = buf == 0 and vim.api.nvim_get_current_buf() or buf
   vim.api.nvim_buf_call(buf, function()
@@ -165,9 +169,9 @@ function M.attach(buf)
       },
     }
 
-    -- NOTE: no syntax awareness, so a `^word` ending a line in a code fence
-    -- matches too, and the `§` also shows in `source` and in code; only the
-    -- first `#` of a link is drawn.
+    -- NOTE: This pattern has no syntax awareness, so it also matches `^word` at code-fence line
+    -- ends.
+    -- The `§` also appears in `source` and code. Only the first `#` of a link appears.
     vim.b.minihipatterns_config = {
       highlighters = {
         block_id = {
@@ -186,7 +190,7 @@ function M.attach(buf)
       },
     }
 
-    -- Prose uses `(`, `[`, `"` and `*` unpaired as often as paired.
+    -- Prose uses unpaired `(`, `[`, `"` and `*` as often as paired characters.
     vim.b.minipairs_disable = true
 
     local original = vim.b.markdown_om_original
@@ -197,7 +201,7 @@ function M.attach(buf)
         windows = {},
       }
       for _, win in ipairs(vim.fn.getbufinfo(buf)[1].windows or {}) do
-        -- String keys: a table keyed by window id would be stored as a sparse list.
+        -- Use string keys. Window id keys would make storage use a sparse list.
         original.windows[tostring(win)] = {
           conceallevel = vim.wo[win][0].conceallevel,
           concealcursor = vim.wo[win][0].concealcursor,
@@ -221,7 +225,7 @@ function M.attach(buf)
       { buf = buf, desc = 'Previous visible Markdown line' }
     )
 
-    -- Reading conceals the cursor line too; move the cursor back off it.
+    -- Reading also conceals the cursor line. Move the cursor off concealed text.
     local cursor_group =
       vim.api.nvim_create_augroup('MarkdownReadingCursor', { clear = false })
     vim.api.nvim_clear_autocmds({ group = cursor_group, buffer = buf })
@@ -237,8 +241,8 @@ function M.attach(buf)
       end,
     })
 
-    -- NOTE: render-markdown attaches in its own `FileType` autocmd, after the
-    -- ftplugin, and `set_buf()` ignores unattached buffers; hence the schedule.
+    -- NOTE: render-markdown attaches in its `FileType` autocmd after the ftplugin.
+    -- Schedule `set_buf()` because it ignores unattached buffers.
     vim.schedule(function()
       if not vim.api.nvim_buf_is_valid(buf) then return end
       vim.api.nvim_buf_call(buf, function()
@@ -268,7 +272,7 @@ function M.attach(buf)
   end)
 end
 
--- Undo `attach` for the current buffer (run from `b:undo_ftplugin`).
+-- Undo `attach` for the current buffer from `b:undo_ftplugin`.
 function M.detach()
   if renderer_available and vim.b.markdown_om then
     set_anti_conceal(true)

@@ -1,19 +1,18 @@
 -- ┌─────────┐
 -- │ Lazygit │
 -- └─────────┘
---
--- Staging, branching and the rest that changes what Git stores is left to
--- 'lazygit'; everything else in 'lua/config/git' only reads the repository.
+-- 'lazygit' handles staging, branching, and other changes to Git data.
+-- The other modules in 'lua/config/git' only read the repository.
 
 local M = {}
 
---- Show 'lazygit' in a floating window; quitting it reloads the files it changed.
+--- Show 'lazygit' in a floating window. Reload changed files when it exits.
 M.open = function()
   if vim.fn.executable('lazygit') ~= 1 then
     return vim.notify('`lazygit` is not available', vim.log.levels.WARN)
   end
 
-  -- Cover most of the editor while keeping some context visible around.
+  -- Cover most of the editor but keep some surrounding context visible.
   local height = math.floor(0.9 * vim.o.lines)
   local width = math.floor(0.9 * vim.o.columns)
   local win_config = {
@@ -31,11 +30,11 @@ M.open = function()
   local on_exit = vim.schedule_wrap(function()
     pcall(vim.api.nvim_win_close, win_id, true)
     pcall(vim.api.nvim_buf_delete, buf_id, { force = true })
-    -- Reload buffers changed by 'lazygit' (checkout, discard, stash, ...)
+    -- Reload buffers that 'lazygit' changed through checkout, discard, stash, or other operations.
     vim.cmd('checktime')
   end)
 
-  -- Runs in the current directory, which 'mini.misc' keeps at the project root.
+  -- Run in the current directory, which 'mini.misc' keeps at the project root.
   local job_id = vim.fn.jobstart({ 'lazygit' }, { term = true, on_exit = on_exit })
   if job_id <= 0 then
     pcall(vim.api.nvim_win_close, win_id, true)

@@ -2,9 +2,9 @@
 -- │ Languages and tools │
 -- └─────────────────────┘
 --
--- The one declaration of what each language needs: parsers, servers, formatters
--- and the programs `:checkhealth config` verifies. Read by 'plugin/40_plugins.lua'
--- and 'lua/config/health.lua'; the order of `languages` is the order of both.
+-- This module declares parsers, servers, formatters and programs for `:checkhealth config`.
+-- 'plugin/40_plugins.lua' and 'lua/config/health.lua' read it.
+-- Both use the order of `languages`.
 
 local M = {}
 
@@ -30,8 +30,8 @@ local install_jdtls = mise(
     )
 )
 
--- Programs the config uses when they are there and does without when they are
--- not. `git`, `rg` and `lazygit` are system utilities; the rest is declared in `mise`.
+-- The config uses these programs if they exist, but also works without them.
+-- `git`, `rg` and `lazygit` are system utilities; `mise` declares the others.
 M.external = {
   {
     exe = 'git',
@@ -68,18 +68,18 @@ M.external = {
   },
 }
 
--- Per language: `name` is the title of its health section (`health = false`
--- gives it none), `bundled` parsers ship with Neovim, `markers` identify a
--- project of the language. A tool is checked for its `--version`, by path only
--- with `check = 'path'`, and only when `needs` is installed. A tool that has no
--- `--version` names its own in `version` (`go version`).
+-- `name` supplies the language health section title; `health = false` omits the section.
+-- Neovim includes `bundled` parsers; `markers` identify a project for the language.
+-- The check uses `--version`, or only the path with `check = 'path'`.
+-- The check runs only if `needs` is installed.
+-- A tool without `--version` supplies its command in `version` (`go version`).
 M.languages = {
   {
     name = 'Lua',
     bundled = true,
     parsers = { 'lua' },
     servers = { 'lua_ls' },
-    -- Reads the '.stylua.toml' at the root, so `<Leader>lf` and `stylua --check` agree
+    -- stylua reads '.stylua.toml' at the root, so `<Leader>lf` and `stylua --check` agree.
     formatters = { lua = { 'stylua' } },
     tools = {
       {
@@ -92,12 +92,12 @@ M.languages = {
   { name = 'Vim help', health = false, parsers = { 'vimdoc' } },
   {
     name = 'Markdown',
-    -- `yaml` is only used through the injection that parses the frontmatter
+    -- Only the frontmatter injection uses `yaml`.
     parsers = { 'markdown', 'yaml' },
   },
   {
     name = 'Rust',
-    -- `toml` for the manifest; `sql` only through 'after/queries/rust/injections.scm'
+    -- `toml` parses the manifest; only 'after/queries/rust/injections.scm' uses `sql`.
     parsers = { 'rust', 'toml', 'sql' },
     servers = { 'rust_analyzer' },
     formatters = { rust = { 'rustfmt' } },
@@ -132,7 +132,7 @@ M.languages = {
   },
   {
     name = 'Angular',
-    -- `angular` reads a template, the rest are the other files of a component
+    -- `angular` parses templates; the other parsers handle the other component files.
     parsers = { 'angular', 'typescript', 'html', 'css', 'scss', 'json' },
     servers = { 'angularls', 'ts_ls' },
     formatters = {
@@ -145,7 +145,7 @@ M.languages = {
       json = { 'prettier' },
     },
     markers = { 'angular.json', 'nx.json' },
-    -- The floor of `typescript-language-server` 6; `ngserver` asks for less
+    -- `typescript-language-server` 6 requires this minimum; `ngserver` requires less.
     node_minimum = 18,
     tools = {
       {
@@ -180,15 +180,16 @@ M.languages = {
         advice = mise('npm:prettier@latest'),
       },
     },
-    -- NOTE: `ngserver` loads the `@angular/language-service` of the project it
-    -- opens, so its major must be the project's; a newer one fails quietly.
+    -- NOTE: `ngserver` loads the project's `@angular/language-service`, so their major versions
+    -- must match.
+    -- A newer version fails without a message.
   },
   {
     name = 'Java',
-    -- `xml` is for 'pom.xml'
+    -- `xml` parses 'pom.xml'.
     parsers = { 'java', 'xml' },
     servers = { 'jdtls' },
-    -- The oldest release jdtls starts on: 'bin/jdtls.py' raises without it
+    -- jdtls requires this minimum release; 'bin/jdtls.py' raises an error with an older release.
     minimum = jdk_minimum,
     install_jdk = install_jdk,
     tools = {
@@ -223,10 +224,10 @@ M.languages = {
   },
   {
     name = 'C++',
-    -- `c` is required by `cpp`; `cmake` and `make` are the build files
+    -- `cpp` requires `c`; `cmake` and `make` parse build files.
     parsers = { 'cpp', 'c', 'cmake', 'make' },
     servers = { 'clangd' },
-    -- Reads the project's '.clang-format', which the server would not
+    -- clang-format reads the project's '.clang-format'; the server does not.
     formatters = { cpp = { 'clang-format' }, c = { 'clang-format' } },
     markers = {
       'CMakeLists.txt',
@@ -275,10 +276,10 @@ M.languages = {
   },
   {
     name = 'Go',
-    -- `gomod` and `gowork` read 'go.mod' and 'go.work'
+    -- `gomod` and `gowork` parse 'go.mod' and 'go.work'.
     parsers = { 'go', 'gomod', 'gowork' },
     servers = { 'gopls' },
-    -- What `gofmt -l` in a project's CI agrees with
+    -- gofmt gives results that agree with `gofmt -l` in the project's CI.
     formatters = { go = { 'gofmt' } },
     tools = {
       {
@@ -304,11 +305,11 @@ M.languages = {
   {
     name = 'Python',
     parsers = { 'python' },
-    -- `basedpyright` for types, `ruff` for lint; the interpreter is chosen in
-    -- 'after/lsp/basedpyright.lua'
+    -- `basedpyright` checks types; `ruff` checks lint.
+    -- 'after/lsp/basedpyright.lua' selects the interpreter.
     servers = { 'basedpyright', 'ruff' },
-    -- Reads the project's 'pyproject.toml' or 'ruff.toml', as CI does; `ruff
-    -- server` is enabled for lint only
+    -- ruff reads the project's 'pyproject.toml' or 'ruff.toml', as CI does.
+    -- `ruff server` checks lint only.
     formatters = { python = { 'ruff_format' } },
     tools = {
       {
@@ -330,10 +331,10 @@ M.languages = {
   },
   {
     name = 'Godot',
-    -- `gdshader` also carries `gdshaderinc`; `godot_resource` reads '.tscn' and '.tres'
+    -- `gdshader` also includes `gdshaderinc`; `godot_resource` parses '.tscn' and '.tres'.
     parsers = { 'gdscript', 'gdshader', 'godot_resource' },
     servers = { 'gdscript' },
-    -- The Godot server does not format, so this is what `<Leader>lf` calls
+    -- The Godot server does not format, so `<Leader>lf` calls gdformat.
     formatters = { gdscript = { 'gdformat' } },
     markers = { 'project.godot' },
     pin = 'godot@4',
@@ -349,12 +350,12 @@ M.languages = {
         advice = mise('pipx:gdtoolkit@4.5.0'),
       },
     },
-    -- NOTE: the server is the Godot editor itself, over TCP, so `cmd` is a
-    -- function and must not be overridden; the port belongs to the machine.
+    -- NOTE: The Godot editor serves requests over TCP, so `cmd` is a function.
+    -- Do not override `cmd`. The port belongs to the machine.
   },
 }
 
--- Flat, deduplicated, in the order of `languages`
+-- Return a flat list without duplicates, in the order of `languages`.
 local function collect(field)
   local out, seen = {}, {}
   for _, language in ipairs(M.languages) do

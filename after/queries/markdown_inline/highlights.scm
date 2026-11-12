@@ -1,8 +1,9 @@
 ; extends
 ;
-; `[[note]]` is not a node: its outer brackets are tokens beside a
-; `shortcut_link`, under any parent (`inline`, emphasis, ...); the anchors
-; exclude a bare `[text]`. 'plugin/40_plugins.lua' defines the group.
+; `[[note]]` is not a node.
+; Its outer brackets are tokens beside a `shortcut_link`, under any parent (`inline`, emphasis,
+; ...).
+; The anchors exclude a bare `[text]`. 'plugin/40_plugins.lua' defines the group.
 
 (inline_link) @markup.link.underlined
 

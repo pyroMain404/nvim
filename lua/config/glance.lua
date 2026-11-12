@@ -1,20 +1,20 @@
 -- ┌────────┐
 -- │ Glance │
 -- └────────┘
---
--- Required by name from the `<Leader>eg` mapping in 'plugin/20_keymaps.lua'.
---
--- Shows the file under the cursor in the float `vim.diagnostic.open_float()`
--- uses (`:h vim.lsp.util.open_floating_preview()`): no buffer, no window change,
--- closes on cursor move; `<Leader>eg` again enters it. The name is resolved like
--- `gf` ('path'); failing that, the `:h` tag of the word is shown.
+-- The `<Leader>eg` mapping in 'plugin/20_keymaps.lua' loads this module by name.
+-- It previews files without a buffer or window switch. Cursor movement closes the float.
+-- Press `<Leader>eg` again to enter it.
+
+-- Use the float from `vim.diagnostic.open_float()` (`:h vim.lsp.util.open_floating_preview()`).
+
+-- Resolve the name like `gf` through 'path'. If that fails, show the word's `:h` tag.
 
 local M = {}
 
--- Lines read per file; the last line says when a bigger file was cut.
+-- Read this many lines per file. The last line reports when the limit cuts off a larger file.
 local max_lines = 60
 
--- The lines of the `:h` tag from its definition, and its help file ('doc/tags').
+-- Return lines from the `:h` tag definition and its help file from 'doc/tags'.
 local help_tag = function(tag)
   for _, tags in ipairs(vim.api.nvim_get_runtime_file('doc/tags', true)) do
     for line in io.lines(tags) do
@@ -40,7 +40,8 @@ M.open = function()
   end
   local path = vim.fn.expand('<cfile>')
   local file = find(path)
-  -- Like `gf`, fall back to 'includeexpr' (`v:fname` empty, fine for cursor-reading expressions).
+  -- Fall back to 'includeexpr', like `gf`. Empty `v:fname` works for expressions that read the
+  -- cursor position.
   if not file and vim.bo.includeexpr ~= '' then
     local ok, name = pcall(vim.fn.eval, vim.bo.includeexpr)
     if ok and type(name) == 'string' and name ~= '' then
@@ -69,8 +70,9 @@ M.open = function()
   else
     local word = vim.fn.expand('<cword>')
     local name = path:gsub('%p+$', '')
-    -- A function is tagged with its parentheses (`vim.diagnostic.open_float()`),
-    -- an option with its quotes. Punctuation alone (`.`) is a tag too: skip it.
+    -- Function tags include parentheses (`vim.diagnostic.open_float()`), and option tags include
+    -- quotes.
+    -- Skip punctuation alone (`.`), which can also name a tag.
     for _, tag in ipairs({
       name,
       name .. '()',
@@ -97,9 +99,9 @@ M.open = function()
   end
   if #lines == 0 then lines = { '(empty)' } end
 
-  -- Syntax `'markdown'` makes the float rewrite the text (`---` becomes a
-  -- rule) and skip the ftplugin. Set the filetype in the float instead, and
-  -- ask the ftplugin for the nonmodifiable `reading` state, not its default.
+  -- Syntax `'markdown'` rewrites float text (`---` becomes a rule) and skips the ftplugin.
+  -- Set the float filetype instead. Request the ftplugin's nonmodifiable `reading` state instead of
+  -- its default.
   local buf, win =
     vim.lsp.util.open_floating_preview(lines, ft ~= 'markdown' and ft or '', {
       focus_id = 'glance',

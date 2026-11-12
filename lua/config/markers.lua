@@ -1,10 +1,9 @@
 -- ┌──────────────────────┐
 -- │ FIXME/HACK/TODO/NOTE │
 -- └──────────────────────┘
---
--- The four marker words and their case variants, written once: the
--- 'mini.hipatterns' highlighters in 'plugin/30_mini.lua' read `words`, and
--- `setup()` makes the commands behind `<Leader>ft` and `<Leader>fT`.
+-- This module defines the four marker words and their case variants once.
+-- The 'mini.hipatterns' highlighters in 'plugin/30_mini.lua' read `words`.
+-- `setup()` creates the commands for `<Leader>ft` and `<Leader>fT`.
 
 local M = {}
 
@@ -27,10 +26,10 @@ local variants = function()
   return all
 end
 
--- NOT built from `MiniHipatterns.get_matches()`: that reads the module's extmarks,
--- set by a debounced timer, and is stale or empty for a buffer acted on in the
--- same breath. A synchronous scan of the same words answers at once. A location
--- list persists and is navigated with `]q`/`[q`, unlike the picker.
+-- `MiniHipatterns.get_matches()` reads extmarks that a debounced timer sets.
+-- Its results can be stale or empty when this operation immediately follows a buffer change.
+-- Scan the same words synchronously for an immediate result.
+-- Unlike the picker, a location list persists and supports navigation with `]q`/`[q`.
 local buffer_markers = function()
   local bufnr = vim.api.nvim_get_current_buf()
   local words = variants()
@@ -57,9 +56,9 @@ local buffer_markers = function()
   vim.cmd('lopen')
 end
 
--- NOTE: `rg` is called directly through `vim.system()`: the `\b(...)` alternation
--- round-tripped through the configured shell's quoting came back as "Can't open
--- errorfile". 'grepformat' parses its `--vimgrep` output like `:grep` would.
+-- NOTE: Call `rg` directly through `vim.system()`.
+-- Shell quoting of the `\b(...)` alternation caused "Can't open errorfile".
+-- 'grepformat' parses its `--vimgrep` output as `:grep` does.
 local project_markers = function()
   if vim.fn.executable('rg') == 0 then
     return vim.notify(

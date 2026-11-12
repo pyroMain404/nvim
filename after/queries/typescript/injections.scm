@@ -1,21 +1,20 @@
 ; extends
 ;
-; A component can carry its template and its styles inline, in the `@Component`
-; decorator, instead of pointing at a '.html' and a '.css' next to it. Those are
-; the same markup and the same stylesheet — the Angular compiler reads them as
-; such and reports errors at a line and column inside the backticks — but to the
-; TypeScript parser they are one long string, and they render as one flat colour.
+; A component can include its template and styles in the `@Component` decorator instead of
+; referencing adjacent '.html' and '.css' files.
+; The Angular compiler reads the same markup and stylesheet, and reports errors at line and column
+; positions inside the backticks.
+; The TypeScript parser sees one long string and shows it in one colour.
 ;
-; The `angular` parser is in `languages` in 'plugin/40_plugins.lua', and so are
-; `css` and `scss`; without them these patterns match and render nothing, in
-; silence.
+; `languages` in 'plugin/40_plugins.lua' includes the `angular`, `css`, and `scss` parsers.
+; Without them, these patterns match but silently render nothing.
 ;
-; `#offset!` is what makes the whole `template_string` usable as the content: it
-; trims one character from each end so the backticks stay with TypeScript
-; instead of being handed to the other parser as markup. Capturing the
-; `(string_fragment)` inside would look simpler and be wrong — a template with a
-; `${}` in it has several fragments, and each would be parsed on its own, so a
-; tag opened before the substitution and closed after it would never match.
+; `#offset!` removes one character from each end of `template_string` to use the full string as
+; content.
+; The backticks stay with TypeScript instead of becoming markup for the other parser.
+; Do not capture the inner `(string_fragment)`.
+; A template with `${}` contains multiple fragments, which the parser would read separately.
+; A tag that opens before the substitution and closes after it would not match.
 
 ((pair
   key: (property_identifier) @_key
@@ -24,9 +23,10 @@
   (#offset! @injection.content 0 1 0 -1)
   (#set! injection.language "angular"))
 
-; `styles` takes an array in current Angular and took a bare string in older
-; code, so both shapes are listed. The language is `css`: a component's inline
-; styles are compiled as plain CSS even in a project whose files are '.scss'.
+; Current Angular takes an array for `styles`; older code took a bare string, so these patterns
+; include both forms.
+; The language is `css`: Angular compiles inline component styles as plain CSS even when the
+; project uses '.scss' files.
 ((pair
   key: (property_identifier) @_key
   value: (array

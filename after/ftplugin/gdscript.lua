@@ -2,23 +2,23 @@
 -- │ GDScript behaviour │
 -- └────────────────────┘
 --
--- Engine integration: `:make`, `:Run`, `:GodotDoc`, `:GodotReconnect`.
+-- The engine supports `:make`, `:Run`, `:GodotDoc`, and `:GodotReconnect`.
 
 local ft = require('config.ft')
 
--- Read once: `:Run` may resolve after `:vertical new` made a nameless buffer current.
+-- Read the root once. `:Run` can resolve after `:vertical new` makes an unnamed buffer current.
 local root = vim.fs.root(0, { 'project.godot' })
 
 if root ~= nil then
-  -- NOTE: Godot prints file names relative to the project while Neovim resolves
-  -- quickfix names against its own directory, hence the `make_root()` marker.
+  -- NOTE: Godot prints file names relative to the project.
+  -- Neovim resolves quickfix names against its own directory, so use the `make_root()` marker.
   ft.build('godot', { 'project.godot' })
 
   vim.bo.include = [[\v^\s*%(const\s+\w+\s*\=\s*)?%(pre)?load\(]]
 end
 
--- NOTE: detached because a captured game draws on Neovim's own screen; it
--- therefore outlives `:qa`.
+-- NOTE: Detach the game because a captured game draws on Neovim's screen.
+-- The detached game continues after `:qa`.
 require('config.run').command(function(args)
   if root == nil then
     return nil, 'no project.godot above this file: there is no game to run'
@@ -26,11 +26,11 @@ require('config.run').command(function(args)
   return vim.list_extend({ 'godot', '--path', root }, args), nil, root
 end, { detach = true })
 
--- TODO: running tests and exporting a build have no entry here; they belong in
--- the game's `mise.toml` tasks. First step: `godot --headless --export-release
--- <preset> <output>` after installing the pinned engine's export templates.
+-- TODO: Add test and export tasks to the game's `mise.toml`; this file has no entries for them.
+-- First, install export templates for the pinned engine.
+-- Then, use `godot --headless --export-release <preset> <output>`.
 
--- NOTE: `stable` is the newest engine, not the version pinned in 'mise.toml'.
+-- NOTE: `stable` is the newest engine, not the version that 'mise.toml' pins.
 vim.api.nvim_buf_create_user_command(0, 'GodotDoc', function()
   local word = vim.fn.expand('<cword>')
   vim.ui.open('https://docs.godotengine.org/en/stable/search.html?q=' .. word)

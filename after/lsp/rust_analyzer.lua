@@ -2,16 +2,16 @@
 -- │ rust-analyzer │
 -- └───────────────┘
 --
--- Install: `rustup component add rust-analyzer rust-src`. Only tables here: a
--- function such as `before_init` would replace the inherited one, which passes `settings`.
+-- Install with `rustup component add rust-analyzer rust-src`. Use only tables here.
+-- A function such as `before_init` would replace the inherited one, which passes `settings`.
 return {
-  -- `cmd` stays bare so the `rustup` proxy honors 'rust-toolchain.toml'.
+  -- Keep `cmd` bare so the `rustup` proxy uses 'rust-toolchain.toml'.
   settings = {
     ['rust-analyzer'] = {
       check = { command = 'clippy' },
       procMacro = { enable = true },
 
-      -- `debugSingle` needs a DAP client; keep the lens off until there is one.
+      -- Keep the lens off until a DAP client is available because `debugSingle` needs one.
       lens = { debug = { enable = false } },
     },
   },

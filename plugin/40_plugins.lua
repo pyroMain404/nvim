@@ -2,13 +2,14 @@
 -- │ Plugins outside of MINI │
 -- └─────────────────────────┘
 --
--- Installation and configuration of plugins outside of MINI, mostly language specific.
+-- This file installs and configures plugins outside MINI, mostly for specific languages.
 
 local add = vim.pack.add
 local now_if_args, later = Config.now_if_args, Config.later
 
--- Reports once a plugin that `add()` left off 'runtimepath' (failed install), so the
--- caller skips its setup. `module_name` is its `lua/<name>/` entry.
+-- Report once when `add()` leaves a plugin off 'runtimepath' after a failed install.
+-- The caller then skips setup.
+-- `module_name` identifies its `lua/<name>/` entry.
 local plugin_missing = function(name, module_name)
   local module_path = 'lua/' .. module_name .. '/init.lua'
   if #vim.api.nvim_get_runtime_file(module_path, false) > 0 then return false end
@@ -19,9 +20,9 @@ end
 
 -- Tree-sitter ================================================================
 
--- Tree-sitter (`:h treesitter`): parsers and queries from 'nvim-treesitter'.
--- NOTE: building parsers needs third party software, see README 'Requirements'.
--- Troubleshooting: `:checkhealth vim.treesitter nvim-treesitter`.
+-- Use parsers and queries from 'nvim-treesitter' (`:h treesitter`).
+-- NOTE: Building parsers needs third-party software; see README 'Requirements'.
+-- Use `:checkhealth vim.treesitter nvim-treesitter` to find problems.
 now_if_args(function()
   local ts_update = function() vim.cmd('TSUpdate') end
   Config.on_packchanged('nvim-treesitter', { 'update' }, ts_update, ':TSUpdate')
@@ -31,7 +32,7 @@ now_if_args(function()
     'https://github.com/nvim-treesitter/nvim-treesitter-textobjects',
   })
 
-  -- Parsers: 'lua/config/toolchain.lua'; restart once after changing them.
+  -- 'lua/config/toolchain.lua' defines parsers. Restart once after changing them.
   local languages = require('config.toolchain').parsers()
   local isnt_installed = function(lang)
     return #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0
@@ -49,19 +50,18 @@ end)
 
 -- Language servers ===========================================================
 
--- Language servers (`:h vim.lsp`): 'nvim-lspconfig' supplies the configurations.
--- Troubleshooting: `:checkhealth vim.lsp`.
+-- 'nvim-lspconfig' supplies language server configurations (`:h vim.lsp`).
+-- Use `:checkhealth vim.lsp` to find problems.
 now_if_args(function()
   add({ 'https://github.com/neovim/nvim-lspconfig' })
 
-  -- Servers: 'lua/config/toolchain.lua', configured in 'after/lsp/' (`:h vim.lsp.enable()`).
-  -- One that is not installed fails silently; the health check reports it.
+  -- 'lua/config/toolchain.lua' lists servers; 'after/lsp/' configures them (`:h vim.lsp.enable()`).
+  -- A missing server fails without a warning; the health check reports it.
   vim.lsp.enable(require('config.toolchain').servers())
 
-  -- NOTE: `gf` on `preload('res://...')` leaves a buffer never read from disk, so a
-  -- `BufReadCmd` must exist before any is opened; 'includeexpr' can not do it because
-  -- `findfile()` returns `scheme://` names unchanged. `nested` is required or the
-  -- buffer gets no filetype, LSP attach or ftplugin commands (`:h autocmd-nested`).
+  -- NOTE: `gf` on `preload('res://...')` reads no disk; register `BufReadCmd` first.
+  -- 'includeexpr' cannot help because `findfile()` returns `scheme://` names unchanged.
+  -- `nested` enables filetype, LSP and ftplugin events (`:h autocmd-nested`).
   vim.api.nvim_create_autocmd('BufReadCmd', {
     pattern = 'res://*',
     group = vim.api.nvim_create_augroup('config-godot-res', { clear = true }),
@@ -87,9 +87,9 @@ now_if_args(function()
     end,
   })
 
-  -- NOTE: go to definition on a JDK or jar class answers a `jdt://` URI, which Neovim
-  -- opens as an empty buffer: its text is asked to jdtls, which must also be attached to
-  -- it for hover and further navigation. Same registration constraint as `res://` above.
+  -- NOTE: JDK or jar class definitions return a `jdt://` URI; Neovim opens an empty buffer.
+  -- Request its text from jdtls and attach jdtls for hover and further navigation.
+  -- Register the handler before opening the buffer, as with `res://` above.
   vim.api.nvim_create_autocmd('BufReadCmd', {
     pattern = 'jdt://*',
     group = vim.api.nvim_create_augroup('config-jdt-class', { clear = true }),
@@ -117,28 +117,28 @@ end)
 
 -- Markdown rendering =========================================================
 
--- 'render-markdown.nvim' (`:h render-markdown-setup`); the state machine lives in the ftplugin.
+-- The ftplugin controls the 'render-markdown.nvim' state machine (`:h render-markdown-setup`).
 now_if_args(function()
   add({ 'https://github.com/MeanderingProgrammer/render-markdown.nvim' })
 
   if plugin_missing('render-markdown.nvim', 'render-markdown') then return end
 
   require('render-markdown').setup({
-    -- Raw by default; the ftplugin enables rendering per state.
+    -- Keep raw text by default; the ftplugin enables rendering for each state.
     enabled = false,
-    -- Keep rendering in Visual modes so reading mode stays concealed (`:h mode()`).
+    -- Keep rendering in Visual modes so reading mode continues to conceal text (`:h mode()`).
     render_modes = { 'n', 'v', 'V', '\22', 'i', 'c', 't' },
-    -- Table borders are drawn over the source: do not reveal them on the cursor line.
+    -- Do not reveal table borders on the cursor line because they cover the source.
     anti_conceal = { enabled = true, ignore = { table_border = true } },
-    -- NOTE: footnotes show as `(†name)` in plain letters; the dagger is in `prefix`,
-    -- `icon` would land outside the parenthesis. `[[#Heading]]` gets no icon, its `§` is
-    -- drawn in 'after/ftplugin/markdown.lua'.
+    -- NOTE: Footnotes show as `(†name)` in plain letters.
+    -- `prefix` keeps the dagger inside the parentheses; `icon` would put it outside.
+    -- `[[#Heading]]` has no icon; 'after/ftplugin/markdown.lua' draws its `§`.
     link = {
       custom = { same_note = { pattern = '^#', icon = '' } },
       footnote = { superscript = false, icon = '', prefix = '(†', suffix = ')' },
     },
     on = {
-      -- The plugin resets `win_options` on every refresh: reapply conceal settings here.
+      -- Apply conceal settings again here because the plugin resets `win_options` on every refresh.
       render = function(args)
         require('config.mdlink').anchor_footnotes(args.buf)
         local state = vim.b[args.buf].markdown_om
@@ -181,7 +181,7 @@ now_if_args(
 
 -- Formatting =================================================================
 
--- Formatters (`:h conform-options`, `:h conform-formatters`).
+-- Set formatters (`:h conform-options`, `:h conform-formatters`).
 later(function()
   add({ 'https://github.com/stevearc/conform.nvim' })
 
@@ -189,39 +189,39 @@ later(function()
     default_format_opts = {
       lsp_format = 'fallback',
     },
-    -- Declared per language in 'lua/config/toolchain.lua'
+    -- 'lua/config/toolchain.lua' declares formatters for each language.
     formatters_by_ft = require('config.toolchain').formatters_by_ft(),
   })
 end)
 
 -- Snippets ===================================================================
 
--- Snippet collection for 'mini.snippets' (`:h MiniSnippets.gen_loader.from_lang()`).
+-- Load the snippet collection for 'mini.snippets' (`:h MiniSnippets.gen_loader.from_lang()`).
 later(function() add({ 'https://github.com/rafamadriz/friendly-snippets' }) end)
 
--- NOTE: see `:h terminal-debug` to enable Termdebug.
+-- NOTE: See `:h terminal-debug` to enable Termdebug.
 
--- Color schemes: 'ayu-mirage' is active; the alternatives are in 'plugin/30_mini.lua'.
+-- 'ayu-mirage' is active; 'plugin/30_mini.lua' contains alternative color schemes.
 Config.now(function()
   add({
     'https://github.com/Shatur/neovim-ayu',
   })
 
-  -- NOTE: install a scheme before selecting it by name; a name Neovim ships
-  -- (`catppuccin`) silently loads the runtime copy.
+  -- NOTE: Install a scheme before selecting it by name.
+  -- A name that Neovim ships (`catppuccin`) loads the runtime copy without a warning.
   vim.cmd('color ayu-mirage')
 
-  -- The scheme's 'WinBar' background is near black; link it to 'StatusLineNC'.
+  -- Link 'WinBar' to 'StatusLineNC' because the scheme makes its background almost black.
   vim.api.nvim_set_hl(0, 'WinBar', { link = 'StatusLineNC' })
   vim.api.nvim_set_hl(0, 'WinBarNC', { link = 'StatusLineNC' })
 
-  -- Empty groups end the scheme's underline fallback for bare `[text]`;
+  -- Empty groups stop the scheme's fallback underline for bare `[text]`.
   -- 'after/queries/markdown_inline/highlights.scm' keeps `[label](url)` underlined.
   vim.api.nvim_set_hl(0, '@markup.link.label', { underline = false })
   vim.api.nvim_set_hl(0, '@markup.link.markdown_inline', { underline = false })
   vim.api.nvim_set_hl(0, '@markup.link.underlined', { link = 'Underlined' })
 
-  -- Straight underline instead of undercurl (`:h highlight-undercurl`).
+  -- Use a straight underline instead of undercurl (`:h highlight-undercurl`).
   for _, name in ipairs({
     'SpellBad',
     'SpellCap',

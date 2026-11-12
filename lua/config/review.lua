@@ -1,16 +1,16 @@
 -- ┌────────┐
 -- │ Review │
 -- └────────┘
---
--- Opens the files a change touched as the arglist of a new tabpage, to be read
--- as a set. Required by name from 'plugin/20_keymaps.lua'.
+-- This module opens changed files in a new tabpage arglist for review as a set.
+-- 'plugin/20_keymaps.lua' loads it by name.
 
 local git = require('config.git')
 local core = require('config.git.core')
 
 local M = {}
 
--- Past this many files the review asks first: loading half a repository freezes the editor.
+-- The review asks before loading more files than this limit. Loading half a repository freezes the
+-- editor.
 M.max_files = 50
 
 local confirm = function(prompt, on_yes)
@@ -19,7 +19,7 @@ local confirm = function(prompt, on_yes)
   end)
 end
 
--- One summary of a batch operation; labels are required (files when opening, buffers when closing).
+-- Report each batch once. Use file labels when opening and buffer labels when closing.
 local report = function(message, done, failed, done_label, failed_label)
   local msg = message .. ': ' .. done .. ' ' .. done_label
   local level = vim.log.levels.INFO
@@ -30,14 +30,13 @@ local report = function(message, done, failed, done_label, failed_label)
   vim.notify(msg, level)
 end
 
--- Window-local arglist of a new tabpage (`:h :arglocal`), files loaded and listed.
--- NOTE: `bufadd()` creates a buffer neither listed nor loaded, hence the two calls after it.
--- NOTE: loading throws on a file another Neovim edits (`:h E325`); without the
--- `pcall` the first such file ends the loop and the review silently misses files.
--- NOTE: the buffers the review created go in a tabpage variable, as afterwards a
--- file already open is indistinguishable from one it opened, and closing must keep it.
--- NOTE: `on_open` runs before the files load, so what it sets (a diff reference)
--- is what they are loaded against.
+-- Load and list files in a new tabpage with a window-local arglist (`:h :arglocal`).
+-- NOTE: `bufadd()` creates an unlisted, unloaded buffer. The next two calls list and load it.
+-- NOTE: Loading a file that another Neovim edits raises an error (`:h E325`).
+-- Without `pcall`, the first error stops the loop and silently omits files from the review.
+-- NOTE: A tabpage variable records buffers that the review creates.
+-- This record distinguishes them from existing buffers, which closing must keep.
+-- NOTE: `on_open` sets the diff reference before the files load against it.
 local open_arglist = function(paths, label, on_open)
   local existing = {}
   for _, buf_id in ipairs(vim.api.nvim_list_bufs()) do
@@ -67,9 +66,9 @@ local open_arglist = function(paths, label, on_open)
   )
 end
 
---- Open `paths` as the review, asking first when it is big; `label` reads after "Review".
+--- Open `paths` for review. Ask first for large reviews. Show `label` after "Review".
 M.open = function(paths, label, on_open)
-  -- Deleted or renamed-away paths have nothing to open; every source produces some.
+  -- Every source can include deleted or renamed paths. These paths have no file to open.
   paths = vim.tbl_filter(function(p) return vim.fn.filereadable(p) == 1 end, paths)
   paths = vim.tbl_map(vim.fs.normalize, paths)
   if #paths == 0 then
@@ -83,11 +82,9 @@ M.open = function(paths, label, on_open)
   )
 end
 
---- Close the review of the current tabpage: drop its buffers, restore the diff reference.
--- NOTE: a buffer with unsaved changes refuses to be deleted (`:h E89`) and is
--- reported, not forced.
--- NOTE: both tabpage variables are read before `:tabclose`, after which they are
--- those of whatever tabpage the closing lands in.
+--- Close the current tabpage review. Remove its buffers. Restore the diff reference.
+-- NOTE: Report buffers with unsaved changes instead of forcing deletion (`:h E89`).
+-- NOTE: Read both tabpage variables before `:tabclose` changes the current tabpage.
 M.close = function()
   local bufs, diff_ref = vim.t.review_bufs, vim.t.review_diff_ref
   if bufs == nil then
@@ -102,8 +99,8 @@ M.close = function()
     return vim.notify('Could not close the review tabpage', vim.log.levels.ERROR)
   end
 
-  -- Scheduled: 'mini.git' updates its own status asynchronously, and deleting a
-  -- buffer right after `:tabclose` can run ahead of that update and raise.
+  -- Schedule deletion after `:tabclose`. Immediate deletion can precede the asynchronous
+  -- 'mini.git' status update and raise an error.
   vim.schedule(function()
     local kept = 0
     for _, buf_id in ipairs(bufs) do
@@ -125,10 +122,11 @@ M.close = function()
   end)
 end
 
--- Files `git diff --name-only <diff_args>` lists, for `M.open()`; `fallback` runs instead of an empty review.
--- NOTE: with the default `core.quotePath` Git quotes non-ASCII paths, which match
--- no file on disk and would drop out of the review.
--- NOTE: a pathspec is read from the repository root and named in both messages.
+-- Pass paths from `git diff --name-only <diff_args>` to `M.open()`.
+-- Use `fallback` instead of an empty review.
+-- NOTE: Default `core.quotePath` makes Git quote non-ASCII paths.
+-- These paths match no file on disk and would leave the review.
+-- NOTE: Resolve a pathspec from the repository root. Name it in both messages.
 local git_changed = function(diff_args, root, pathspec, label, on_open, fallback)
   local cmd = { 'git', '-c', 'core.quotePath=false', 'diff', '--name-only' }
   vim.list_extend(cmd, diff_args)
@@ -159,17 +157,18 @@ local git_changed = function(diff_args, root, pathspec, label, on_open, fallback
   end)
 end
 
--- Reference `rev` in every buffer and record it in the tabpage, for `M.close()`.
--- NOTE: the reference is global, so a second review over the first takes it over;
--- closing the first afterwards finds a reference it did not set and leaves it.
--- NOTE: a range such as `main...` is not a state `git show <rev>:<path>` resolves,
--- so every file falls back to the index silently; reference its merge base instead.
+-- Set `rev` as the reference in every buffer. Record it in the tabpage for `M.close()`.
+-- NOTE: A second review replaces the global reference of the first review.
+-- Closing the first review keeps a reference that it did not set.
+-- NOTE: `git show <rev>:<path>` cannot resolve a range such as `main...`.
+-- Use its merge base to prevent silent index fallback for every file.
 local reference_rev = function(rev)
   vim.t.review_diff_ref = { set = rev, prev = git.get_diff_ref() }
   git.set_diff_ref(nil, rev)
 end
 
---- Review the files changed since `rev` (log pick when nil), narrowed by `pathspec`; `rev` becomes the diff reference.
+--- Review changes since `rev`, limited by `pathspec`. Pick from the log when `rev` is nil.
+--- Use `rev` as the diff reference.
 M.git = function(rev, pathspec)
   local root = git.require_root()
   if root == nil then return end
@@ -186,9 +185,9 @@ M.git = function(rev, pathspec)
   git.pick_commit(nil, since)
 end
 
---- Review the files a commit changed by itself, read against its parent.
--- NOTE: `<rev>^!` works on the first commit too (`:h gitrevisions`); the reference
--- stays `<rev>~`, which the first commit lacks, so its files fall back to the index.
+--- Review only the changes from one commit against its parent.
+-- NOTE: `<rev>^!` also works on the first commit (`:h gitrevisions`).
+-- The reference stays `<rev>~`. The first commit has no parent, so its files use the index.
 M.commit_only = function(rev, pathspec)
   local root = git.require_root()
   if root == nil then return end

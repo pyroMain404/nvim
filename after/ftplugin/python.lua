@@ -2,13 +2,13 @@
 -- │ Python behaviour │
 -- └──────────────────┘
 --
--- On top of '$VIMRUNTIME/ftplugin/python.vim' (indent, `gf` on an import,
--- `keywordprg`, `:compiler pytest`): `:Run`.
+-- This file adds `:Run` to '$VIMRUNTIME/ftplugin/python.vim'.
+-- The runtime file supplies indentation, `gf` on imports, `keywordprg`, and `:compiler pytest`.
 
--- `:Run` under the contract of 'lua/config/run.lua': `<interpreter> <file> <args>`
--- with the interpreter of 'lua/config/python.lua', resolved at every call so a
--- venv created mid-session is used at once. A script belongs to no project, so
--- the working directory is the file's.
+-- `:Run` follows the contract in 'lua/config/run.lua': `<interpreter> <file> <args>`.
+-- Each call resolves the interpreter through 'lua/config/python.lua', so a new venv works
+-- immediately in the current session.
+-- A script belongs to no project, so its working directory is the file's directory.
 require('config.run').command(function(args)
   local file = vim.api.nvim_buf_get_name(0)
   local python = require('config.python').interpreter(file)

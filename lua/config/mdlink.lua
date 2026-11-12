@@ -1,23 +1,19 @@
 -- ┌───────────────────────────┐
 -- │ Markdown link for 'path'  │
 -- └───────────────────────────┘
---
--- Required by name from 'after/ftplugin/markdown.lua', as its 'includeexpr'.
---
--- Everything that looks a name up through 'path' (`gf`, `gF`, `<C-w>f`, `[f`,
--- `:find`) takes the name from the text under the cursor and, when no file has
--- it, asks 'includeexpr' for another name (`:h 'includeexpr'`). In a
--- `[label](target)` link that name is wrong twice: on the label it is a word
--- of the label, and on the target it may carry a `#anchor`. The answer here is
--- the target of the link the cursor is in, without its anchor. The cursor
--- column is a byte column of the source text, so it is right in the rendered
--- (concealed) states of `<Leader>om` too.
+-- 'after/ftplugin/markdown.lua' loads this module by name for 'includeexpr'.
+-- It resolves Markdown links for 'path' in concealed `<Leader>om` states (`:h 'includeexpr'`).
+
+-- 'path' commands (`gf`, `gF`, `<C-w>f`, `[f`, `:find`) first use the name under the cursor.
+-- If no file matches, they ask 'includeexpr' for another name.
+-- In `[label](target)`, that name can be a label word or a target with `#anchor`.
+-- This module returns the link target without its anchor.
+-- The cursor uses source byte columns, so concealment does not affect the result.
 
 local M = {}
 
--- Name for 'path' to look up: the target of the link covering the cursor, else
--- `fname` itself, in both cases without `#anchor`. `<...>` and a trailing title
--- are handled.
+-- Return the link target under the cursor for 'path', or `fname` if no link contains the cursor.
+-- Remove `#anchor` in both cases. Handle `<...>` and a trailing title.
 M.target = function(fname)
   local line, col = vim.api.nvim_get_current_line(), vim.fn.col('.')
   local init = 1
@@ -34,19 +30,20 @@ M.target = function(fname)
   return (fname:gsub('#.*$', ''))
 end
 
--- Whether the source text at byte `col` (0-based) opens a footnote `[^name]`.
+-- Check whether source byte `col` (0-based) starts a footnote `[^name]`.
 local starts_footnote = function(line, col) return line:sub(col + 1, col + 2) == '[^' end
 
--- 'render-markdown.nvim' draws a footnote reference as inline virtual text
--- anchored where the hidden source starts, so a cursor resting on that source
--- is drawn after the mark and seems to jump over it. Anchor the text at the end
--- of the hidden range instead: the cursor on its first byte is then drawn at
--- the start of the mark. For the `on.render` and `on.clear` hooks of the plugin
--- (`:h render-markdown-setup`). The plugin's extmark keeps only the conceal;
--- the text is rebuilt from the source on every render, as the plugin does
--- (`render/common/footnote.lua`: icon, prefix, name, suffix, `link.highlight`;
--- `superscript` is off in 'plugin/40_plugins.lua' and not reproduced here), so
--- nothing is keyed by extmark id: ids restart after each clear of the namespace.
+-- 'render-markdown.nvim' anchors inline footnote text at the start of its hidden source.
+-- The cursor on that source appears after the mark and seems to skip it.
+-- Anchor the text at the hidden range end so the cursor on its first byte appears at the mark
+-- start.
+-- Use this for the plugin's `on.render` and `on.clear` hooks (`:h render-markdown-setup`).
+
+-- Keep only concealment in the plugin's extmark. Rebuild text from source on each render, as the
+-- plugin does.
+-- Follow `render/common/footnote.lua`: icon, prefix, name, suffix, `link.highlight`.
+-- Do not reproduce `superscript`, which 'plugin/40_plugins.lua' disables.
+-- Do not store data by extmark id because ids restart after each namespace clear.
 local footnote_ns = vim.api.nvim_create_namespace('config-footnote')
 
 M.anchor_footnotes = function(buf)
@@ -84,8 +81,8 @@ M.anchor_footnotes = function(buf)
         },
         virt_text_pos = 'inline',
         right_gravity = false,
-        -- Rebuilt on every render. Undo restores a mark by id, and ids restart
-        -- after each clear, so a restored one would move another mark.
+        -- Rebuild on every render. Undo restores marks by id, but ids restart after each clear.
+        -- A restored mark could therefore move another mark.
         undo_restore = false,
       })
     end
@@ -96,11 +93,12 @@ M.clear_footnotes = function(buf)
   vim.api.nvim_buf_clear_namespace(buf, footnote_ns, 0, -1)
 end
 
--- Keep reading-state motions off hidden source text: renderer extmarks and
--- Markdown highlight captures both conceal it, including multiline ranges.
--- Merge their row-clipped runs before landing after a run when moving right,
--- or before it when moving left / at end of line. A fully hidden line has one
--- cursor anchor at column zero. `prev` is the previous 1-based byte column.
+-- Keep reading-state motions off source that renderer extmarks or Markdown highlight captures
+-- conceal, including multiline ranges.
+-- Merge their runs after clipping them to the current row.
+-- Move after a run when moving right, or before it when moving left or at line end.
+-- A fully hidden line has one cursor anchor at column zero. `prev` gives the previous 1-based byte
+-- column.
 M.skip_hidden = function(prev)
   local level = vim.wo.conceallevel
   if level < 2 then return end
@@ -139,8 +137,8 @@ M.skip_hidden = function(prev)
         end
       elseif is_hidden(details.conceal) then
         add_range(mark[2], mark[3], er, ec == -1 and len or ec)
-        -- A footnote reference is replaced by inline virtual text, so its first
-        -- byte stays reachable: the cursor has somewhere to land on it.
+        -- Inline virtual text replaces a footnote reference. Keep its first byte reachable as a
+        -- cursor position.
         if mark[2] == row and starts_footnote(line, mark[3]) then
           holes[#holes + 1] = mark[3]
         end
@@ -154,8 +152,8 @@ M.skip_hidden = function(prev)
     parser:for_each_tree(function(tree, ltree)
       local lang = ltree:lang()
       if lang ~= 'markdown' and lang ~= 'markdown_inline' then return end
-      -- The renderer draws an icon over the `#` of a heading but conceals
-      -- nothing, so the marker and the space after it are added here.
+      -- The renderer covers the heading `#` with an icon but conceals nothing.
+      -- Add the marker and its following space here.
       if lang == 'markdown' then
         local node = tree:root():descendant_for_range(row, 0, row, 0)
         while node and node:type() ~= 'atx_heading' do
@@ -180,7 +178,7 @@ M.skip_hidden = function(prev)
     end)
   end
 
-  -- Take each hole out of the runs, whichever source hid it.
+  -- Remove each hole from the runs, regardless of which source concealed it.
   for _, hole in ipairs(holes) do
     local split = {}
     for _, run in ipairs(runs) do
