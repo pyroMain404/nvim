@@ -279,7 +279,7 @@ M.languages = {
     -- `gomod` and `gowork` parse 'go.mod' and 'go.work'.
     parsers = { 'go', 'gomod', 'gowork' },
     servers = { 'gopls' },
-    -- gofmt gives results that agree with `gofmt -l` in the project's CI.
+    -- `gofmt` is the formatter that the project's CI check `gofmt -l` expects.
     formatters = { go = { 'gofmt' } },
     tools = {
       {

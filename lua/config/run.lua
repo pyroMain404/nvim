@@ -120,9 +120,10 @@ end
 
 -- For a C, C++ or Rust file outside a project, compile into the cache directory.
 -- Run the result. `compiler` supplies argv up to the source file.
--- One shell command in the terminal job shares the split between compiler errors and program output
--- without blocking the editor.
+-- One shell command runs in the terminal job.
+-- Compiler errors and program output share the split, and the editor never waits for the compiler.
 -- `&&` prevents a failed compilation from starting an old binary.
+--
 -- NOTE: Use an unquoted command name because pwsh rejects a quoted name.
 -- The `& ` operator runs a quoted path in pwsh but means "background" in `sh`.
 M.compiled = function(compiler, args)

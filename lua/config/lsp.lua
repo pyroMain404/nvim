@@ -176,7 +176,8 @@ local show_hover = function(ctx, uri, position, buf, index)
         chain.index = #chain.history
       end
       -- The source buffer holds the chain and the new window registration.
-      -- Clear its old registration to prevent closure of the old window before the new one exists.
+      -- `open_floating_preview()` closes the window registered on the source buffer.
+      -- Clear the registration so the old window stays open until the new one exists.
       vim.b[ctx.bufnr].lsp_floating_preview = nil
       pending = {
         client = ctx.client,
@@ -228,7 +229,7 @@ local hover_word = function(ctx, buf)
 
   -- The document has no match, and the server does not recognize the name.
   -- Follow the hover subject's definition to its declaring document to search there (the
-  -- `PrintStream` class of `println` ).
+  -- `PrintStream` class of `println`).
   local from_definition = function()
     ctx.client:request(
       'textDocument/definition',
@@ -410,12 +411,11 @@ local add_hover_chain = function()
 end
 
 -- HACK: jdtls reports progress for every document change ('Validate documents',
--- 'Publish Diagnostics' ).
+-- 'Publish Diagnostics').
 -- Typing in a Java buffer then fills the screen with notifications.
 -- Use `content.sort` in 'plugin/30_mini.lua' to exclude these from 'mini.notify' (`:h
 -- MiniNotify.config`).
--- Import and build notifications still appear.
--- (jdtls 1.61.0, locked 2026-11-01, not retested)
+-- Import and build notifications still appear (jdtls 1.61.0, locked 2026-11-01, not retested).
 local noisy_progress = {
   jdtls = { 'Validate documents', 'Publish Diagnostics' },
 }

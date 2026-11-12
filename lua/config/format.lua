@@ -1,7 +1,8 @@
 -- ┌────────────┐
 -- │ Formatting │
 -- └────────────┘
--- This module formats changed lines against the 'mini.diff' reference, as the gutter marks show.
+-- This module formats the lines that differ from the 'mini.diff' reference.
+-- These are the same hunks that the gutter marks.
 -- 'lua/config/toolchain.lua' selects the formatter.
 
 local M = {}

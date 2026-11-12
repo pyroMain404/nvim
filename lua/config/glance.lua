@@ -2,12 +2,14 @@
 -- │ Glance │
 -- └────────┘
 -- The `<Leader>eg` mapping in 'plugin/20_keymaps.lua' loads this module by name.
--- It previews files without a buffer or window switch. Cursor movement closes the float.
--- Press `<Leader>eg` again to enter it.
-
--- Use the float from `vim.diagnostic.open_float()` (`:h vim.lsp.util.open_floating_preview()`).
-
--- Resolve the name like `gf` through 'path'. If that fails, show the word's `:h` tag.
+-- This module previews the file under the cursor without loading the file into a buffer or
+-- changing the current window.
+-- Moving the cursor closes the float. Press `<Leader>eg` again to enter the float.
+--
+-- The preview uses the same float as `vim.diagnostic.open_float()`
+-- (`:h vim.lsp.util.open_floating_preview()`).
+-- The module resolves the name like `gf` through 'path'.
+-- If that fails, it shows the word's `:h` tag.
 
 local M = {}
 

@@ -54,8 +54,8 @@ local diff_source_at = function(rev)
     if loc == nil then return false end
     local files = ls_tree(rev, loc.cwd)
     if not files[loc.path] then
-      -- Let the Git source handle paths absent from the revision.
-      -- For a commit state instead of a file, treat the content as fully added.
+      -- Let the Git source handle paths that the revision lacks.
+      -- A buffer that shows a commit state is not a file. Treat its content as fully added.
       if not loc.at_commit then return false end
       return MiniDiff.set_ref_text(buf_id, '')
     end

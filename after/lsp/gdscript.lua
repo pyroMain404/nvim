@@ -7,5 +7,5 @@
 -- editor.
 
 -- NOTE: Keep the inherited `cmd` function; a new value would replace it.
--- Two editors cannot run together: the second gets no port and attaches to the first.
+-- This config does not handle two editors at once: the second gets no port and attaches to the first.
 return { root_markers = { 'project.godot' } }

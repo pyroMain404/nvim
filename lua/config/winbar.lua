@@ -129,7 +129,7 @@ M.setup = function()
   Config.new_autocmd({ 'BufWinEnter', 'FileType' }, nil, function(args)
     if vim.bo[args.buf].buftype ~= '' then return end
     vim.wo[0][0].winbar = "%{%v:lua.require'config.winbar'.render()%}"
-    -- Fill the bar before the first cursor move.
+    -- Fill the bar now. Otherwise it stays empty until the first cursor move.
     refresh(args.buf)
   end, "Show the container breadcrumb in 'winbar'")
 end

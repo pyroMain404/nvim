@@ -30,7 +30,7 @@ end
 
 -- This list contains installed JDKs, oldest first, with one JDK per release.
 --
--- NOTE: For two JDKs of one release, use the first that `mise` lists.
+-- NOTE: If two JDKs have the same release, the code keeps the first JDK that `mise` lists.
 -- NOTE: Without `mise`, `vim.system()` throws `ENOENT`.
 -- Thus, `config.mise.installed()` uses `pcall`.
 local installed_jdks = mise.installed('java')
@@ -54,8 +54,8 @@ if installed_jdks ~= nil then
 end
 
 -- 'bin/jdtls.py' uses `$JAVA_HOME`, then `java` on PATH, to select the server JDK.
--- It reports an old JDK only in its own log, so a project that pins Java 11 leaves no client
--- attached.
+-- It refuses a JDK that is too old and writes the refusal only in its own log.
+-- Thus, a project that pins Java 11 leaves no client attached.
 -- `MISE_JAVA_VERSION` selects the newest installed release for this process only; the health check
 -- reports an unmet minimum.
 --

@@ -11,7 +11,8 @@ local health = vim.health
 local toolchain = require('config.toolchain')
 
 -- NOTE: Windows console tools can print carriage returns (`java --version`).
--- The first `trim` removes only the last one in multiline output; the second cleans the first line.
+-- The first `trim` removes only the carriage return at the end of the output.
+-- The second `trim` removes the one on the first line.
 local function first_line(cmd)
   local ok, out = pcall(function() return vim.system(cmd):wait() end)
   if not ok or out.code ~= 0 then return nil end
@@ -177,9 +178,8 @@ local function extra_angular(language)
     })
   else
     health.ok('project dependencies: installed in ' .. root)
-    -- NOTE: `ngserver` loads the project's language service through a `mise` shim in the current
-    -- directory.
-    -- The project's mise.toml pins the major version, not the global mise.toml.
+    -- NOTE: A `mise` shim starts `ngserver` and resolves its version from the current directory.
+    -- The project's mise.toml therefore pins the major version, not the global mise.toml.
     local manifest = vim.fs.joinpath(root, 'package.json')
     local ok, blob = pcall(vim.fn.readblob, manifest)
     local deps = ok and (vim.json.decode(blob) or {}).dependencies or {}
@@ -298,8 +298,12 @@ local function extra_cpp(language)
   -- 'godot-cpp' historically uses SCons (`scons compiledb=yes` writes the database); recent
   -- versions also include 'CMakeLists.txt'.
   -- The advice below names only CMake, so it can misleadingly prescribe an unsupported command.
+  -- Wrong advice reads as authoritative, so it is worse than no advice.
+  --
   -- No GDExtension project exists on this machine; defer changes to avoid guessing its build
   -- system.
+  -- This branch exists to avoid advice that depends on guesses.
+  --
   -- First, check a real project's root for 'SConstruct' and 'CMakeLists.txt' before changing this
   -- branch.
   -- Keep CMake advice if 'CMakeLists.txt' exists; use `scons compiledb=yes` only if 'SConstruct'
@@ -358,8 +362,8 @@ local function hook_godot(tool, language, root)
   end
 end
 
--- NOTE: A second Godot game cannot use the same machine port; buffers then attach to the first game
--- and show its symbols.
+-- NOTE: The port is a machine resource. A second Godot editor on another game gets no port.
+-- Buffers then attach to the first editor and show the other game's symbols.
 -- Report the port without testing a connection: "the editor is closed" is valid, not a failure.
 local function extra_godot()
   local port = vim.env.GDScript_Port

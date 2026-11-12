@@ -10,14 +10,14 @@ vim.g.current_compiler = 'ngc'
 -- Use `--noEmit` because bare `ngc` writes JavaScript next to the sources.
 vim.cmd([[CompilerSet makeprg=npx\ --no-install\ ngc\ --noEmit\ $*]])
 
--- NOTE: `ngc` always emits color escapes (@angular/compiler-cli 17.3 / 22.1).
--- `--pretty false` and `NO_COLOR` do not reach it.
--- Handle escapes to prevent an empty quickfix list from falsely indicating a successful build.
+-- NOTE: `ngc` always emits color escapes; `--pretty false` and `NO_COLOR` do not reach it.
+-- The errorformat must match through the escapes.
+-- Otherwise, the quickfix list stays empty, like a successful build (@angular/compiler-cli 17.3 / 22.1).
 --
 -- Double backslashes because `CompilerSet` is a `:set` and removes one backslash from each pair.
 local color = [[%\\%%(%\\e%[[0-9;]%#m%\\)%#]]
 
--- Build one diagnostic with color sequences between all fields.
+-- This pattern matches one diagnostic with color sequences between all fields.
 local function diagnostic(severity, code)
   return color
     .. [[%f]]

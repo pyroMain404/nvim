@@ -28,12 +28,13 @@ if root ~= nil then
       table.insert(dirs, (dir:gsub('[ ,]', '\\%0')))
     end
   end
-  -- Use the constant, not the current 'path' value. See 'lua/config/path.lua'.
+  -- This line builds the value from the constant, not from the current 'path' value.
+  -- See 'lua/config/path.lua'.
   vim.bo.path = require('config.path').with(dirs)
 end
 
 -- `:Run` follows the contract in 'lua/config/run.lua'.
--- NOTE: A project's `:Run` uses the last `:make` output without a new build.
+-- NOTE: A project's `:Run` runs the program that the last `:make` built. It never builds first.
 -- A build inside the resolver would freeze the editor without a quickfix list.
 -- The terminal job compiles a file outside a project.
 local function programs()

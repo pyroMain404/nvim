@@ -116,8 +116,9 @@ local load_vault = function(spec, root)
     -- HACK: obsidian.nvim cannot sync a `title` or first heading equal to the `id` during rename.
     -- This fork branch adds `frontmatter.sync_title`, `note.sync_heading`, and `note.sync_filename`
     -- to upstream main.
-    -- Upstream includes its element rename through obsidian-nvim/obsidian.nvim#1009, merged into
-    -- this branch at 9af605a (2026-11-09).
+    -- The fork branch carried the element rename.
+    -- Upstream has it since obsidian-nvim/obsidian.nvim#1009, merged into this branch at 9af605a
+    -- (2026-11-09).
     -- Return to 'https://github.com/obsidian-nvim/obsidian.nvim' when upstream merges the sync
     -- options.
     vim.pack.add({ spec })
@@ -181,7 +182,8 @@ end
 ---@param spec table vim.pack spec of obsidian.nvim
 function M.setup(spec)
   plugin_spec = spec
-  -- NOTE: Do not match '*.base'. obsidian.nvim attaches only to `FileType` markdown/quarto.
+  -- NOTE: This pattern does not match '*.base' because obsidian.nvim attaches only to `FileType`
+  -- markdown/quarto.
   Config.new_autocmd(
     { 'BufReadPre', 'BufNewFile' },
     { '*.md', '*.markdown', '*.qmd' },

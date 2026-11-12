@@ -2,7 +2,7 @@
 -- │ GDScript behaviour │
 -- └────────────────────┘
 --
--- The engine supports `:make`, `:Run`, `:GodotDoc`, and `:GodotReconnect`.
+-- This file adds engine integration: `:make`, `:Run`, `:GodotDoc`, and `:GodotReconnect`.
 
 local ft = require('config.ft')
 

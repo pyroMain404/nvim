@@ -2,7 +2,7 @@
 -- │ Blame of line │
 -- └───────────────┘
 -- This module shows the last author at the end of the cursor line.
--- `toggle()` enables it to avoid running `git` on every cursor pause.
+-- Blame is off until `toggle()` turns it on. This avoids a `git` run on every cursor pause.
 
 -- NOTE: `git blame` reads the disk file. Hide annotations in modified buffers because line numbers
 -- could identify the wrong commit.

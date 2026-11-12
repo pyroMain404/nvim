@@ -4,8 +4,8 @@
 
 local mise = require('config.mise')
 
--- A project can pin a Node version too old for the server, which silently stops through the `mise`
--- shim.
+-- A project can pin a Node version that is too old for the server.
+-- The `mise` shim then stops the server silently.
 -- `MISE_NODE_VERSION` selects the newest Node for this process only.
 -- NOTE: Do not use `PATH`; the shim recalculates its environment from the working directory.
 local node_entry = mise.newest(

@@ -2,13 +2,13 @@
 -- │ Markdown link for 'path'  │
 -- └───────────────────────────┘
 -- 'after/ftplugin/markdown.lua' loads this module by name for 'includeexpr'.
--- It resolves Markdown links for 'path' in concealed `<Leader>om` states (`:h 'includeexpr'`).
+-- It resolves Markdown links for 'path' (`:h 'includeexpr'`).
 
 -- 'path' commands (`gf`, `gF`, `<C-w>f`, `[f`, `:find`) first use the name under the cursor.
 -- If no file matches, they ask 'includeexpr' for another name.
 -- In `[label](target)`, that name can be a label word or a target with `#anchor`.
 -- This module returns the link target without its anchor.
--- The cursor uses source byte columns, so concealment does not affect the result.
+-- The cursor uses source byte columns, so concealed `<Leader>om` states do not affect the result.
 
 local M = {}
 
@@ -39,11 +39,11 @@ local starts_footnote = function(line, col) return line:sub(col + 1, col + 2) ==
 -- start.
 -- Use this for the plugin's `on.render` and `on.clear` hooks (`:h render-markdown-setup`).
 
--- Keep only concealment in the plugin's extmark. Rebuild text from source on each render, as the
--- plugin does.
--- Follow `render/common/footnote.lua`: icon, prefix, name, suffix, `link.highlight`.
--- Do not reproduce `superscript`, which 'plugin/40_plugins.lua' disables.
--- Do not store data by extmark id because ids restart after each namespace clear.
+-- The plugin's extmark keeps only the conceal.
+-- This code rebuilds the text from the source on every render, as the plugin does.
+-- It follows `render/common/footnote.lua`: icon, prefix, name, suffix, `link.highlight`.
+-- It does not reproduce `superscript`, which 'plugin/40_plugins.lua' disables.
+-- It stores no data by extmark id because ids restart after each namespace clear.
 local footnote_ns = vim.api.nvim_create_namespace('config-footnote')
 
 M.anchor_footnotes = function(buf)

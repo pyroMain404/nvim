@@ -4,8 +4,9 @@
 --
 -- `:compiler cmake` sends `:make` results to quickfix (`:h write-compiler-plugin`).
 
--- NOTE: Source gcc.vim before setting `current_compiler`; otherwise, it exits early.
--- `:compiler` unlets it first.
+-- NOTE: `gcc.vim` exits early when `current_compiler` is set.
+-- Source `gcc.vim` before this file sets `current_compiler`.
+-- `:compiler` unlets `current_compiler` first.
 vim.cmd('runtime compiler/gcc.vim')
 
 vim.cmd([[CompilerSet errorformat+=%ECMake\ Error\ at\ %f:%l\ %m]])

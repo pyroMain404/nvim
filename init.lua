@@ -14,7 +14,8 @@ Config.new_autocmd = function(event, pattern, callback, desc)
   vim.api.nvim_create_autocmd(event, opts)
 end
 
--- Define `vim.pack.add()` hooks before the first add (`:h vim.pack-events`).
+-- This helper defines `vim.pack.add()` hooks.
+-- Call it before the first add (`:h vim.pack-events`).
 Config.on_packchanged = function(plugin_name, kinds, callback, desc)
   local f = function(ev)
     local name, kind = ev.data.spec.name, ev.data.kind
@@ -27,8 +28,9 @@ end
 
 vim.pack.add({ 'https://github.com/nvim-mini/mini.nvim' })
 
--- `now` runs before the first draw; `now_if_args` does so only when opening a file.
--- `later` runs the remaining work.
+-- `now` runs the work before the first draw.
+-- `now_if_args` runs it before the first draw only when Neovim opens a file.
+-- `later` runs the remaining work after the first draw.
 local misc = require('mini.misc')
 Config.now = function(f) misc.safely('now', f) end
 Config.later = function(f) misc.safely('later', f) end

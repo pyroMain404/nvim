@@ -61,7 +61,8 @@ end
 -- Apply the project's `start` contract from 'lua/config/project.lua' to `base`, the context menu or
 -- `nil`.
 -- With `merge` and a base, use the project header if present and merge items.
--- Otherwise, use only the project menu without builtin items after it.
+-- Otherwise, use only the project menu without builtin items after it. The project owns the menu.
+--
 -- This includes `substitute` and `merge` without a base. The default screen never serves as a base.
 local function project_menu(base)
   local start, root = require('config.project').contract('start')

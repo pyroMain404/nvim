@@ -8,7 +8,7 @@
 
 local nmap = function(lhs, rhs, desc) vim.keymap.set('n', lhs, rhs, { desc = desc }) end
 
--- Paste lines without indentation instead of using `:h ]p`.
+-- Paste lines without indentation. This mapping replaces `]p` (`:h ]p`).
 nmap('[p', '<Cmd>exe "iput! " . v:register<CR>', 'Paste Above')
 nmap(']p', '<Cmd>exe "iput "  . v:register<CR>', 'Paste Below')
 
@@ -74,7 +74,8 @@ Config.leader_group_clues = {
   { mode = 'x', keys = '<Leader>l', desc = '+Language' },
 }
 
--- A `<Cmd>` RHS does not need its module when defining the Leader mapping (`:h <Cmd>`).
+-- These helpers define Leader mappings.
+-- A `<Cmd>` RHS needs no loaded module at mapping time (`:h <Cmd>`).
 local nmap_leader = function(suffix, rhs, desc)
   vim.keymap.set('n', '<Leader>' .. suffix, rhs, { desc = desc })
 end
@@ -113,7 +114,7 @@ local show_notification_history = function()
   -- `:tab split` keeps the current buffer and leaves no unused empty buffer (`:h :tab`).
   vim.cmd('tab split')
   MiniNotify.show_history()
-  -- Remove the history buffer from the buffer list because `q` closes it.
+  -- Neovim creates the history buffer as listed. Unlist it because `q` closes it.
   vim.bo.buflisted = false
   vim.keymap.set('n', 'q', '<Cmd>silent! close<CR>', { buffer = 0, desc = 'Close notification history' })
 end
@@ -196,7 +197,8 @@ nmap_leader('gS', "<Cmd>lua require('config.git').diff_commit(0)<CR>",      'Sin
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 
 -- l is for 'Language'; `lf` formats the changed lines ('lua/config/format.lua').
--- NOTE: 'mini.operators' uses `gr` to replace text, so LSP mappings use this group, not `:h gra`.
+-- NOTE: 'mini.operators' uses `gr` to replace text.
+-- LSP mappings therefore use this group instead of the default `gra` (`:h gra`).
 -- `:make` stays synchronous; `:Make` ('lua/config/make.lua') is asynchronous.
 nmap_leader('la', '<Cmd>lua vim.lsp.buf.code_action()<CR>',          'Actions')
 nmap_leader('ld', '<Cmd>lua vim.diagnostic.open_float()<CR>',        'Diagnostic popup')

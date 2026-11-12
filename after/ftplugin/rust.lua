@@ -2,7 +2,7 @@
 -- │ Rust behaviour │
 -- └────────────────┘
 --
--- This file adds a quote safe for lifetimes and `:Run` to '$VIMRUNTIME/ftplugin/rust.vim'.
+-- This file adds a `'` mapping that does not break lifetimes, and `:Run`, to '$VIMRUNTIME/ftplugin/rust.vim'.
 
 -- 'mini.pairs' pairs `'`, which causes errors with lifetimes.
 -- Map the key to itself to disable pairing in this buffer (`:h MiniPairs.unmap_buf()`).

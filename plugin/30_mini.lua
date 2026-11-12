@@ -7,7 +7,7 @@
 local now, now_if_args, later = Config.now, Config.now_if_args, Config.later
 
 -- Step one ===================================================================
--- These disabled schemes replace 'ayu' (plugin/40_plugins.lua); see `:h mini.nvim-color-schemes`.
+-- These disabled schemes are alternatives to 'ayu' (plugin/40_plugins.lua); see `:h mini.nvim-color-schemes`.
 -- now(function() vim.cmd('colorscheme miniwinter') end)
 -- now(function() vim.cmd('colorscheme minispring') end)
 -- now(function() vim.cmd('colorscheme minisummer') end)
@@ -161,7 +161,7 @@ end)
 later(function() require('mini.align').setup() end)
 
 -- Add square-bracket motions (`:h MiniBracketed`).
--- NOTE: Disable the `indent` target because 'mini.indentscope' uses `[i`.
+-- NOTE: An empty suffix disables the `indent` target because 'mini.indentscope' uses `[i`.
 -- Neovim defaults use `[d` (`:h lsp-defaults`).
 later(
   function()
@@ -190,19 +190,19 @@ later(function()
       miniclue.gen_clues.z(),
     },
     triggers = {
-      { mode = { 'n', 'x' }, keys = '<Leader>' }, -- Show Leader clues.
-      { mode =   'n',        keys = '\\' },       -- Show mini.basics clues.
-      { mode = { 'n', 'x' }, keys = '[' },        -- Show mini.bracketed clues.
+      { mode = { 'n', 'x' }, keys = '<Leader>' }, -- This entry defines the Leader trigger.
+      { mode =   'n',        keys = '\\' },       -- This entry defines the mini.basics trigger.
+      { mode = { 'n', 'x' }, keys = '[' },        -- These entries define mini.bracketed triggers.
       { mode = { 'n', 'x' }, keys = ']' },
-      { mode =   'i',        keys = '<C-x>' },    -- Show built-in completion clues.
-      { mode = { 'n', 'x' }, keys = 'g' },        -- Show `g` key clues.
-      { mode = { 'n', 'x' }, keys = "'" },        -- Show mark clues.
+      { mode =   'i',        keys = '<C-x>' },    -- This entry defines the built-in completion trigger.
+      { mode = { 'n', 'x' }, keys = 'g' },        -- This entry defines the `g` key trigger.
+      { mode = { 'n', 'x' }, keys = "'" },        -- These entries define mark triggers.
       { mode = { 'n', 'x' }, keys = '`' },
-      { mode = { 'n', 'x' }, keys = '"' },        -- Show register clues.
+      { mode = { 'n', 'x' }, keys = '"' },        -- These entries define register triggers.
       { mode = { 'i', 'c' }, keys = '<C-r>' },
-      { mode =   'n',        keys = '<C-w>' },    -- Show window command clues.
-      { mode = { 'n', 'x' }, keys = 's' },        -- Show `s` key clues (mini.surround, etc.).
-      { mode = { 'n', 'x' }, keys = 'z' },        -- Show `z` key clues.
+      { mode =   'n',        keys = '<C-w>' },    -- This entry defines the window command trigger.
+      { mode = { 'n', 'x' }, keys = 's' },        -- This entry defines the `s` key trigger (mini.surround, etc.).
+      { mode = { 'n', 'x' }, keys = 'z' },        -- This entry defines the `z` key trigger.
     },
   })
 end)
@@ -258,7 +258,7 @@ later(function() require('mini.jump').setup() end)
 -- Jump to labelled spots (`:h MiniJump2d`).
 later(function() require('mini.jump2d').setup() end)
 
--- Set multistep and combined mappings (`:h MiniKeymap-examples`).
+-- Set multistep and combo mappings (`:h MiniKeymap-examples`).
 later(function()
   require('mini.keymap').setup()
   -- NOTE: In a snippet session, <Tab> jumps instead of inserting a tab.
@@ -315,7 +315,8 @@ end)
 -- 'after/ftplugin/markdown.lua' skips prose.
 later(function() require('mini.pairs').setup() end)
 
--- Set the picker with mappings from 'plugin/20_keymaps.lua' (`:h MiniPick-overview`).
+-- Set the picker (`:h MiniPick-overview`).
+-- 'plugin/20_keymaps.lua' defines its mappings.
 later(
   function()
     require('mini.pick').setup({ source = { show = require('config.pick').show } })

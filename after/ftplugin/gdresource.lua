@@ -2,7 +2,7 @@
 -- │ Godot resource behaviour │
 -- └──────────────────────────┘
 --
--- `:GodotTree` shows `.tscn`/`.tres` `[node ...]` sections as a tree (`:h scratch-buffer`).
+-- `:GodotTree` shows `.tscn`/`.tres` `[node ...]` sections as a tree in a scratch buffer (`:h scratch-buffer`).
 -- `<CR>` jumps to the node. 'ftdetect/godot.lua' sets the filetype.
 -- 'plugin/40_plugins.lua' supplies the `godot_resource` parser.
 

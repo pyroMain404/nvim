@@ -59,9 +59,10 @@ now_if_args(function()
   -- A missing server fails without a warning; the health check reports it.
   vim.lsp.enable(require('config.toolchain').servers())
 
-  -- NOTE: `gf` on `preload('res://...')` reads no disk; register `BufReadCmd` first.
+  -- NOTE: `gf` on `preload('res://...')` opens a buffer that Neovim never reads from disk.
+  -- Register `BufReadCmd` before any such buffer opens.
   -- 'includeexpr' cannot help because `findfile()` returns `scheme://` names unchanged.
-  -- `nested` enables filetype, LSP and ftplugin events (`:h autocmd-nested`).
+  -- The handler needs `nested` for filetype detection, LSP attachment and ftplugin commands (`:h autocmd-nested`).
   vim.api.nvim_create_autocmd('BufReadCmd', {
     pattern = 'res://*',
     group = vim.api.nvim_create_augroup('config-godot-res', { clear = true }),
@@ -87,8 +88,9 @@ now_if_args(function()
     end,
   })
 
-  -- NOTE: JDK or jar class definitions return a `jdt://` URI; Neovim opens an empty buffer.
-  -- Request its text from jdtls and attach jdtls for hover and further navigation.
+  -- NOTE: Go to definition on a JDK or jar class returns a `jdt://` URI.
+  -- Neovim opens an empty buffer for this URI.
+  -- The handler requests its text from jdtls and attaches jdtls to the buffer for hover and further navigation.
   -- Register the handler before opening the buffer, as with `res://` above.
   vim.api.nvim_create_autocmd('BufReadCmd', {
     pattern = 'jdt://*',
@@ -117,7 +119,8 @@ end)
 
 -- Markdown rendering =========================================================
 
--- The ftplugin controls the 'render-markdown.nvim' state machine (`:h render-markdown-setup`).
+-- Set up 'render-markdown.nvim' (`:h render-markdown-setup`).
+-- The ftplugin holds the state machine.
 now_if_args(function()
   add({ 'https://github.com/MeanderingProgrammer/render-markdown.nvim' })
 

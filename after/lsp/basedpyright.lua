@@ -8,8 +8,8 @@
 
 -- Do not add `on_attach` here.
 -- `vim.tbl_deep_extend('force')` merges files in 'lsp/' and replaces functions.
--- This would delete `:LspPyrightOrganizeImports` and `:LspPyrightSetPythonPath` from
--- 'nvim-lspconfig'.
+-- An `on_attach` here would replace the one from 'nvim-lspconfig'
+-- and delete `:LspPyrightOrganizeImports` and `:LspPyrightSetPythonPath`.
 return {
   before_init = function(_, config)
     -- `root_dir` is nil for a single script; the buffer that started the client is current.

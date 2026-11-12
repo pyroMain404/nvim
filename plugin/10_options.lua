@@ -17,10 +17,11 @@ vim.o.shada = "'100,<50,s10,:1000,/100,@100,h" -- Limit the ShaDa file for start
 -- Copy to the system clipboard with OSC 52.
 -- Paste from it with `win32yank.exe`.
 
--- HACK: The stock provider uses a detached `win32yank.exe`.
--- Its console window flashes on each yank to `+`.
--- (neovim/neovim#25928, nvim v0.12.5, locked 2026-11-06, not
--- retested). OSC 52 starts no process.
+-- HACK: The stock provider copies through a detached `win32yank.exe`.
+-- Its console window flashes on each yank to `+`
+-- (neovim/neovim#25928, nvim v0.12.5, locked 2026-11-06, not retested).
+--
+-- OSC 52 starts no process.
 -- `system()` runs `win32yank.exe -o` for paste, as in the stock provider.
 -- Windows Terminal never answers the OSC 52 read query, so `"+p` would wait 10 s.
 local osc52 = require('vim.ui.clipboard.osc52')
@@ -64,7 +65,7 @@ vim.o.cursorlineopt  = 'screenline,number' -- Show the cursor line per screen li
 vim.o.fillchars = 'eob: ,fold:╌'
 vim.o.listchars = 'extends:…,nbsp:␣,precedes:…,tab:> '
 
-vim.o.foldlevel   = 10       -- Keep folds open by default. Set to 0 or 1 to close folds.
+vim.o.foldlevel   = 10       -- Keep folds open by default. Set `foldlevel` to 0 or 1 to close folds.
 vim.o.foldmethod  = 'indent' -- Fold by indentation level.
 vim.o.foldnestmax = 10       -- Limit the number of fold levels.
 vim.o.foldtext    = ''       -- Show the fold text with its highlighting.

@@ -90,7 +90,7 @@ M.diff_commit_only = function(buf_id, rev)
   pick_commit_patch(buf_id, rev, patch_of)
 end
 
---- Show all changes since a commit, or only that commit's changes.
+--- Show all changes since a commit. If nothing changed, show only that commit's own changes.
 M.diff_commit = function(buf_id, rev)
   local patch_of = function(id, commit)
     local own = function()

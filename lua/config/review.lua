@@ -19,7 +19,8 @@ local confirm = function(prompt, on_yes)
   end)
 end
 
--- Report each batch once. Use file labels when opening and buffer labels when closing.
+-- Report one summary for a batch operation.
+-- The caller must pass labels: files when opening, buffers when closing.
 local report = function(message, done, failed, done_label, failed_label)
   local msg = message .. ': ' .. done .. ' ' .. done_label
   local level = vim.log.levels.INFO
@@ -31,11 +32,15 @@ local report = function(message, done, failed, done_label, failed_label)
 end
 
 -- Load and list files in a new tabpage with a window-local arglist (`:h :arglocal`).
+--
 -- NOTE: `bufadd()` creates an unlisted, unloaded buffer. The next two calls list and load it.
+--
 -- NOTE: Loading a file that another Neovim edits raises an error (`:h E325`).
 -- Without `pcall`, the first error stops the loop and silently omits files from the review.
+--
 -- NOTE: A tabpage variable records buffers that the review creates.
 -- This record distinguishes them from existing buffers, which closing must keep.
+--
 -- NOTE: `on_open` sets the diff reference before the files load against it.
 local open_arglist = function(paths, label, on_open)
   local existing = {}
