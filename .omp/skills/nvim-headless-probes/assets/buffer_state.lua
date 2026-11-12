@@ -1,27 +1,25 @@
---- 6. What a buffer became after an action.
+--- 6. Check the buffer state after an action.
 ---
---- The counterpart of the layout probe: not where the window is, but what is
---- inside it. Opening a file "the right way" also means the buffer got its
---- filetype, its options and its buffer local state - a scratch copy that looks
---- like a file but has no filetype attached still fails every plugin that keys
---- off one.
+--- The layout probe checks window positions. This probe checks buffer contents, options,
+--- filetype, and buffer-local state.
+--- Opening a file "the right way" requires its filetype.
+--- A scratch copy can look like a file but lack its filetype. Plugins that require a filetype
+--- then fail.
 ---
 --- Parameters:
----   before   snippet that produces the buffer to inspect
----   keys     keys to send before inspecting, a list, in order
----   options  buffer or window options to report ('filetype', 'foldmethod')
----   vars     `b:` variables to report ('diff_ref', 'minidiff_summary')
----   expect   table of name -> pattern; the name is an option, a variable, or
----            one of 'name', 'lines', 'cursor'. NOTE: the pattern is matched
----            against `tostring(actual)`, and an option goes through
----            `vim.inspect()` before that: an empty 'buftype' is `^""$` and not
----            `^$`, while a `cursor` carries its braces (`{ 1, 0 }`)
+---   before: Run this snippet to create the buffer to inspect.
+---   keys: Send this list of keys in order before inspection.
+---   options: Report these buffer or window options ('filetype', 'foldmethod').
+---   vars: Report these `b:` variables ('diff_ref', 'minidiff_summary').
+---   expect: Map each name to a pattern. A name identifies an option, a variable,
+---           or 'name', 'lines', 'cursor'. Patterns match `tostring(actual)`.
+---           Options first pass through `vim.inspect()`: empty 'buftype' matches
+---           `^""$`, not `^$`. A `cursor` includes braces (`{ 1, 0 }`).
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
--- NOTE: the `ok and value or '<none>'` idiom cannot be used here. A boolean
--- option that is genuinely `false` makes `ok and value` false, so the fallback
--- wins and the probe reports `<none>` - "not set" - for a value it did read.
+-- NOTE: Do not use `ok and value or '<none>'` here. A `false` option triggers the fallback.
+-- The probe would report `<none>` ("not set") for a value it read.
 local function option(name)
   local ok, value = pcall(vim.api.nvim_get_option_value, name, { scope = 'local' })
   if not ok then return '<none>' end

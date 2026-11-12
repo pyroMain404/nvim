@@ -2,28 +2,25 @@
 -- │ <project> under Neovim   │
 -- └──────────────────────────┘
 --
--- Skeleton of a project local '.nvim.lua'. Copy it into the project, keep the
--- sections that apply, delete the rest - what is left has to read as a file
--- written for this project, not as a filled in template.
+-- Copy this project-local '.nvim.lua' template into the project.
+-- Keep only the applicable sections.
+-- Make the result specific to the project, not a completed template.
 --
--- Sourced because `:h 'exrc'` is on in the config and this file has been
--- trusted (`:h :trust`). Keep it out of the repository with
--- '.git/info/exclude', so the checkout the rest of the team reads with other
--- editors does not see it.
+-- The config enables `:h 'exrc'`, which loads this file after trust approval (`:h :trust`).
+-- Exclude it through '.git/info/exclude' to keep it out of the repository
+-- that teammates use with other editors.
 --
--- The header is the part that matters: say **why this project is different**,
--- because that is the question asked a year from now. Everything else is
--- explained by the config itself.
+-- Explain why this project differs in the header, so future readers know the reason.
+-- The config itself explains the other settings.
 
 -- Language server ============================================================
 
--- Environment a server reads, which the config cannot know. It is set here
--- because a `.nvim.lua` is read before any language server starts, so what it
--- exports reaches the `cmd` that launches one.
+-- Set server environment values here when the config cannot know them.
+-- Neovim reads `.nvim.lua` before language servers start, so exported values reach the server's `cmd`.
 --
--- Anything outside the repository is checked before it is used and its absence
--- is reported: a server that starts without it keeps answering, and answers
--- wrong. Never `error()` here - it would abort the rest of the file.
+-- Check resources outside the repository before use and report missing resources.
+-- Without them, a server can still run but give incorrect results.
+-- Do not use `error()` here because it stops the rest of this file.
 local agent = vim.fs.normalize('~/.local/share/java/lombok-1.18.36.jar')
 if vim.uv.fs_stat(agent) ~= nil then
   vim.env.JDTLS_JVM_ARGS = '-javaagent:' .. agent
@@ -33,9 +30,8 @@ end
 
 -- Build ======================================================================
 
--- An option the config's own ftplugin also sets has to be written from a
--- `FileType` autocommand, not assigned: 'after/ftplugin/<ft>.lua' runs after
--- this file, and a plain assignment is silently overwritten.
+-- Use a `FileType` autocommand for options that the config's ftplugin also sets.
+-- 'after/ftplugin/<ft>.lua' runs after this file and silently replaces plain assignments.
 vim.api.nvim_create_autocmd('FileType', {
   pattern = '<filetype>',
   desc = '<what makes this project need it>',
@@ -44,25 +40,22 @@ vim.api.nvim_create_autocmd('FileType', {
 
 -- Running ===================================================================
 
--- `:Run` (the contract of 'lua/config/run.lua') asks here first, and unlike an
--- option this needs no autocommand: the resolver is consulted when the command
--- is invoked, which is always after this file has been read. A list is the whole
--- command, and the arguments of the call are appended to it.
+-- `:Run`, from 'lua/config/run.lua', checks this resolver first.
+-- It needs no autocommand because `:Run` calls it after Neovim reads this file.
+-- A list defines the complete command, and `:Run` adds the call arguments to it.
 require('config.project').set('run', { '<program>', '<argument>' })
 
--- Or a function - one of the two, not both - when the command depends on the
--- buffer - a monorepo whose
--- parts are started differently - or when some of them are not meant to be
--- started at all. It answers like any resolver: the command, or `nil, nil` to
--- leave it to the language.
+-- Instead of a list, use a function when the command depends on the buffer.
+-- For example, monorepo parts can need different commands, or some parts must not run.
+-- Return the command, or `nil, nil` to use the language resolver.
 -- require('config.project').set('run', function(args)
 --   if vim.bo.filetype ~= '<filetype>' then return nil, nil end
 --   return vim.list_extend({ '<program>', '<argument>' }, args)
 -- end)
 
--- Editing this file voids its trust, and an untrusted file is not sourced at
--- all - with no question asked in headless. Authorise it again after every
--- edit, and check that the hash matches:
+-- Each edit removes trust, and Neovim does not load an untrusted file.
+-- Headless Neovim gives no prompt.
+-- Approve trust after each edit, then check that the hash matches:
 --
 --   nvim --headless -u NONE .nvim.lua -c 'trust' -c 'qa!'
 --   sha256sum .nvim.lua; cat "$env:LOCALAPPDATA\nvim-data\trust"

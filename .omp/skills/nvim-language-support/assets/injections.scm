@@ -1,37 +1,37 @@
 ; extends
 ;
-; Skeleton for 'after/queries/<lang>/injections.scm'. The same shape applies to
-; 'highlights.scm', 'folds.scm' and 'textobjects.scm'.
+; Use this template for 'after/queries/<lang>/injections.scm'.
+; Use the same structure for 'highlights.scm', 'folds.scm' and 'textobjects.scm'.
 ;
-; THE FIRST LINE IS THE FILE. `; extends` adds these patterns to the query that
-; 'nvim-treesitter' already provides for this language (:h
-; treesitter-query-modeline-extends). Without it this file REPLACES that query
-; entirely, so every injection or highlight the plugin shipped disappears — with no
-; error and no message. It is the single most common way to break a language that
-; was working.
+; Keep `; extends` on the first line (:h treesitter-query-modeline-extends).
+; It adds these patterns to the language query from 'nvim-treesitter'.
+; Without it, this file replaces that query and removes all its injections or highlights
+; without an error or message.
+; This missing line commonly breaks language support that worked before.
 ;
-; Check first that the parser does not already cover the case: :InspectTree shows
-; the tree, :Inspect the capture and highlight group under the cursor, and
-; :EditQuery lets you write a query while watching what it matches.
+; First, check if the parser already supports the case.
+; Use :InspectTree to see the tree.
+; Use :Inspect to see the capture and highlight group under the cursor.
+; Use :EditQuery to write a query and see its matches.
 ;
-; Injections make one language render inside another: SQL inside a query macro,
-; regular expressions inside a string, markdown inside documentation comments. The
-; capture names are fixed — @injection.content is the text to parse, and the
-; language is named either statically with #set! or dynamically from a captured
-; node (:h treesitter-language-injections).
+; Injections render one language inside another, such as SQL in a query macro,
+; regular expressions in strings,
+; or markdown in documentation comments.
+; The fixed capture name @injection.content selects the text to parse.
+; Set the language with #set!, or get it dynamically from a captured node
+; (:h treesitter-language-injections).
 ;
-; The injected language needs its own parser installed, so it belongs in the
-; `languages` table too. Without it the injection matches and renders nothing, in
-; silence.
+; Add the injected language to the `languages` table because it needs its own installed parser.
+; Without that parser, the injection matches but renders nothing and gives no message.
 ;
-; Write the pattern against the tree, not from memory: :InspectTree shows it, and
-; `node:sexpr()` prints the exact shape of one node. The example below took three
-; corrections that no error message would have pointed at — a scoped call is a
-; `scoped_identifier` and not an `identifier`, `string_literal` hands the quotes to
-; the other parser while `string_content` does not, and without the `.` anchor a
-; second string argument is parsed as SQL as well.
+; Write the pattern from the tree, not from memory.
+; Use :InspectTree to see the tree, or `node:sexpr()` to print the exact structure of one node.
+; The example below needed three corrections that error messages did not identify.
+; A scoped call uses `scoped_identifier`, not `identifier`.
+; `string_literal` passes quotes to the other parser, but `string_content` does not.
+; Without the `.` anchor, the query also parses a second string argument as SQL.
 
-; Static language: the macro always contains SQL.
+; This static language rule selects SQL for the macro.
 ((macro_invocation
    macro: [
      (identifier) @_name
@@ -43,7 +43,7 @@
  (#eq? @_name "query")
  (#set! injection.language "sql"))
 
-; Dynamic language: a fenced block that names its own language.
+; This dynamic language rule gets the language from a fenced block.
 ; ((fenced_code_block
 ;    (info_string) @injection.language
 ;    (code_fence_content) @injection.content))

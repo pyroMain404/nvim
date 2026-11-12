@@ -1,29 +1,29 @@
---- 7. Which language server answered, and with which configuration.
+--- 7. Check the language server and its configuration.
 ---
---- `:checkhealth vim.lsp` says it in a real session; this probe says it in
---- a form a script can fail on. Two clients of the same server on one project
---- and a `root_dir` replaced by a config file are the recurring failures here,
---- and both look fine until someone counts.
+--- `:checkhealth vim.lsp` reports this in an interactive session. This probe makes the results
+--- available to script checks.
+--- Recurring failures include duplicate clients for one project and a configuration file that
+--- replaces `root_dir`.
+--- Both can look correct until a check counts clients or inspects the root.
 ---
 --- Parameters:
----   before    snippet run first, when the buffer needs to be reopened
----   server    name of the expected server ('rust_analyzer')
----   clients   number of clients expected attached, default 1
----   methods   LSP methods the client must support, as
----             'textDocument/formatting'
----   settings  dotted path inside the client settings to report
----   expect    pattern the value at `settings` must match
----   wait      grace period for the deferred configuration, in ms
----   timeout   how long to wait for a client to attach, default 10000 ms
----   ready     wait for the server to finish loading before reading its
----             capabilities, default false. Needed for every server that
----             registers capabilities dynamically instead of announcing them
----             in the reply to `initialize`: `jdtls` does, so `methods` reads
----             false for definition, rename and formatting until the project
----             has been imported, which looks exactly like a broken config
+---   before: Run this snippet first when the buffer needs to open again.
+---   server: Specify the expected server name ('rust_analyzer').
+---   clients: Specify the expected attached client count. The default is 1.
+---   methods: Specify required LSP methods, such as 'textDocument/formatting'.
+---   settings: Report this dotted path in the client settings.
+---   expect: Specify the pattern that the value at `settings` must match.
+---   wait: Specify the deferred configuration grace period, in ms.
+---   timeout: Specify the attachment wait limit. The default is 10000 ms.
+---   ready: Wait for loading to finish before reading capabilities. The default is false.
+---          Servers such as `jdtls` register capabilities dynamically, not in the `initialize`
+---   reply.
+---          Before project import, `methods` reports false for definition, rename, and
+---   formatting.
+---          This can look like a configuration failure.
 ---
---- The file to open is given to the driver (`-File`), because a server only
---- attaches to a buffer of a filetype it was enabled for.
+--- Give the file to open to the driver (`-File`).
+--- A server attaches only to buffers with a filetype for which the configuration enables it.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
@@ -31,25 +31,25 @@ P.run(function()
   P.eval('before')
   local server = P.param('server')
 
-  -- Attaching is asynchronous: the server has to start and answer `initialize`
-  -- before the client exists. Polling for it is what tells "not attached" apart
-  -- from "not attached yet", which no fixed wait can do.
+  -- Attachment is asynchronous: the server must start and answer `initialize` before the client
+  -- exists.
+  -- Polling distinguishes "not attached" from "not attached yet"; a fixed wait cannot.
   vim.wait(
     P.param('timeout', 10000),
     function() return #vim.lsp.get_clients({ bufnr = 0 }) > 0 end
   )
   local attached = vim.lsp.get_clients({ bufnr = 0 })
 
-  -- A capability registered with `client/registerCapability` only exists once
-  -- the server has done its first pass over the project.
+  -- The server registers a capability through `client/registerCapability` only after its first
+  -- project pass.
   if P.param('ready', false) and #attached > 0 then
     local idle, ms, note = P.wait_lsp({ timeout = P.param('timeout', 10000) })
     P.check('the server finished loading', idle, ('%dms - %s'):format(ms, note))
   end
 
-  -- When nothing attached, the answer is almost always one of these two: the
-  -- server was never enabled, or its executable is not on the PATH Neovim
-  -- inherited. Reporting both turns "no client" into a cause.
+  -- Absent clients usually mean the server is not enabled or Neovim's inherited PATH lacks its
+  -- executable.
+  -- Report both conditions to help explain "no client".
   if server ~= nil then
     local config = vim.lsp.config[server]
     P.info(

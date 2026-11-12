@@ -2,42 +2,38 @@
 -- │ Health check │
 -- └──────────────┘
 --
--- This file reports the state of what this config assumes about its environment:
--- which external programs are installed, at which version, and what stops working
--- when one of them is missing. Run it with `:checkhealth config`.
+-- Report external program versions and the features that need them.
+-- Run this check with `:checkhealth config`.
 --
--- `:checkhealth` discovers any 'lua/**/health.lua' on `:h 'runtimepath'` and names
--- the check after its path, so this one is reachable as `config`. It is not the
--- only file under 'lua/': `lua/config/run.lua` and `lua/config/mise.lua` also live
--- there, required by name rather than found by path - see "Where a change goes"
--- in 'AGENTS.md' for the rule that decides which of the two a new module is.
+-- `:checkhealth` finds each 'lua/**/health.lua' on `:h 'runtimepath'`.
+-- It names each check after its path, so this check uses `config`.
+-- `lua/config/run.lua` and `lua/config/mise.lua` also use 'lua/', but callers load them by name.
+-- See "Where a change goes" in 'AGENTS.md' to choose how to load a new module.
 --
--- Structure: one `check_*()` function per area, called from `M.check()` in the
--- order they should be read. This is the shape every healthcheck in Neovim's own
--- runtime uses (see '$VIMRUNTIME/lua/vim/health/health.lua').
+-- Use one `check_*()` function for each area.
+-- Call these functions from `M.check()` in reading order.
+-- Neovim uses this structure in '$VIMRUNTIME/lua/vim/health/health.lua'.
 --
--- Conventions to keep when adding a section (see `:h health-dev`):
--- - Open with `health.start()`; return before it if the check does not apply.
--- - Always pass advice to `warn()` and `error()`: the second argument says how
---   to fix it. A warning without a command to run sends the reader elsewhere.
--- - Close a section that found nothing wrong with `health.ok()`, never silence.
--- - Report the version, not only the presence: an outdated tool fails in more
---   confusing ways than a missing one.
+-- Keep these rules when you add a section (see `:h health-dev`):
+-- - Start with `health.start()`.
+-- - Return before `health.start()` if the check does not apply.
+-- - Give `warn()` and `error()` a second argument with advice and a command to correct the problem.
+-- - End a section without problems with `health.ok()` to show that the check ran.
+-- - Report the version, not only the presence, because old tools can cause less clear failures.
 
 local M = {}
 local health = vim.health
 
--- Read the first line of `cmd` output, or `nil` if it can not be run.
+-- Return the first line of `cmd` output, or `nil` if the command cannot run.
 local function first_line(cmd)
   local ok, out = pcall(function() return vim.system(cmd):wait() end)
   if not ok or out.code ~= 0 then return nil end
   return vim.trim(vim.split(vim.trim(out.stdout), '\n')[1] or '')
 end
 
--- Report an external program: its version when present, what breaks when not.
--- Every executable check in this file goes through this one function, so a
--- new language's tools read `report('<tool>', '<what breaks>', '<fix>')`
--- rather than hand-rolling the executable/version/warn dance again.
+-- Report the program version, or the feature that fails without the program.
+-- Use this function for every executable check in this file.
+-- Add language tools with `report('<tool>', '<what breaks>', '<fix>')` instead of separate checks.
 local function report(name, why, advice)
   if vim.fn.executable(name) ~= 1 then
     health.warn('`' .. name .. '` is not available', { advice, why })
@@ -48,10 +44,10 @@ local function report(name, why, advice)
   return version
 end
 
--- Whether each of `langs` has an installed tree-sitter parser, not merely
--- available - the same check 'plugin/40_plugins.lua' uses to decide what to
--- install. `advice` is a function of the language name giving the fix line;
--- omit it to use the default ("restart with `<lang>` in `languages`").
+-- Check that each language in `langs` has an installed tree-sitter parser, not only an available parser.
+-- 'plugin/40_plugins.lua' uses the same check to select parsers for installation.
+-- `advice` takes a language name and returns a correction.
+-- Omit `advice` to use the default ("restart with `<lang>` in `languages`").
 local function check_parsers(langs, advice)
   advice = advice
     or function(lang)
@@ -70,13 +66,12 @@ local function check_parsers(langs, advice)
 end
 
 -- Language toolchains ========================================================
--- One section per language the config supports. Answer the questions asked when
--- something does not work: is the toolchain there, which version is active in
--- this session, is the language server reachable, is the parser installed.
+-- Use one section for each supported language.
+-- Report the installed toolchain, its active version, language server access, and parser installation.
 --
--- Neovim inherits the environment of the shell that started it, so the active
--- toolchain can differ from the one the user sees in a fresh terminal. Saying
--- which one is in use here is the point of the check.
+-- Neovim uses the environment of the shell that starts it.
+-- The active toolchain can differ from the toolchain in a new terminal.
+-- This check identifies the toolchain that this session uses.
 --
 -- Copy this function per language and call it from `M.check()`.
 local function check_lang()

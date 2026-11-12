@@ -1,19 +1,18 @@
---- 15. What the configuration costs at startup, file by file.
+--- 15. Measure configuration startup time for each file.
 ---
---- The reason this configuration splits loading into steps is that the first
---- screen has to be drawn before anything optional runs. A change that moves
---- work from `later()` to the immediate part does not break anything - it just
---- makes every session slower, which nobody notices in a single test. This is
---- the check that notices.
+--- Loading uses separate steps so the first screen appears before optional work runs.
+--- Moving work from `later()` to immediate loading causes no functional failure but slows every
+--- session.
+--- A single manual test can miss this change. This probe measures it.
 ---
---- It runs a second Neovim with `--startuptime`, because the timing of the
---- session a probe runs in is already spoiled by the probe itself.
+--- The probe starts a second Neovim with `--startuptime`.
+--- The probe itself changes the timing of its own session.
 ---
 --- Parameters:
----   file     file to open in the measured session, default none
----   budget   total milliseconds allowed; the check fails above it
----   top      how many slowest entries to print, default 12
----   filter   pattern of entries to keep in the report ('plugin/')
+---   file: Specify the file to open in the measured session. The default is none.
+---   budget: Specify the total time limit in milliseconds. The check fails above this limit.
+---   top: Specify how many of the slowest entries to print. The default is 12.
+---   filter: Keep report entries that match this pattern ('plugin/').
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
@@ -36,10 +35,10 @@ P.run(function()
 
   local total = 0
   local entries = {}
-  -- A log line is either `clock  self+sourced  self: sourced script` or
-  -- `clock  elapsed: some event`. Only the first kind is worth ranking - the
-  -- second is cumulative, so sorting it would put the end of startup on top -
-  -- while both carry the clock, which is what the total comes from.
+  -- Log lines use `clock  self+sourced  self: sourced script` or `clock  elapsed: some event`.
+  -- Rank only script lines. Event times accumulate, so sorting them would put the end of startup
+  -- first.
+  -- Both forms include the clock value for the total.
   for _, line in ipairs(lines) do
     local clock, sourced, what =
       line:match('^(%d+%.%d+)%s+(%d+%.%d+)%s+%d+%.%d+:%s+(.+)$')

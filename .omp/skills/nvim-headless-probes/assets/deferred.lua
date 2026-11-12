@@ -1,19 +1,17 @@
---- 2. A module loaded by `Config.later()` is there, and holds the configuration
---- it was given.
+--- 2. Check that a module from `Config.later()` loads with the specified configuration.
 ---
---- Deferred loading is what makes a wrong `setup()` invisible: the module is
---- fine at startup because it does not exist yet. This probe waits for it and
---- then reads the value that actually reached it, which is not always the one
---- written in the config file - a second `setup()` call, or an option renamed
---- upstream, both end here.
+--- Deferred loading can hide a wrong `setup()` at startup because the module does not yet exist.
+--- This probe waits and reads the value that reached the module.
+--- A second `setup()` call or an upstream option rename can change the value from the
+--- configuration file.
 ---
 --- Parameters:
----   module   Lua module to inspect ('mini.git'), required
----   force    `require()` it instead of waiting, to tell "not loaded yet"
----            apart from "loading throws"
----   field    dotted path inside the module to read ('config.command.split')
----   expect   pattern the value at `field` must match
----   wait     grace period for `Config.later()`, in ms
+---   module: Specify the required Lua module ('mini.git').
+---   force: Use `require()` instead of waiting to distinguish "not loaded yet"
+---          from "loading throws".
+---   field: Read this dotted path in the module ('config.command.split').
+---   expect: Specify the pattern that the value at `field` must match.
+---   wait: Specify the grace period for `Config.later()`, in ms.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 

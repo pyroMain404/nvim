@@ -1,30 +1,27 @@
---- 17. What the server actually reports about this buffer.
+--- 17. Check the diagnostics that the server reports for this buffer.
 ---
---- "No diagnostics" is the most deceiving state in this whole directory: it is
---- what a clean file looks like, what a server that never published looks like,
---- and what a buffer outside any workspace looks like. The way to tell them
---- apart is to break something on purpose (`insert`) and demand that the
---- breakage is reported, which is what this probe is for.
+--- "No diagnostics" can mean a clean file, a server that published nothing, or a buffer outside
+--- all workspaces.
+--- Use `insert` to add a defect. Require a diagnostic for that defect to distinguish these
+--- states.
 ---
---- Timing is the other half. A server publishes more than once - an empty list
---- while it parses, the real one after - so a probe that returns on the first
---- `DiagnosticChanged` reads a half-filled state. `P.wait_diagnostics()` waits
---- for the quiet after the last publish instead of a fixed number of seconds.
+--- A server can publish an empty list during parsing and a complete list later.
+--- The first `DiagnosticChanged` can thus give incomplete results.
+--- `P.wait_diagnostics()` waits for silence after the last publication, not a fixed delay.
 ---
 --- Parameters:
----   before    snippet run first
----   insert    lines appended to the buffer before waiting, as a list. Keep the
----             buffer syntactically valid: many tools (`stylua`, some servers)
----             report nothing at all about a file they cannot parse
----   at        0-based line to insert at, default the end of the buffer
----   count     number of diagnostics expected
----   expect    pattern at least one message must match
----   absent    pattern no message may match - this is how a declared global
----             (`Config`) is told apart from a typo
----   severity  only look at this severity: ERROR, WARN, INFO, HINT
----   ready     wait for the server to finish loading first, default true
----   quiet     milliseconds of silence that end the wait, default 700
----   timeout   how long to wait for diagnostics at all, default 30000 ms
+---   before: Run this snippet first.
+---   insert: Append this list of lines before waiting. Keep the buffer syntactically valid.
+---           Many tools (`stylua`, some servers) report nothing for files they cannot parse.
+---   at: Specify the 0-based insertion line. The default is the buffer end.
+---   count: Specify the expected diagnostic count.
+---   expect: Specify the pattern that at least one message must match.
+---   absent: Specify the pattern that no message can match.
+---           This distinguishes a declared global (`Config`) from a typing error.
+---   severity: Check only this severity: ERROR, WARN, INFO, HINT.
+---   ready: Wait for the server to finish loading first. The default is true.
+---   quiet: Specify the silence period that ends the wait. The default is 700 ms.
+---   timeout: Specify the diagnostic wait limit. The default is 30000 ms.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
@@ -46,8 +43,8 @@ P.run(function()
         or ''
     )
   )
-  -- A client with no root is in single file mode, and some servers publish
-  -- nothing at all in it. Saying so here turns an empty report into a cause.
+  -- A client without a root uses single file mode. Some servers publish nothing in this mode.
+  -- Report the missing root to explain an empty diagnostic report.
   if clients[1] and clients[1].root_dir == nil then
     P.info('this client has no root_dir: single file mode')
   end

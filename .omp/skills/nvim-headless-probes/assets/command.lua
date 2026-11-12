@@ -1,19 +1,19 @@
---- 12. A user command exists, and running it does not throw.
+--- 12. Check that a user command exists and runs without an error.
 ---
---- A command defined by a plugin loaded with `Config.later()` is missing for
---- the first seconds of a session and present after: "unknown command" is
---- therefore not an answer until the deferred part has run. This probe waits,
---- says which command it found and where it came from, and optionally runs it.
+--- A plugin that loads through `Config.later()` defines its commands after startup, not during
+--- the first seconds.
+--- Thus, "unknown command" does not prove failure before deferred loading finishes.
+--- This probe waits, reports the command and its source, and can run it.
 ---
 --- Parameters:
----   name     command without the colon ('Git'), required
----   buffer   look for a buffer local command instead of a global one
----   run      arguments to run it with ('diff HEAD~1'); omit to only check
----   expect   pattern the definition must match
----   before   snippet run first
----   after    snippet run once the command has run, to report its effect;
----            it is skipped when `run` was not given, so a snippet that has
----            to run in any case belongs to `before`
+---   name: Specify the required command without the colon ('Git').
+---   buffer: Look for a buffer-local command instead of a global command.
+---   run: Specify command arguments ('diff HEAD~1'). Omit this parameter to check only.
+---   expect: Specify the pattern that the definition must match.
+---   before: Run this snippet first.
+---   after: Run this snippet after the command to report its effect.
+---          The probe skips this snippet when `run` is absent.
+---          Put snippets that must always run in `before`.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 

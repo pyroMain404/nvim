@@ -1,15 +1,14 @@
---- Shared library of the probes in this directory.
+--- This library supplies shared probe functions for this directory.
 ---
---- A probe is a Lua file injected into a real Neovim session with `-c 'luafile
---- <probe>'`, so it runs with the configuration actually loaded - the only way
---- to see what the user sees. It never hardcodes what it looks at: parameters
---- arrive as JSON in `$env:NVIM_PROBE` (set by 'run.ps1') or in `vim.g.probe`
---- when the probe is sourced by hand from an interactive session.
+--- Each probe runs in a real Neovim session through `-c 'luafile <probe>'` with the user's
+--- configuration loaded.
+--- Parameters arrive as JSON in `$env:NVIM_PROBE`, which 'run.ps1' sets, or through `vim.g.probe`
+--- during manual sourcing.
+--- The probe does not hardcode the values to inspect.
 ---
---- Results are `PASS` / `FAIL` / `INFO` lines and a final count. The exit code
---- is what a caller reads, and it has to be set explicitly: headless Neovim
---- exits 0 even when a `setup()` threw, so a probe that only prints is a probe
---- that can never fail a check.
+--- Results contain `PASS` / `FAIL` / `INFO` lines and a final count.
+--- The caller reads an explicit exit code. Headless Neovim exits 0 even if `setup()` fails.
+--- Printing alone cannot make a check fail.
 local M = {}
 
 M.params = {}
@@ -25,14 +24,14 @@ end
 
 local results = {}
 
---- Read a parameter, falling back to `default` when it was not given.
+--- Read a parameter. Use `default` if the parameter is absent.
 function M.param(name, default)
   local value = M.params[name]
   if value == nil then return default end
   return value
 end
 
---- Read a parameter as a list, accepting a single value for convenience.
+--- Read a parameter as a list. Accept a single value too.
 function M.list(name, default)
   local value = M.param(name, default)
   if value == nil then return {} end
@@ -40,9 +39,9 @@ function M.list(name, default)
   return value
 end
 
---- Read a parameter the probe cannot work without. Failing here, instead of
---- letting the probe throw later, is what tells a missing parameter apart from
---- a real defect in the configuration.
+--- Read a required parameter.
+--- Report missing parameters here to distinguish them from configuration defects that would cause
+--- later errors.
 function M.need(name)
   local value = M.param(name)
   if value == nil or value == '' then
@@ -55,16 +54,16 @@ function M.need(name)
   return value
 end
 
---- Free-form observation. It carries no verdict, so it can never fail a run:
---- use it for what you want to read, `check()` for what you want to assert.
+--- Record an observation without a verdict. This cannot fail a run.
+--- Use `check()` for assertions.
 function M.info(text) table.insert(results, { kind = 'INFO', text = text }) end
 
---- Report a value in full, for the parts of a state no assertion can express.
+--- Report the complete value when an assertion cannot describe the state.
 function M.dump(label, value) M.info(label .. ' = ' .. vim.inspect(value)) end
 
---- A check that can fail. `evidence` is what makes the verdict re-readable
---- later without running anything again, so give the observed value, not
---- a restatement of the check.
+--- Record a check that can fail. Include the observed value in `evidence`, not a repeat of the
+--- check.
+--- This lets readers review the verdict without another run.
 function M.check(text, ok, evidence)
   local kind = ok and 'PASS' or 'FAIL'
   table.insert(results, { kind = kind, text = text, evidence = evidence })
@@ -73,8 +72,8 @@ end
 
 function M.fail(text, evidence) return M.check(text, false, evidence) end
 
---- Check a string against a Lua pattern given as a parameter. Returns true
---- when no pattern was asked for, so an optional expectation stays optional.
+--- Check a string against a Lua pattern from a parameter.
+--- Return true if no pattern was requested, so expectations remain optional.
 function M.expect(text, pattern, actual)
   if pattern == nil or pattern == '' then
     M.info(text .. ': ' .. tostring(actual))
@@ -84,13 +83,12 @@ function M.expect(text, pattern, actual)
   return M.check(text .. ' matches `' .. pattern .. '`', ok, actual)
 end
 
---- Position the cursor from a `find` parameter (searched for) or explicit
---- `row`/`col` parameters - the "locate one spot in the buffer" contract
---- every probe that inspects a single position needs, written out
---- identically in 'treesitter.lua' and 'highlight.lua' before this existed.
---- Returns the cursor position (1-based row, 0-based col), or `nil` when
---- `find` was given and not found - the `check()` for that failure has
---- already run, so the caller only has to test for `nil` and return.
+--- Position the cursor from a `find` search or explicit `row`/`col` parameters.
+--- This shared "locate one spot in the buffer" contract replaces identical code in
+--- 'treesitter.lua' and 'highlight.lua'.
+--- Return the cursor position (1-based row, 0-based col).
+--- If `find` has no match, report the failed `check()` and return `nil`.
+--- The caller then only needs to check for `nil` and return.
 function M.locate()
   local find = M.param('find')
   if find ~= nil then
@@ -104,11 +102,10 @@ function M.locate()
   return vim.api.nvim_win_get_cursor(0)
 end
 
---- Check a list of rendered lines against the `expect` and `absent` patterns.
+--- Check rendered lines against the optional `expect` and `absent` patterns.
 ---
---- Both are optional, and both report the line that decided the verdict rather
---- than the whole list: an evidence block of forty lines is one nobody reads,
---- and the one line that matched is the whole answer.
+--- Report only the line that determines each verdict.
+--- A matching line gives the necessary evidence without a large, hard-to-read list.
 function M.match(label, lines)
   local expect = M.param('expect')
   if expect then
@@ -142,10 +139,9 @@ function M.match(label, lines)
   end
 end
 
---- Compile and run a Lua snippet passed as a parameter. This is what keeps
---- a probe reusable: the setup that brings the session into the state worth
---- probing is data (`before = "vim.cmd('Git diff HEAD~3')"`), not one more
---- copy of the probe.
+--- Compile and run a Lua snippet from a parameter.
+--- Setup stays in data (`before = "vim.cmd('Git diff HEAD~3')"`), so callers can reuse the probe
+--- without copying it.
 function M.eval(name)
   local src = M.param(name)
   if src == nil or src == '' then return nil end
@@ -157,36 +153,34 @@ function M.eval(name)
   return chunk()
 end
 
---- Send keys as if typed. Mode 'x' is what makes them run now instead of
---- being queued until the probe has already ended.
+--- Send keys as if typed. Mode 'x' runs them immediately instead of queuing them until after the
+--- probe ends.
 function M.keys(lhs)
   local codes = vim.api.nvim_replace_termcodes(lhs, true, false, true)
   vim.api.nvim_feedkeys(codes, 'x', false)
 end
 
---- The tail of a path, which is what identifies a buffer in a report.
+--- Return the path suffix that identifies a buffer in a report.
 function M.short(name)
   if name == nil or name == '' then return '[No Name]' end
   return name:match('[^/]*/?[^/]+$')
 end
 
---- Wait until a language server is attached to the buffer AND done loading.
+--- Wait for a language server to attach to the buffer and finish loading.
 ---
---- Two waits, because they fail differently: a client that never attaches is
---- a missing executable or a server not enabled, while a client that attached
---- but is still indexing answers requests with its own "loading" message
---- instead of the answer - which reads exactly like a wrong configuration.
---- `:h vim.lsp.status()` is the readiness signal: it holds the current progress
---- message and is empty when nothing is running.
+--- Use separate waits because attachment and loading failures differ.
+--- A client that never attaches suggests an absent executable or a server that is not enabled.
+--- An indexing server returns a "loading" message instead of the answer, which can look like a
+--- configuration failure.
+--- `:h vim.lsp.status()` gives the current progress message and is empty when no work runs.
 ---
---- Empty is not the same as done, which is the trap this function exists to
---- close. A server opens several progress tokens in a row (`lua_ls` uses one
---- per scope it loads), and between two of them the status is empty for a
---- moment that looks exactly like the end. So this waits for `quiet`
---- milliseconds of continuous silence, not for the first gap.
+--- An empty status does not prove completion.
+--- Servers create successive progress tokens; `lua_ls` uses one per scope.
+--- Short empty gaps occur between tokens. Wait for `quiet` milliseconds of continuous silence
+--- instead of the first gap.
 ---
---- Returns `ok, ms, note`. Report `ms`: it is the evidence that separates
---- "slow" from "stuck", and it is what a fixed wait can never tell you.
+--- Return `ok, ms, note`. Report `ms` to distinguish "slow" from "stuck", which a fixed wait
+--- cannot do.
 function M.wait_lsp(opts)
   opts = opts or {}
   local buf = opts.bufnr or 0
@@ -213,11 +207,11 @@ function M.wait_lsp(opts)
   return idle, vim.uv.now() - t0, note
 end
 
---- Wait until diagnostics for the buffer settle.
+--- Wait for buffer diagnostics to stop changing.
 ---
---- `DiagnosticChanged` fires on every publish, and a server publishes more than
---- once (an empty list first, then the real one). Waiting for the event alone
---- therefore reads a half-filled state; this waits for the quiet after it.
+--- `DiagnosticChanged` occurs on each publication. A server can publish an empty list before the
+--- complete list.
+--- Waiting only for the event can give incomplete results. Wait for silence after it instead.
 function M.wait_diagnostics(opts)
   opts = opts or {}
   local buf = opts.bufnr or 0
@@ -237,17 +231,16 @@ function M.wait_diagnostics(opts)
   return vim.diagnostic.get(buf), vim.uv.now() - t0
 end
 
---- Sentinel thrown to unwind out of a probe that is finished. In a one-shot
---- run `finish()` quits and nothing sees it; inside a reused session there is
---- nothing to quit, so `run()` catches this instead of reporting it as a throw.
+--- This sentinel ends a completed probe through an error.
+--- In a one-shot run, `finish()` quits before anything catches it.
+--- In a reused session, `run()` catches it without reporting a probe error.
 M.ABORT = '<probe finished>'
 
---- Print the report and exit with a code that means something.
+--- Print the report and exit with a meaningful code.
 ---
---- Inside a session (`session = true`) neither happens: the report is left in
---- `g:probe_result` and the count of failures in `g:probe_failed`, for the
---- driver to read over the RPC socket, and the instance stays alive for the
---- probe after this one.
+--- For `session = true`, store the report in `g:probe_result` and the failure count in
+--- `g:probe_failed` instead.
+--- The driver reads both through the RPC socket. Keep the instance alive for the next probe.
 function M.finish()
   local failed = 0
   for _, r in ipairs(results) do
@@ -278,24 +271,22 @@ function M.finish()
   vim.cmd(failed > 0 and 'cquit! 1' or 'qa!')
 end
 
---- Run `body` once the configuration has finished loading, then report.
+--- Run `body` after configuration loading, then report.
 ---
---- Everything set up through `Config.later()` runs on a timer after startup, so
---- a probe that looks immediately finds a configuration that does not exist
---- yet: no mappings, no autocommands, no plugins. `wait` is that grace period
---- in milliseconds - raise it when what you probe needs a plugin to be
---- downloaded or a language server to answer.
+--- `Config.later()` uses a timer after startup. An immediate probe can find no mappings,
+--- autocommands, or plugins.
+--- `wait` gives the grace period in milliseconds.
+--- Increase it when the probe requires a plugin download or a language server reply.
 function M.run(body)
   local report = function()
     local ok, err = pcall(body)
     if not ok then M.fail('the probe itself threw', err) end
     local done, err2 = pcall(M.finish)
-    -- `finish()` unwinds through `error()` inside a session; anything else is
-    -- a real failure of the reporting itself, which has to stay visible.
+    -- `finish()` uses `error()` to end a probe inside a session.
+    -- Keep other reporting failures visible.
     if not done and err2 ~= M.ABORT then error(err2, 0) end
   end
-  -- A reused session finished loading long before this probe was sourced, so
-  -- the grace period only makes sense for a fresh instance.
+  -- A reused session has already finished loading. Only a new instance needs the grace period.
   if M.param('session', false) then return report() end
   vim.defer_fn(report, M.param('wait', 1500))
 end

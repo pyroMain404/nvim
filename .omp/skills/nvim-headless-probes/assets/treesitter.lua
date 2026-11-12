@@ -1,19 +1,19 @@
---- 10. The parser is installed, and the tree is the one the queries expect.
+--- 10. Check parser installation and the tree that queries require.
 ---
---- "Highlight works" is true of a legacy syntax file too, so it proves nothing
---- about tree-sitter. What proves it is the node under a known position and the
---- captures attached to it: those exist only if the parser is installed, the
---- query loaded, and the language registered for the filetype.
+--- "Highlight works" also applies to legacy syntax files, so it does not prove tree-sitter works.
+--- Check the node and captures at a known position instead.
+--- These require an installed parser, a loaded query, and a language registration for the
+--- filetype.
 ---
 --- Parameters:
----   lang      language to check, default the filetype of the buffer
----   find      text to search for, to put the cursor on something known
----   row, col  explicit position instead of `find` (1 based row, 0 based col)
----   node      node type expected at that position ('string_content')
----   capture   capture expected at that position, without the at sign
----   injected  language expected to be injected at that position
+---   lang: Specify the language to check. The default is the buffer filetype.
+---   find: Search for this text to position the cursor at a known location.
+---   row, col: Use this explicit position instead of `find` (1-based row, 0-based col).
+---   node: Specify the expected node type at this position ('string_content').
+---   capture: Specify the expected capture without the at sign.
+---   injected: Specify the expected injected language at this position.
 ---
---- The file to open is given to the driver (`-File`).
+--- Give the file to open to the driver (`-File`).
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
@@ -50,11 +50,11 @@ P.run(function()
   if injected == nil then return end
   local row, col = cursor[1] - 1, cursor[2]
 
-  -- Every language whose tree covers the position, not the first one found:
-  -- `:h LanguageTree:language_for_range()` returns the first child that
-  -- contains the range and iterates with `pairs()`, so where injections nest -
-  -- the body of a Rust macro is inside a `rust` injection and the `sql` one at
-  -- the same time - it answered either of them at random.
+  -- Collect all languages whose trees cover the position, not just the first match.
+  -- `:h LanguageTree:language_for_range()` uses `pairs()` and returns the first child that
+  -- contains the range.
+  -- A Rust macro body can have nested `rust` and `sql` injections at the same position.
+  -- The function thus returned either language unpredictably.
   local langs, found = {}, {}
   parser:for_each_tree(function(tree, ltree)
     local srow, scol, erow, ecol = tree:root():range()

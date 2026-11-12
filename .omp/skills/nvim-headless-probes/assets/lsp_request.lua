@@ -1,42 +1,39 @@
---- 16. One LSP request, on a position named by a pattern.
+--- 16. Send one LSP request at a position from a pattern.
 ---
---- The counterpart of the `lsp` probe: that one answers "which server, with
---- which configuration", this one answers "and what does it reply". They fail
---- for different reasons, and the second failure is the one that hides - a
---- server can be attached, healthy, and still answer nothing useful because a
---- library is missing from its settings or the cursor sits on a comment.
+--- The `lsp` probe checks "which server, with which configuration". This probe checks "and what
+--- does it reply".
+--- A healthy attached server can return no useful answer because a library setting is missing or
+--- the cursor is on a comment.
 ---
---- Every request needs the same three things done right, which is why they are
---- here once: the server has to be done loading (a request sent during indexing
---- comes back as "Workspace loading", which reads like a wrong answer), the
---- position has to be a real symbol (`find` puts the cursor on one instead of
---- trusting line numbers that move), and the reply has to be rendered as text
---- (`expect` cannot match a nested table).
+--- Three shared requirements apply to every request.
+--- The server must finish loading; requests during indexing can return "Workspace loading"
+--- instead of a useful answer.
+--- The position must identify a real symbol. `find` avoids line numbers that change.
+--- The reply must become text because `expect` cannot match a nested table.
 ---
 --- Parameters:
----   method   LSP method, default 'textDocument/definition'. Also handled with
----            the parameters they need: hover, references, implementation,
----            typeDefinition, codeLens, codeAction
----   find     search pattern that puts the cursor on the symbol to ask about
----   line     explicit 1-based line, when no pattern fits
----   col      explicit 1-based column, or the offset inside the match
----   server   name of the client to ask, default the first one attached
----   count    number of results expected
----   expect   pattern at least one rendered result must match
----   absent   pattern no rendered result may match
----   resolve  resolve every item before rendering it (code lens are sent
----            unresolved: their `command` only exists after this)
----   ready    wait for the server to finish loading first, default true
----   before   snippet run first
----   timeout  per request, default 15000 ms
+---   method: Specify the LSP method. The default is 'textDocument/definition'.
+---           The probe also supplies parameters for hover, references, implementation,
+---           typeDefinition, codeLens, and codeAction.
+---   find: Search with this pattern to put the cursor on the required symbol.
+---   line: Use this explicit 1-based line when no pattern fits.
+---   col: Specify a 1-based column or an offset within the match.
+---   server: Specify the client name. The default is the first attached client.
+---   count: Specify the expected result count.
+---   expect: Specify the pattern that at least one rendered result must match.
+---   absent: Specify the pattern that no rendered result can match.
+---   resolve: Resolve each item before rendering. Unresolved code lenses have no `command`.
+---   ready: Wait for the server to finish loading first. The default is true.
+---   before: Run this snippet first.
+---   timeout: Specify the wait limit per request. The default is 15000 ms.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
---- Render one reply item as a line of text, per method family.
+--- Render one reply item as a text line for its method family.
 local function render(item)
   if type(item) ~= 'table' then return tostring(item) end
 
-  -- Location / LocationLink, from definition, references, implementation
+  -- Handle Location / LocationLink results from definition, references, and implementation.
   local uri = item.uri or item.targetUri
   if uri then
     local range = item.targetSelectionRange or item.targetRange or item.range
@@ -47,7 +44,7 @@ local function render(item)
     )
   end
 
-  -- CodeLens
+  -- Handle CodeLens results.
   if item.range and (item.command or item.data) then
     local command = item.command or {}
     return ('line %d: %s [command=%s]'):format(
@@ -57,7 +54,7 @@ local function render(item)
     )
   end
 
-  -- CodeAction / Command
+  -- Handle CodeAction / Command results.
   if item.title then
     return ('%s (%s)'):format(item.title, item.kind or 'command')
   end
@@ -65,9 +62,9 @@ local function render(item)
   return vim.inspect(item):gsub('%s+', ' ')
 end
 
---- The request that turns an unresolved item into a usable one. A server may
---- send code lens without their `command` and fill it in only on demand, which
---- is why an unresolved lens shows no title (`:h codeLens/resolve`).
+--- These requests resolve items for use.
+--- A server can send code lenses without `command` and supply it only on demand.
+--- An unresolved code lens thus has no title (`:h codeLens/resolve`).
 local resolvers = {
   ['textDocument/codeLens'] = 'codeLens/resolve',
   ['textDocument/codeAction'] = 'codeAction/resolve',
@@ -75,7 +72,7 @@ local resolvers = {
   ['textDocument/documentLink'] = 'documentLink/resolve',
 }
 
---- Parameters each method wants. Only these four shapes exist in practice.
+--- Supply method parameters. These methods use four parameter forms.
 local function params_for(method, client)
   if method:find('codeLens') then
     return { textDocument = vim.lsp.util.make_text_document_params(0) }
@@ -91,9 +88,9 @@ local function params_for(method, client)
       context = { diagnostics = diagnostics, triggerKind = 1 },
     }
   end
-  -- `references` is a position plus a context, and the context is not
-  -- optional: without it `lua_ls` answers with an internal error whose
-  -- traceback names its own 'provider.lua', which reads like a broken server.
+  -- `references` requires a position and context.
+  -- Without context, `lua_ls` returns an internal error with 'provider.lua' in its traceback.
+  -- This can look like a server defect.
   if method:find('references') then
     local position = vim.lsp.util.make_position_params(0, client.offset_encoding)
     return {
@@ -111,9 +108,9 @@ P.run(function()
   local method = P.param('method', 'textDocument/definition')
   local name = P.param('server')
 
-  -- Waiting comes before looking: attaching is asynchronous, so a probe that
-  -- counts clients the moment it starts reports "no client" for a server that
-  -- is merely half a second away. In a reused session this is the whole delay.
+  -- Wait before counting clients because attachment is asynchronous.
+  -- An immediate count can report "no client" just before attachment.
+  -- This wait supplies the entire delay in a reused session.
   local ready, ms, note = P.wait_lsp({
     timeout = P.param('timeout', 15000) * 4,
     quiet = P.param('quiet', 1000),
@@ -135,16 +132,15 @@ P.run(function()
     )
   end
 
-  -- Positioning is a check of its own: a pattern that matched nothing leaves
-  -- the cursor where it was, and the empty reply that follows looks like the
-  -- server's fault instead of the probe's.
+  -- Check positioning separately. An unmatched pattern leaves the cursor unchanged.
+  -- The resulting empty reply can look like a server defect instead of a probe defect.
   local find = P.param('find')
   if find then
     vim.fn.cursor(1, 1)
-    -- A malformed pattern throws (`E54`, `E55`), and the throw belongs to the
-    -- parameter, not to the configuration. Remember that `search()` reads a Vim
-    -- regexp: there `(` is a literal and `\(` opens a group, the opposite of
-    -- the Lua patterns the rest of these probes take.
+    -- A malformed pattern raises `E54` or `E55`; this identifies a parameter error, not a
+    -- configuration error.
+    -- `search()` uses a Vim regexp: `(` is literal and `\(` starts a group.
+    -- Other probe patterns use Lua syntax, which reverses these meanings.
     local ok, row = pcall(vim.fn.search, find, 'W')
     if not ok then return P.fail('`find` is not a valid Vim pattern', row) end
     P.check(('`%s` found in the buffer'):format(find), row > 0, row)
@@ -174,15 +170,14 @@ P.run(function()
     P.info(method .. ': null (the server has nothing here)')
     result = {}
   end
-  -- Hover replies with one object, everything else with a list.
+  -- Hover returns one object. Other methods return a list.
   if result.contents ~= nil then
     local contents = result.contents
     local text = type(contents) == 'table'
         and (contents.value or vim.inspect(contents))
       or tostring(contents)
-    -- The parentheses matter: `gsub` returns the count as a second value, and
-    -- without them the table holds two entries and the report claims two
-    -- results where there is one.
+    -- Keep the parentheses because `gsub` returns the count as a second value.
+    -- Without them, the table has two entries and the report incorrectly counts two results.
     result = { (text:gsub('\r?\n', ' ')) }
   elseif result.uri or result.targetUri then
     result = { result }

@@ -1,17 +1,17 @@
---- 1. Clean startup: the configuration loads, and says nothing it should not.
+--- 1. Check that startup loads the configuration without unwanted messages.
 ---
---- This is the one check worth running after every change, because a file that
---- throws while loading takes with it everything registered after it, and the
---- symptom shows up somewhere else entirely.
+--- Run this check after each change.
+--- A file that fails during loading prevents all later registrations, so the visible symptom can
+--- appear elsewhere.
 ---
 --- Parameters:
----   modules  list of Lua modules that must be loaded once the deferred part
----            of the configuration has run ('mini.git', 'mini.diff', ...)
----   forbid   patterns that must not appear in `:messages`
----            (default: the shapes an error takes)
----   expect   patterns that must appear in `:messages`
----   allow    patterns of a `v:errmsg` that is known and accepted
----   wait     grace period for `Config.later()`, in ms
+---   modules: Specify Lua modules that must load after deferred configuration
+---            ('mini.git', 'mini.diff', ...).
+---   forbid: Specify patterns that must not occur in `:messages`.
+---           The defaults match common error forms.
+---   expect: Specify patterns that must occur in `:messages`.
+---   allow: Specify patterns for known, accepted `v:errmsg` values.
+---   wait: Specify the grace period for `Config.later()`, in ms.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 

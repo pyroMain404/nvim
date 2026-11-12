@@ -1,17 +1,17 @@
---- 4. A mapping exists, comes from where it should, and does what it promises.
+--- 4. Check a mapping's presence, source, and effect.
 ---
---- Two failures hide behind "the mapping does not work", and only the first is
---- visible without pressing anything: the mapping is not there (or a buffer
---- local one shadows the global), or it is there and its effect is not the one
---- expected. `maparg()` answers the first, sending the keys answers the second.
+--- "the mapping does not work" can mean a missing mapping or a buffer-local mapping that
+--- overrides a global mapping.
+--- It can also mean that the mapping exists but has the wrong effect.
+--- `maparg()` checks the definition. Sending the keys checks the effect.
 ---
 --- Parameters:
----   lhs      keys of the mapping, in `<CR>` notation, required
----   mode     mode to look in, default 'n'
----   before   snippet that opens the buffer the mapping belongs to
----   expect   pattern the right hand side or the description must match
----   press    send the keys after checking, and report what changed
----   after    snippet run once the keys were sent, to report the effect
+---   lhs: Specify the required mapping keys in `<CR>` notation.
+---   mode: Specify the mode to inspect. The default is 'n'.
+---   before: Run this snippet to open the mapping's buffer.
+---   expect: Specify the pattern that the right-hand side or description must match.
+---   press: Send the keys after checking and report the changes.
+---   after: Run this snippet after the keys to report their effect.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 

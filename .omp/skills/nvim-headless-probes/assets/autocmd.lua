@@ -1,19 +1,17 @@
---- 11. An autocommand is registered, and firing its event does something.
+--- 11. Check that an autocommand exists and its event has an effect.
 ---
---- Most of what this configuration adds happens inside an autocommand, so
---- "nothing happens" usually means the autocommand is not there at all - the
---- file that registers it threw while loading, or its pattern does not match
---- this buffer. Listing them answers the first, firing the event answers the
---- second.
+--- Most configuration changes use autocommands. "nothing happens" usually means registration
+--- failed during file loading or the pattern excludes this buffer.
+--- List autocommands to check registration. Trigger the event to check its effect.
 ---
 --- Parameters:
----   event     event to look at ('FileType', 'BufWinEnter'), required
----   group     restrict to one augroup, by name
----   pattern   pattern the registered autocommand must match
----   before    snippet run first, to open the buffer they belong to
----   fire      also trigger the event with `:doautocmd`, default false
----   after     snippet run after firing, to report what it changed
----   min       minimum number of matching autocommands, default 1
+---   event: Specify the required event ('FileType', 'BufWinEnter').
+---   group: Limit the search to one named augroup.
+---   pattern: Specify the pattern that the registered autocommand must match.
+---   before: Run this snippet first to open the relevant buffer.
+---   fire: Also trigger the event with `:doautocmd`. The default is false.
+---   after: Run this snippet after the event to report its effect.
+---   min: Specify the minimum matching autocommand count. The default is 1.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 

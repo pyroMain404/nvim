@@ -1,16 +1,16 @@
---- 9. `:checkhealth`, in a form a script can fail on.
+--- 9. Make `:checkhealth` results available to script checks.
 ---
---- Read by eye, a health check is a wall of green in which one ERROR hides
---- perfectly. Parsed, it becomes the cheapest regression test this
---- configuration has: it already knows what should be installed and what should
---- be reachable, so a change that breaks the environment fails here first.
+--- A large green health report can hide one ERROR during visual inspection.
+--- Parsing the report gives a low-cost regression check.
+--- The health check already knows the required tools and connections, so environment failures
+--- appear here first.
 ---
 --- Parameters:
----   sections  what to check, default 'config' (this repository's own check)
----   fail_on   'ERROR' (default) or 'WARNING' to be stricter
----   allow     patterns of lines to ignore, for what is known and accepted
----   show      also print the whole report, default false
----   wait      health checks are slow: 4000+ ms is a reasonable start
+---   sections: Specify the sections to check. The default is 'config', this repository's check.
+---   fail_on: Use 'ERROR' (default) or 'WARNING' for stricter checks.
+---   allow: Ignore lines that match these patterns for known, accepted conditions.
+---   show: Print the complete report too. The default is false.
+---   wait: Allow time for slow health checks. Start with 4000+ ms.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 

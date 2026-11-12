@@ -2,59 +2,57 @@
 -- │ Compiler plugin │
 -- └─────────────────┘
 --
--- Skeleton for 'compiler/<tool>.lua'. Copy and rename after the build tool, not
--- after the language: a compiler plugin is about a command, and several filetypes
--- can select the same one.
+-- Use this template for 'compiler/<tool>.lua'.
+-- Copy it with the build tool name, not the language name.
+-- A compiler plugin defines a command that several filetypes can select.
 --
--- Needed only when `vim.fn.getcompletion('', 'compiler')` shows that the runtime
--- has none for this tool — Neovim ships over 130 of them.
+-- Add this file only if `vim.fn.getcompletion('', 'compiler')` shows no runtime compiler for this tool.
+-- Neovim supplies more than 130 compiler plugins.
 --
--- Activate it from 'after/ftplugin/<ft>.lua' with `vim.cmd('compiler <tool>')`,
--- after which `:make <subcommand>` runs the tool and fills the quickfix list.
+-- Activate it from 'after/ftplugin/<ft>.lua' with `vim.cmd('compiler <tool>')`.
+-- Then, `:make <subcommand>` runs the tool and fills the quickfix list.
 -- See `:h write-compiler-plugin`, `:h :compiler`, `:h errorformat`.
 --
--- Why here and not directly in the ftplugin: these two options describe a program,
--- so in this file they can be reused by other filetypes, undone with
--- `:compiler make` (`:h compiler-make`), and found by whoever asks where the
--- command came from. Set inside a ftplugin they are tied to one language and
--- invisible.
+-- These two options describe a program, not a language.
+-- A compiler plugin lets other filetypes reuse them and shows where the command comes from.
+-- Use `:compiler make` to undo them (`:h compiler-make`).
+-- Options inside a ftplugin apply to only one language and do not appear as a compiler plugin.
 --
--- `CompilerSet` is a command that `:compiler` defines while sourcing this file and
--- deletes afterwards; it applies the options locally, or globally under `:compiler!`.
--- It has no Lua API, so `vim.cmd()` here is the only way, not a shortcut.
+-- `:compiler` defines `CompilerSet` while it loads this file, then deletes the command.
+-- `CompilerSet` sets local options, or global options under `:compiler!`.
+-- It has no Lua API, so use `vim.cmd()`.
 
 vim.g.current_compiler = 'mytool'
 
--- `$*` is where `:make` inserts its arguments, so that `:make test` and
--- `:make check` both work through a single definition.
+-- `:make` inserts its arguments at `$*`.
+-- Thus, `:make test` and `:make check` use the same definition.
 vim.cmd([[CompilerSet makeprg=mytool\ $*]])
 
--- Read `:h errorformat` before writing this line: it is scanf-like, matched in
--- order, and a wrong pattern silently yields an empty quickfix list.
+-- Read `:h errorformat` before you write this line.
+-- It uses scanf-like patterns and tests them in order.
+-- An incorrect pattern can produce an empty quickfix list without an error.
 --
--- It also accepts a Vim regular expression, which is what makes it able to cope
--- with output nobody designed for it - colour escapes above all. Three escapes
--- decide whether such a pattern matches, and getting one wrong produces the
--- same silence as no pattern at all, so check them against a real line first:
--- - `%#` is the regex star; a bare `*` is a literal asterisk, and `%[` a
---   literal bracket (a bare `[` opens a character class);
--- - `%\%(` opens a NON capturing group. A capturing `%\(` competes with the
---   groups `errorformat` builds for `%f` and friends and hands back the wrong
---   text - and enough of them raise `E872: Too many '('`;
--- - `CompilerSet` is `:set`, which eats one backslash of every pair, so a
---   backslash meant for the pattern is written doubled - the reason
---   '$VIMRUNTIME/compiler/tsc.vim' writes `\\,` for a comma inside its format.
+-- `errorformat` also accepts Vim regular expressions for output such as colour escapes.
+-- Test these three escape rules against a real output line to prevent silent failures:
+-- - `%#` repeats the preceding item; a bare `*` matches a literal asterisk.
+-- - `%[` matches a literal bracket; a bare `[` starts a character class.
+-- - `%\%(` starts a non-capturing group.
 --
--- Writing the format in Lua and passing it to `vim.cmd()` is what keeps it
--- readable once these stack: build the repeated part once, name it, and
--- concatenate. `vim.fn.setqflist({}, ' ', { lines = ..., efm = ... })` is the
--- cheapest way to try one - it needs no build, no config, and no `:set`.
+-- A capturing `%\(` conflicts with the groups that `errorformat` creates for `%f` and similar fields.
+-- Such groups return incorrect text, and too many cause `E872: Too many '('`.
+-- `CompilerSet` uses `:set`, which removes one backslash from each pair.
+-- Double each backslash that the pattern must receive.
+-- Thus, '$VIMRUNTIME/compiler/tsc.vim' uses `\\,` for a comma inside its format.
 --
--- Three things are worth the effort, and they are what separates a useful compiler
--- plugin from one that only compiles:
--- - the file, line and column of each message, so that `]q` jumps to the spot;
--- - `%-G` patterns discarding progress noise, so the list holds only problems;
--- - the shape of a *failing test*, which turns `:make test` into navigation of the
---   failures instead of a wall of output.
+-- Build repeated format parts once in Lua.
+-- Name them.
+-- Join them before calling `vim.cmd()` to keep escapes readable.
+-- Use `vim.fn.setqflist({}, ' ', { lines = ..., efm = ... })` to test a format.
+-- This needs no build, config, or `:set`.
+--
+-- Include these three features for a useful compiler plugin:
+-- - Record each message's file, line, and column so `]q` jumps to the problem.
+-- - Use `%-G` patterns to remove progress messages and keep only problems.
+-- - Match failing test output so `:make test` lets the user move directly to failures.
 vim.cmd([[CompilerSet errorformat=%f:%l:%c:\ %m]])
 vim.cmd([[CompilerSet errorformat+=%-G%.%#Compiling%.%#]])

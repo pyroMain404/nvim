@@ -1,21 +1,21 @@
---- 14. Which highlight actually paints a position, and with which colour.
+--- 14. Check the highlight group and colour at a position.
 ---
---- The complement of the tree-sitter probe: not "is there a capture", but
---- "which group won, and what does the colour scheme give it". Extmarks,
---- LSP semantic tokens and tree-sitter all paint the same cell, and the visible
---- result is the last one that wins - which is why a capture can be right while
---- the colour is not.
+--- The tree-sitter probe checks "is there a capture".
+--- This probe checks "which group won, and what does the colour scheme give it".
+--- Extmarks, LSP semantic tokens, and tree-sitter can colour the same cell.
+--- The last applicable highlight determines the visible result, so a correct capture can still
+--- show the wrong colour.
 ---
 --- Parameters:
----   find     text to search for, to inspect a known position
----   row, col explicit position instead of `find` (1 based row, 0 based col)
----   group    pattern one of the groups at that position must match. They are
----            reported as `<group> -> <link>` where the two differ, so the
----            capture and the group it resolves to can both be asked for
----   fg, bg   pattern the resolved colours must match ('#ff0000')
----   link     pattern the group must be linked to
+---   find: Search for this text to inspect a known position.
+---   row, col: Use this explicit position instead of `find` (1-based row, 0-based col).
+---   group: Specify the pattern that one group at this position must match.
+---          Reports show `<group> -> <link>` when names differ.
+---          Thus, checks can use the capture or its resolved group.
+---   fg, bg: Specify the patterns that resolved colours must match ('#ff0000').
+---   link: Specify the pattern that the group's link must match.
 ---
---- The file to open is given to the driver (`-File`).
+--- Give the file to open to the driver (`-File`).
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
@@ -24,10 +24,9 @@ P.run(function()
   if cursor == nil then return end
   local info = vim.inspect_pos(0, cursor[1] - 1, cursor[2])
 
-  -- Both names are kept, `@keyword.lua -> Statement`, because only the first
-  -- says where the colour comes from: a capture and a legacy syntax group
-  -- resolve to the same link, so reporting the link alone cannot tell
-  -- tree-sitter from 'syntax/lua.vim' - which is the whole question here.
+  -- Keep both names, `@keyword.lua -> Statement`, to identify the colour source.
+  -- A capture and a legacy syntax group can share a link.
+  -- The link alone cannot distinguish tree-sitter from 'syntax/lua.vim'.
   local groups, painter = {}, nil
   local add = function(name, link)
     if name == nil then return end

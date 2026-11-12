@@ -1,25 +1,23 @@
---- 8. `:make` fills the quickfix list with something navigable.
+--- 8. Check that `:make` creates quickfix entries with usable file positions.
 ---
---- An `'errorformat'` that matches nothing leaves an empty list and no error
---- message, which reads exactly like a build that succeeded. The check that
---- means something is therefore the opposite one: build something that is
---- broken on purpose, and require the entry to point at a real file and line.
+--- An `'errorformat'` that matches nothing gives an empty list without an error message.
+--- This looks like a successful build. Build a known broken file instead.
+--- Require an entry that identifies an existing file and line.
 ---
 --- Parameters:
----   make      command to run, default 'make'
----   makeprg   value to force before running, to test the format alone
----   errorformat  same, for the error format
----   before    snippet run before (to open a file that fails to compile)
----   min       minimum number of entries expected, default 1
----   valid     require an entry to have a line and a buffer whose file is on
----             disk, default true. The file has to exist: see `located` below
----   entry     which entry that has to be, default 1, or 'any'. A build tool
----             that opens its report with a banner ('[ERROR] COMPILATION
----             ERROR :' from Maven) puts a legitimately fileless entry first,
----             and demanding it of entry 1 fails on the message rather than on
----             the format
----   pattern   pattern the text of some entry must match
----   entries   how many entries to print, default 5
+---   make: Specify the command to run. The default is 'make'.
+---   makeprg: Set this value before running to test the format alone.
+---   errorformat: Set this error format before running to test the format alone.
+---   before: Run this snippet first to open a file that fails compilation.
+---   min: Specify the minimum expected entry count. The default is 1.
+---   valid: Require a line and a buffer with a file on disk. The default is true.
+---          The file must exist; see `located` below.
+---   entry: Select the entry to check. Use 1 (default) or 'any'.
+---          A build banner ('[ERROR] COMPILATION ERROR :' from Maven) can create a valid first
+---   entry without a file.
+---          Requiring a file in entry 1 then rejects the message, not the format.
+---   pattern: Specify the pattern that at least one entry's text must match.
+---   entries: Specify how many entries to print. The default is 5.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
@@ -46,13 +44,13 @@ P.run(function()
 
   local which = P.param('entry', 1)
   if P.param('valid', true) and list[1] ~= nil then
-    -- A buffer id and a line are not enough. An 'errorformat' whose `%f` is
-    -- relative to something other than the current directory still produces an
-    -- entry, and Vim resolves it against the cwd into a file that does not
-    -- exist: `]q` opens an empty buffer with a plausible name, and the entry
-    -- reports here with a perfectly good `bufnr`. Measured on a Godot project
-    -- whose paths are relative to the project root, with `:make` run from a
-    -- subdirectory. So the file has to be on disk for the entry to count.
+    -- Require an existing file, not just a buffer id and line.
+    -- An 'errorformat' with `%f` relative to another directory can still produce an entry with a
+    -- valid `bufnr`.
+    -- Vim resolves the path against the current directory, where the file might not exist.
+    -- Then `]q` opens an empty buffer with a plausible name.
+    -- This occurred with Godot paths relative to the project root when `:make` ran from a
+    -- subdirectory.
     local located = function(e)
       if e == nil or e.bufnr == 0 or e.lnum <= 0 then return false end
       local name = vim.api.nvim_buf_get_name(e.bufnr)
@@ -71,7 +69,7 @@ P.run(function()
       found ~= nil,
       vim.inspect({
         bufnr = shown.bufnr,
-        -- The name is the evidence: a wrong `%f` shows up here and nowhere else
+        -- Report the name because only this field shows an incorrect `%f`.
         name = shown.bufnr ~= 0 and vim.api.nvim_buf_get_name(shown.bufnr) or nil,
         lnum = shown.lnum,
         text = shown.text,

@@ -1,18 +1,17 @@
---- 13. The folds are the ones the 'foldexpr' promises.
+--- 13. Check that folds agree with 'foldexpr'.
 ---
---- A fold is computed per line, so it is one of the few behaviours that can be
---- read exactly instead of being tried: `foldlevel()` says what level a line
---- got, and that is what decides whether `zm` folds by hunk, by file, or by
---- nothing at all. Reading it beats opening the file and pressing keys until
---- something collapses.
+--- The configuration calculates a fold level for each line.
+--- `foldlevel()` reports that level, which determines whether `zm` folds by hunk, by file, or not
+--- at all.
+--- Read the levels instead of opening the file and trying keys until a fold closes.
 ---
 --- Parameters:
----   before   snippet that produces the buffer to fold ("vim.cmd('Git diff')")
----   find     text to search for, to report the levels around a known line
----   around   how many lines to report around it, default 3
----   levels   table of line offset (from the match) -> expected level, as
----            @{ '0' = 2; '1' = 3 }
----   closed   check that the line is inside a closed fold after `zM`
+---   before: Run this snippet to create the buffer to fold ("vim.cmd('Git diff')").
+---   find: Search for this text to report levels near a known line.
+---   around: Specify how many nearby lines to report. The default is 3.
+---   levels: Map line offsets from the match to expected levels, as
+---           @{ '0' = 2; '1' = 3 }.
+---   closed: Check that the line is inside a closed fold after `zM`.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 

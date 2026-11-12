@@ -2,41 +2,41 @@
 -- │ Filetype detection │
 -- └────────────────────┘
 --
--- Skeleton for 'ftdetect/<lang>.lua'. Copy, rename after the language, keep only
--- the rules that are needed.
+-- Use this template for 'ftdetect/<lang>.lua'.
+-- Copy it with the language name.
+-- Keep only the necessary rules.
 --
--- Files in 'ftdetect/' are sourced as part of filetype detection, so this is the
--- one place where a filetype can be taught before anything else runs: no ftplugin
--- loads, no parser starts and no language server attaches until the filetype is
--- set. See `:h ftdetect` and `:h vim.filetype.add()`.
+-- Neovim loads files in 'ftdetect/' during filetype detection,
+-- before ftplugins, parsers, or language servers start.
+-- Set the filetype here before those features run.
+-- See `:h ftdetect` and `:h vim.filetype.add()`.
 --
--- Check first whether this file is needed at all — Neovim already knows several
--- hundred filetypes:
+-- First, check if Neovim already knows the filetype; it supports several hundred filetypes:
 --   :=vim.filetype.match({ filename = 'example.xyz' })
 --
--- For a format met once in a single file, a modeline in that file (`:h modeline`)
--- is the proportionate answer and costs this config nothing.
+-- For a format in only one file, use a modeline in that file (`:h modeline`).
+-- A modeline needs no change to this config.
 
 vim.filetype.add({
-  -- Keyed by extension without the dot. The cheapest and most common rule.
+  -- Use the extension without its dot as the key for this simple, common rule.
   extension = {
     myext = 'mylang',
   },
 
-  -- Keyed by full file name, for files that carry no extension.
+  -- Use the full file name as the key for files without extensions.
   filename = {
     ['Mylangfile'] = 'mylang',
     ['.mylangrc'] = 'mylang',
   },
 
-  -- Keyed by Lua pattern matched against the full path. Used last, so keep it for
-  -- what the two above can not express: a name that only means something inside a
-  -- certain directory.
+  -- Use a Lua pattern that matches the full path as the key.
+  -- Neovim checks patterns last.
+  -- Use them only for cases the other rules cannot express, such as names that depend on a directory.
   pattern = {
     ['.*/mylang/.*%.conf'] = 'mylang',
   },
 })
 
--- A new filetype that should reuse an existing tree-sitter parser does not need a
--- parser of its own, only the mapping (`:h vim.treesitter.language.register()`):
+-- Map a new filetype to an existing tree-sitter parser instead of adding a parser
+-- (`:h vim.treesitter.language.register()`).
 -- vim.treesitter.language.register('toml', 'mylang')

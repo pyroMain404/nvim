@@ -1,19 +1,17 @@
---- 5. Where the windows ended up.
+--- 5. Check the final window positions.
 ---
---- A layout is the one thing that cannot be judged from a description of the
---- code: the position and the size of every window are the observable fact, and
---- they are cheap to read. Sending the keys one at a time and printing the
---- layout after each is what shows the second file behaving differently from
---- the first, which is exactly where window code breaks.
+--- A code description cannot prove a layout. Each window's position and size give direct evidence
+--- at low cost.
+--- Send keys one at a time. Print the layout after each key.
+--- This shows differences between the first and second files, where window code often fails.
 ---
 --- Parameters:
----   before   snippet that opens the starting state ("vim.cmd('Git diff')")
----   keys     keys to send, one snapshot after each; a list, in order
----   from     'source' (default) to send every key from the window `before`
----            ended in, 'current' to send it from wherever the previous key led
----   count    number of windows expected at the end
----   ignore   pattern of buffer names to leave out of the report (floating
----            notifications and the like)
+---   before: Run this snippet to open the initial state ("vim.cmd('Git diff')").
+---   keys: Send this list in order and take one snapshot after each key.
+---   from: Use 'source' (default) to send every key from the window that `before` selected.
+---         Use 'current' to send each key from the window that the previous key selected.
+---   count: Specify the expected final window count.
+---   ignore: Exclude buffer names that match this pattern, such as floating notifications.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')
 
