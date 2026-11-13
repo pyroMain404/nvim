@@ -1,4 +1,4 @@
---- 9. Let a script fail on `:checkhealth` results.
+--- 9. Run `:checkhealth` in a form that a script can fail on.
 ---
 --- A large green health report can hide one ERROR during visual inspection.
 --- Parsing the report gives a low-cost regression check.
@@ -9,6 +9,7 @@
 ---   sections: Specify the sections to check. The default is 'config', this repository's check.
 ---   fail_on: Use 'ERROR' (default) or 'WARNING' for stricter checks.
 ---   allow: Ignore lines that match these patterns for known, accepted conditions.
+---
 ---   show: Print the complete report too. The default is false.
 ---   wait: Allow time for slow health checks. Start with 4000+ ms.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))

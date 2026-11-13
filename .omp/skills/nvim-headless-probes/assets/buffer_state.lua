@@ -11,6 +11,7 @@
 ---   keys: Send this list of keys in order before inspection.
 ---   options: Report these buffer or window options ('filetype', 'foldmethod').
 ---   vars: Report these `b:` variables ('diff_ref', 'minidiff_summary').
+---
 ---   expect: Map each name to a pattern. A name identifies an option, a variable,
 ---           or 'name', 'lines', 'cursor'. Patterns match `tostring(actual)`.
 ---           Options first pass through `vim.inspect()`: empty 'buftype' matches

@@ -2,7 +2,7 @@
 ---
 --- A code description cannot prove a layout. Each window's position and size give direct evidence
 --- at low cost.
---- Send keys one at a time. Print the layout after each key.
+--- The probe sends the keys one at a time and prints the layout after each key.
 --- This shows differences between the first and second files, where window code often fails.
 ---
 --- Parameters:

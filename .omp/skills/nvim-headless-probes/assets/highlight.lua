@@ -10,8 +10,9 @@
 ---   find: Search for this text to inspect a known position.
 ---   row, col: Use this explicit position instead of `find` (1-based row, 0-based col).
 ---   group: Specify the pattern that one group at this position must match.
----          Reports show `<group> -> <link>` when names differ.
----          Thus, checks can use the capture or its resolved group.
+---          Reports show `<group> -> <link>` when the two names differ.
+---          A pattern can thus match the capture and the group it resolves to.
+---
 ---   fg, bg: Specify the patterns that resolved colours must match ('#ff0000').
 ---   link: Specify the pattern that the group's link must match.
 ---
@@ -24,8 +25,9 @@ P.run(function()
   if cursor == nil then return end
   local info = vim.inspect_pos(0, cursor[1] - 1, cursor[2])
 
-  -- Keep both names, `@keyword.lua -> Statement`, to identify the colour source.
-  -- A capture and a legacy syntax group can share a link.
+  -- The probe keeps both names, `@keyword.lua -> Statement`, because only the first name shows
+  -- where the colour comes from.
+  -- A capture and a legacy syntax group can share the same link.
   -- The link alone cannot distinguish tree-sitter from 'syntax/lua.vim'.
   local groups, painter = {}, nil
   local add = function(name, link)

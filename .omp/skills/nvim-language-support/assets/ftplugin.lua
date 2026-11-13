@@ -32,7 +32,8 @@ vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 
 -- Select the compiler for this filetype so `:make` fills the quickfix list.
 -- `:compiler` has no Lua API and sets its options through a temporary command.
--- Thus, use `vim.cmd()` to call it.
+-- Thus `vim.cmd()` is the only way to call it,
+-- and here it is the right tool, not a shortcut.
 -- vim.cmd('compiler mytool')
 
 -- Use buffer-local MINI configuration (`:h mini.nvim-buffer-local-config`).
@@ -72,7 +73,8 @@ vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 -- Give each entry an optional `compiler`.
 -- An entry can have a `run` without a `compiler`, and the reverse.
 -- A `:compiler` missing from the runtime raises `E666` when this file loads.
--- See 'after/ftplugin/java.lua' for an example.
+-- See 'after/ftplugin/java.lua' and `M.java_builds` in 'lua/config/run.lua'
+-- for an example of a resolver table.
 
 -- If this file sets many options and defines commands, define how Neovim must undo them
 -- (`:h undo_ftplugin`).

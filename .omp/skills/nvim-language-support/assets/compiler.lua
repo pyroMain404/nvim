@@ -13,14 +13,16 @@
 -- Then, `:make <subcommand>` runs the tool and fills the quickfix list.
 -- See `:h write-compiler-plugin`, `:h :compiler`, `:h errorformat`.
 --
--- These two options describe a program, not a language.
--- A compiler plugin lets other filetypes reuse them and shows where the command comes from.
--- Use `:compiler make` to undo them (`:h compiler-make`).
--- Options inside a ftplugin apply to only one language and do not appear as a compiler plugin.
+-- A compiler plugin is the better place for these options than a ftplugin.
+-- They describe a program, not a language.
+-- In this file, other filetypes can reuse them.
+-- `:compiler make` can undo them (`:h compiler-make`).
+-- A user can find where the command came from.
+-- Options that a ftplugin sets apply to one language and stay invisible.
 --
 -- `:compiler` defines `CompilerSet` while it loads this file, then deletes the command.
 -- `CompilerSet` sets local options, or global options under `:compiler!`.
--- It has no Lua API, so use `vim.cmd()`.
+-- It has no Lua API, so `vim.cmd()` is the only way here, not a shortcut.
 
 vim.g.current_compiler = 'mytool'
 

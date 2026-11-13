@@ -14,12 +14,16 @@
 ---   insert: Append this list of lines before waiting. Keep the buffer syntactically valid.
 ---           Many tools (`stylua`, some servers) report nothing for files they cannot parse.
 ---   at: Specify the 0-based insertion line. The default is the buffer end.
+---
 ---   count: Specify the expected diagnostic count.
 ---   expect: Specify the pattern that at least one message must match.
 ---   absent: Specify the pattern that no message can match.
 ---           This distinguishes a declared global (`Config`) from a typing error.
 ---   severity: Check only this severity: ERROR, WARN, INFO, HINT.
----   ready: Wait for the server to finish loading first. The default is true.
+---
+---   ready: Check that the server finished loading. The default is true.
+---          The probe waits for loading in every case.
+---
 ---   quiet: Specify the silence period that ends the wait. The default is 700 ms.
 ---   timeout: Specify the diagnostic wait limit. The default is 30000 ms.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
@@ -43,8 +47,8 @@ P.run(function()
         or ''
     )
   )
-  -- A client without a root uses single file mode. Some servers publish nothing in this mode.
-  -- Report the missing root to explain an empty diagnostic report.
+  -- A client without a root uses single file mode, and some servers publish nothing in this mode.
+  -- The probe reports the missing root, so an empty report has a stated cause.
   if clients[1] and clients[1].root_dir == nil then
     P.info('this client has no root_dir: single file mode')
   end

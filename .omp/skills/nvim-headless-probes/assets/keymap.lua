@@ -1,7 +1,7 @@
 --- 4. Check a mapping's presence, source, and effect.
 ---
---- "the mapping does not work" can mean a missing mapping or a buffer-local mapping that
---- overrides a global mapping.
+--- The statement "the mapping does not work" can mean that the mapping is missing.
+--- It can also mean that a buffer-local mapping overrides the global mapping.
 --- It can also mean that the mapping exists but has the wrong effect.
 --- `maparg()` checks the definition. Sending the keys checks the effect.
 ---
@@ -10,6 +10,7 @@
 ---   mode: Specify the mode to inspect. The default is 'n'.
 ---   before: Run this snippet to open the mapping's buffer.
 ---   expect: Specify the pattern that the right-hand side or description must match.
+---
 ---   press: Send the keys after checking and report the changes.
 ---   after: Run this snippet after the keys to report their effect.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))

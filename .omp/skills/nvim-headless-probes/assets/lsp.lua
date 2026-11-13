@@ -12,9 +12,11 @@
 ---   clients: Specify the expected attached client count. The default is 1.
 ---   methods: Specify required LSP methods, such as 'textDocument/formatting'.
 ---   settings: Report this dotted path in the client settings.
+---
 ---   expect: Specify the pattern that the value at `settings` must match.
 ---   wait: Specify the deferred configuration grace period, in ms.
 ---   timeout: Specify the attachment wait limit. The default is 10000 ms.
+---
 ---   ready: Wait for loading to finish before reading capabilities. The default is false.
 ---          Set this to true for every server that registers capabilities dynamically, not in the `initialize` reply.
 ---          `jdtls` does.
@@ -39,16 +41,17 @@ P.run(function()
   )
   local attached = vim.lsp.get_clients({ bufnr = 0 })
 
-  -- The server registers a capability through `client/registerCapability` only after its first
-  -- project pass.
+  -- A capability that a server registers with `client/registerCapability` exists only after
+  -- the server finishes its first pass over the project.
   if P.param('ready', false) and #attached > 0 then
     local idle, ms, note = P.wait_lsp({ timeout = P.param('timeout', 10000) })
     P.check('the server finished loading', idle, ('%dms - %s'):format(ms, note))
   end
 
-  -- Absent clients usually mean the server is not enabled or Neovim's inherited PATH lacks its
-  -- executable.
-  -- Report both conditions to help explain "no client".
+  -- When no client attaches, the cause is almost always one of two conditions.
+  -- The server is not enabled, or its executable is not on the PATH that Neovim inherited.
+  -- The probe reports the server configuration and the executable path, so "no client" has
+  -- a stated cause.
   if server ~= nil then
     local config = vim.lsp.config[server]
     P.info(

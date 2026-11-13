@@ -11,6 +11,7 @@
 ---   pattern: Specify the pattern that the registered autocommand must match.
 ---   before: Run this snippet first to open the relevant buffer.
 ---   fire: Also trigger the event with `:doautocmd`. The default is false.
+---
 ---   after: Run this snippet after the event to report its effect.
 ---   min: Specify the minimum matching autocommand count. The default is 1.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))

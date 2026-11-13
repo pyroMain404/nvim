@@ -10,15 +10,14 @@
 --- Failure meanings:
 ---   - No client attached: The server refused to start, usually because its JDK is too old.
 ---   - No `MISE_JAVA_VERSION`: 'after/lsp/jdtls.lua' found no JDK through `mise`. The server used the project JDK.
----   - No runtime for the project release: The required JDK is absent. The server checks against the wrong class library.
 ---
+---   - No runtime for the project release: The required JDK is absent. The server checks against the wrong class library.
 ---   - No build import: Import failed. The server uses a bare JDK for answers, including the release.
 ---
 --- Parameters:
 ---   before: Run this snippet first when the buffer needs to open again.
 ---   release: Specify the expected project release in jdtls form ('1.8', '11', '21').
----            Without this optional value, the probe reports the server answer without an
----   assertion.
+---            Without this optional value, the probe reports the server answer without an assertion.
 ---   timeout: Specify the project import wait limit. The default is 120000 ms.
 ---            The first import downloads build dependencies.
 ---
@@ -35,8 +34,8 @@ P.run(function()
   P.eval('before')
   local timeout = P.param('timeout', 120000)
 
-  -- Check attachment first, rather than assuming it. A server with a JDK below its minimum cannot
-  -- attach.
+  -- Attachment is the first assertion, not a precondition.
+  -- A server that gets a JDK below its minimum cannot attach.
   local idle, ms, note = P.wait_lsp({ timeout = timeout })
   P.check(
     'jdtls attached and finished importing',
@@ -58,9 +57,11 @@ P.run(function()
   local server_jdk = vim.tbl_get(client.config, 'cmd_env', 'MISE_JAVA_VERSION')
   P.check('the server was given a JDK of its own', server_jdk ~= nil, server_jdk)
 
-  -- Report the project JDK separately from the server JDK. Do not assert its version: 8 and 11
-  -- are valid.
-  -- The configuration works correctly when an older project JDK does not prevent server startup.
+  -- This is the JDK that the project resolves to.
+  -- It is a different thing from the server JDK, and this probe shows the difference.
+  -- The probe reports this value and never asserts it.
+  -- The versions 8 and 11 are normal answers.
+  -- The configuration is correct when such an older JDK does not stop the server.
   local project_jdk = vim.system({ 'java', '-version' }):wait()
   P.info('project JDK: ' .. vim.split(vim.trim(project_jdk.stderr or ''), '\n')[1])
 
@@ -88,9 +89,9 @@ P.run(function()
   -- An unreachable repository or an unresolved parent POM can prevent import.
   -- jdtls then answers from a bare JDK project at its own release, so all later checks can pass
   -- incorrectly.
-  -- On '~/workspace/RGI/assimoco-pass-platform-batch', absent Maven credentials caused an empty
-  -- project list.
-  -- The server reported compliance 21 while 'pom.xml' specified 11.
+  -- Measured on '~/workspace/RGI/assimoco-pass-platform-batch' with the Maven credentials unset:
+  -- the project list was empty.
+  -- The server reported compliance 21, and 'pom.xml' specified 11.
   local projects = execute('java.project.getAll', {}) or {}
   P.check(
     'the build was imported',

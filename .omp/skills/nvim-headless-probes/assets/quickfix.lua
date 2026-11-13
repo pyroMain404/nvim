@@ -9,13 +9,16 @@
 ---   makeprg: Set this value before running to test the format alone.
 ---   errorformat: Set this error format before running to test the format alone.
 ---   before: Run this snippet first to open a file that fails compilation.
+---
 ---   min: Specify the minimum expected entry count. The default is 1.
 ---   valid: Require a line and a buffer with a file on disk. The default is true.
 ---          The file must exist; see `located` below.
----   entry: Select the entry to check. Use 1 (default) or 'any'.
+---
+---   entry: Select the entry to check. Use an entry number (default 1) or 'any'.
 ---          A build banner ('[ERROR] COMPILATION ERROR :' from Maven) can put a legitimate entry
 ---          without a file first.
 ---          Requiring a file in entry 1 then rejects the message, not the format.
+---
 ---   pattern: Specify the pattern that at least one entry's text must match.
 ---   entries: Specify how many entries to print. The default is 5.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))

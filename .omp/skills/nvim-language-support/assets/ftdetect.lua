@@ -18,7 +18,8 @@
 -- A modeline needs no change to this config.
 
 vim.filetype.add({
-  -- Use the extension without its dot as the key for this simple, common rule.
+  -- The key is the extension without the dot.
+  -- This rule is the cheapest and the most common.
   extension = {
     myext = 'mylang',
   },
@@ -30,13 +31,13 @@ vim.filetype.add({
   },
 
   -- Use a Lua pattern that matches the full path as the key.
-  -- Neovim checks patterns last.
+  -- Neovim checks patterns after file names and before extensions.
   -- Use them only for cases the other rules cannot express, such as names that depend on a directory.
   pattern = {
     ['.*/mylang/.*%.conf'] = 'mylang',
   },
 })
 
--- Map a new filetype to an existing tree-sitter parser instead of adding a parser
--- (`:h vim.treesitter.language.register()`).
+-- A new filetype that reuses an existing tree-sitter parser needs only this mapping,
+-- not a parser of its own (`:h vim.treesitter.language.register()`):
 -- vim.treesitter.language.register('toml', 'mylang')

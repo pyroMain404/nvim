@@ -6,8 +6,8 @@
 ---
 --- Parameters:
 ---   module: Specify the required Lua module ('mini.git').
----   force: Use `require()` instead of waiting to distinguish "not loaded yet"
----          from "loading throws".
+---   force: Use `require()` after the wait if the module is still not loaded.
+---          This distinguishes "not loaded yet" from "loading throws".
 ---   field: Read this dotted path in the module ('config.command.split').
 ---   expect: Specify the pattern that the value at `field` must match.
 ---   wait: Specify the grace period for `Config.later()`, in ms.

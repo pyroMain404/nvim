@@ -10,6 +10,7 @@
 --- Parameters:
 ---   file: Specify the file to open in the measured session. The default is none.
 ---   budget: Specify the total time limit in milliseconds. The check fails above this limit.
+---
 ---   top: Specify how many of the slowest entries to print. The default is 12.
 ---   filter: Keep report entries that match this pattern ('plugin/').
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))

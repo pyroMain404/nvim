@@ -14,18 +14,21 @@
 -- This file adds only Godot-specific settings to the base '.nvim.lua' template,
 -- 'nvim-project-environment/assets/nvim.lua'.
 
--- 1. Set the port that the Godot editor uses to open files in this Neovim instance.
---    Use it with Godot's `Exec Flags`:
+-- 1. This is the port that the Godot editor uses to open files in this Neovim instance.
+--    It goes together with Godot's own `Exec Flags`:
 --      --server 127.0.0.1:55432 --remote-send "<C-\><C-N>:e {file}<CR>:call cursor({line},{col})<CR>"
 --
 --    `serverstart()` adds a second listener.
 --    `v:servername` keeps the default named pipe, and `serverlist()` shows both listeners, as measured.
---    A second bind on the same port raises an error, so use `pcall`.
---    Two Neovim instances can open the same game; the first keeps the port.
+--    A second bind on the same port raises an error.
+--    `pcall` catches it, because two Neovim instances on the same game are not an error.
+--    The first instance keeps the port.
 --
--- NOTE: Use TCP, not a named pipe; Windows needs `//./pipe/<name>`, unlike other systems.
---    `--listen {project}/server.pipe` creates a file inside the repository.
---    Exclude that file from version control. Hide it in every picker.
+-- NOTE: The port uses TCP, not a named pipe.
+--    Windows needs the form `//./pipe/<name>`, which other systems write differently.
+--    The common recipe `--listen {project}/server.pipe` creates a file inside the repository.
+--    Exclude that file from version control.
+--    Hide it in every picker.
 local ok, err = pcall(vim.fn.serverstart, '127.0.0.1:55432')
 if not ok then
   vim.notify('Godot editor port: ' .. tostring(err), vim.log.levels.WARN)

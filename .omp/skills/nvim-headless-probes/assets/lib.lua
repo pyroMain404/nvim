@@ -1,7 +1,7 @@
 --- This library supplies shared probe functions for this directory.
 ---
---- Each probe runs in a real Neovim session through `-c 'luafile <probe>'` with the user's
---- configuration loaded.
+--- Each probe runs in a real Neovim session with the user's configuration loaded.
+--- 'run.ps1' sources it with `-S <probe>`, or with `dofile()` in a session.
 --- Parameters arrive as JSON in `$env:NVIM_PROBE`, which 'run.ps1' sets, or through `vim.g.probe`
 --- during manual sourcing.
 --- The probe does not hardcode the values to inspect.
@@ -168,7 +168,7 @@ end
 
 --- Wait for a language server to attach to the buffer and finish loading.
 ---
---- Use separate waits because attachment and loading failures differ.
+--- The function uses two waits, because attachment and loading fail differently.
 --- A client that never attaches suggests an absent executable or a server that is not enabled.
 --- An indexing server returns a "loading" message instead of the answer, which can look like a
 --- configuration failure.
@@ -176,8 +176,8 @@ end
 ---
 --- An empty status does not prove completion.
 --- Servers create successive progress tokens; `lua_ls` uses one per scope.
---- Short empty gaps occur between tokens. Wait for `quiet` milliseconds of continuous silence
---- instead of the first gap.
+--- Short empty gaps occur between tokens.
+--- This function waits for `quiet` milliseconds of continuous silence, not for the first gap.
 ---
 --- Return `ok, ms, note`. Report `ms` to distinguish "slow" from "stuck", which a fixed wait
 --- cannot do.
@@ -209,9 +209,10 @@ end
 
 --- Wait for buffer diagnostics to stop changing.
 ---
---- `DiagnosticChanged` occurs on each publication. A server can publish an empty list before the
---- complete list.
---- Waiting only for the event can give incomplete results. Wait for silence after it instead.
+--- `DiagnosticChanged` occurs on each publication.
+--- A server can publish an empty list before the complete list.
+--- Waiting only for the event can give incomplete results, so this function waits for silence
+--- after the event.
 function M.wait_diagnostics(opts)
   opts = opts or {}
   local buf = opts.bufnr or 0
@@ -238,9 +239,10 @@ M.ABORT = '<probe finished>'
 
 --- Print the report and exit with a meaningful code.
 ---
---- For `session = true`, store the report in `g:probe_result` and the failure count in
---- `g:probe_failed` instead.
---- The driver reads both through the RPC socket. Keep the instance alive for the next probe.
+--- Inside a session (`session = true`), `finish()` does not print the report and does not exit.
+--- It stores the report in `g:probe_result` and the failure count in `g:probe_failed`.
+--- The driver reads both through the RPC socket.
+--- The instance stays alive for the next probe.
 function M.finish()
   local failed = 0
   for _, r in ipairs(results) do

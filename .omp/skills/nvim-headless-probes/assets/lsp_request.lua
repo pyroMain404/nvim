@@ -18,12 +18,16 @@
 ---   find: Search with this pattern to put the cursor on the required symbol.
 ---   line: Use this explicit 1-based line when no pattern fits.
 ---   col: Specify a 1-based column or an offset within the match.
+---
 ---   server: Specify the client name. The default is the first attached client.
 ---   count: Specify the expected result count.
 ---   expect: Specify the pattern that at least one rendered result must match.
 ---   absent: Specify the pattern that no rendered result can match.
+---
 ---   resolve: Resolve each item before rendering. Unresolved code lenses have no `command`.
----   ready: Wait for the server to finish loading first. The default is true.
+---   ready: Check that the server finished loading. The default is true.
+---          The probe waits for loading in every case.
+---
 ---   before: Run this snippet first.
 ---   timeout: Specify the wait limit per request. The default is 15000 ms.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
@@ -64,7 +68,7 @@ end
 
 --- These requests resolve items for use.
 --- A server can send code lenses without `command` and supply it only on demand.
---- An unresolved code lens thus has no title (`:h codeLens/resolve`).
+--- An unresolved code lens thus has no title.
 local resolvers = {
   ['textDocument/codeLens'] = 'codeLens/resolve',
   ['textDocument/codeAction'] = 'codeAction/resolve',

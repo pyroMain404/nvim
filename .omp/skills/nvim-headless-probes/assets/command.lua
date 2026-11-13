@@ -1,14 +1,16 @@
 --- 12. Check that a user command exists and runs without an error.
 ---
---- A plugin that loads through `Config.later()` defines its commands after startup, not during
---- the first seconds.
---- Thus, "unknown command" does not prove failure before deferred loading finishes.
---- This probe waits, reports the command and its source, and can run it.
+--- A command that a plugin defines after it loads through `Config.later()` is absent during
+--- the first seconds of a session.
+--- It is present afterward.
+--- Thus "unknown command" does not prove failure before the deferred part has run.
+--- This probe waits, reports the command and its definition, and can run it.
 ---
 --- Parameters:
 ---   name: Specify the required command without the colon ('Git').
 ---   buffer: Look for a buffer-local command instead of a global command.
 ---   run: Specify command arguments ('diff HEAD~1'). Omit this parameter to check only.
+---
 ---   expect: Specify the pattern that the definition must match.
 ---   before: Run this snippet first.
 ---   after: Run this snippet after the command to report its effect.

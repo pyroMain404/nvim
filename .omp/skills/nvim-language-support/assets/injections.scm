@@ -5,9 +5,9 @@
 ;
 ; Keep `; extends` on the first line (:h treesitter-query-modeline-extends).
 ; It adds these patterns to the language query from 'nvim-treesitter'.
-; Without it, this file replaces that query and removes all its injections or highlights
-; without an error or message.
-; This missing line commonly breaks language support that worked before.
+; Without it, this file replaces that query and removes every injection or highlight
+; that the plugin provided, with no error and no message.
+; A missing `; extends` is the most common way to break a language that worked before.
 ;
 ; First, check if the parser already supports the case.
 ; Use :InspectTree to see the tree.
@@ -43,7 +43,7 @@
  (#eq? @_name "query")
  (#set! injection.language "sql"))
 
-; This dynamic language rule gets the language from a fenced block.
+; Dynamic language: the fenced block names its own language.
 ; ((fenced_code_block
 ;    (info_string) @injection.language
 ;    (code_fence_content) @injection.content))

@@ -3,9 +3,9 @@
 -- └───────────────────────────────┘
 --
 -- Use this template for 'after/lsp/<server>.lua'.
--- Copy it with the server name from 'nvim-lspconfig'.
--- Add that name to `servers` in 'lua/config/toolchain.lua'.
---
+-- Copy this file.
+-- Rename the copy after the server, with the name that 'nvim-lspconfig' uses.
+-- Add that same name to `servers` in 'lua/config/toolchain.lua'.
 -- See 'after/lsp/lua_ls.lua' for an example in this config.
 --
 -- Source: <upstream URL of the server>
@@ -51,9 +51,9 @@ return {
   --   -- Reduce the list to prevent this behavior.
   --   client.server_capabilities.completionProvider.triggerCharacters = { '.', ':' }
   --
-  --   -- Inlay hints show inferred types and parameter names as virtual text,
-  --   -- but move the displayed text.
-  --   -- Propose this option to the user instead of enabling it without agreement.
+  --   -- Inlay hints show inferred types and parameter names as virtual text.
+  --   -- They are useful and intrusive in equal measure, and they shift the text.
+  --   -- Propose them to the user instead of enabling them without agreement.
   --   vim.lsp.inlay_hint.enable(true, { bufnr = buf_id })
   --
   --   -- Define buffer-local mappings only for features specific to this server.

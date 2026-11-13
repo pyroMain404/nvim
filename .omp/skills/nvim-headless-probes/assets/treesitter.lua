@@ -9,6 +9,7 @@
 ---   lang: Specify the language to check. The default is the buffer filetype.
 ---   find: Search for this text to position the cursor at a known location.
 ---   row, col: Use this explicit position instead of `find` (1-based row, 0-based col).
+---
 ---   node: Specify the expected node type at this position ('string_content').
 ---   capture: Specify the expected capture without the at sign.
 ---   injected: Specify the expected injected language at this position.

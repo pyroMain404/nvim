@@ -2,13 +2,18 @@
 -- │ Health check │
 -- └──────────────┘
 --
--- Report which external programs are installed, their versions, and which features stop working when one is missing.
+-- This file reports the state of what this config assumes about its environment.
+-- It shows which external programs are installed, their versions,
+-- and which features stop working when one is missing.
 -- Run this check with `:checkhealth config`.
 --
 -- `:checkhealth` finds each 'lua/**/health.lua' on `:h 'runtimepath'`.
--- It names each check after its path, so this check uses `config`.
--- `lua/config/run.lua` and `lua/config/mise.lua` also use 'lua/', but callers load them by name.
--- See "Where a change goes" in 'AGENTS.md' to choose how to load a new module.
+-- It names each check after its path, so this check is reachable as `config`.
+-- Other modules also live under 'lua/', for example `lua/config/run.lua` and `lua/config/mise.lua`.
+-- Callers require them by name, and `:checkhealth` does not find them by path.
+--
+-- See "Where a change goes" in 'AGENTS.md' for the rule for new modules.
+-- This rule distinguishes health checks from modules that callers require by name.
 --
 -- Use one `check_*()` function for each area.
 -- Call these functions from `M.check()` in reading order.
@@ -17,11 +22,11 @@
 -- Keep these rules when you add a section (see `:h health-dev`):
 -- - Start with `health.start()`.
 -- - Return before `health.start()` if the check does not apply.
--- - Always give `warn()` and `error()` a second argument with advice and a command to correct the problem.
--- - End a section without problems with `health.ok()` to show that the check ran.
--- - Report the version, not only the presence, because old tools can cause less clear failures.
---
--- A warning without a command sends the reader elsewhere.
+-- - Always give `warn()` and `error()` a second argument with advice.
+--   A warning without a command to run sends the reader elsewhere.
+-- - End a section that found no problem with `health.ok()`, never with silence.
+-- - Report the version, not only the presence, because an outdated tool fails
+--   in more confusing ways than a missing tool.
 
 local M = {}
 local health = vim.health
@@ -69,8 +74,11 @@ end
 
 -- Language toolchains ========================================================
 -- Use one section for each supported language.
--- Answer the questions a user asks when something does not work:
--- Report the installed toolchain, its active version, language server access, and parser installation.
+-- Each section answers the questions that a user asks when something does not work.
+-- Is the toolchain present?
+-- Which version is active in this session?
+-- Can Neovim reach the language server?
+-- Is the parser installed?
 --
 -- Neovim uses the environment of the shell that starts it.
 -- The active toolchain can differ from the toolchain in a new terminal.
