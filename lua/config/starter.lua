@@ -65,7 +65,7 @@ end
 -- Otherwise (`substitute`, or `merge` without a base), it returns only the project menu, with no
 -- builtin items after it.
 -- The project owns the menu.
--- The default screen never serves as a base.
+-- `merge` can have no base because the default screen is never a base.
 local function project_menu(base)
   local start, root = require('config.project').contract('start')
   if not start then return base end

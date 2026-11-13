@@ -6,11 +6,10 @@
 --- appear here first.
 ---
 --- Parameters:
----   sections: Specify the sections to check. The default is 'config', this repository's check.
----   fail_on: Specify 'ERROR' (default) or 'WARNING'. 'WARNING' is stricter.
+---   sections: Specify the sections to check; the default is 'config', this repository's check.
+---   fail_on: Specify 'ERROR' (default) or 'WARNING', which is stricter.
 ---   allow: Ignore lines that match these patterns for known, accepted conditions.
----
----   show: Print the complete report too. The default is false.
+---   show: Print the complete report too; the default is false.
 ---   wait: Allow time for slow health checks. Start with 4000+ ms.
 local here = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
 local P = dofile(here .. '/lib.lua')

@@ -65,7 +65,7 @@ vim.o.cursorlineopt  = 'screenline,number' -- This shows the cursor line per scr
 vim.o.fillchars = 'eob: ,fold:╌'
 vim.o.listchars = 'extends:…,nbsp:␣,precedes:…,tab:> '
 
-vim.o.foldlevel   = 10       -- Folds stay open by default; a lower value closes more folds.
+vim.o.foldlevel   = 10       -- Folds stay open by default. Set a value of 0 or 1 to fold.
 vim.o.foldmethod  = 'indent' -- This folds by indentation level.
 vim.o.foldnestmax = 10       -- This limits the number of fold levels.
 vim.o.foldtext    = ''       -- This shows the fold text with its highlighting.

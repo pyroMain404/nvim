@@ -10,7 +10,8 @@ local M = {}
 local health = vim.health
 local toolchain = require('config.toolchain')
 
--- NOTE: Windows console tools can print carriage returns (`java --version`).
+-- NOTE: Windows console tools print a carriage return at the end of each line.
+-- Multi-line output such as `java --version` therefore keeps one on the first line.
 -- The first `trim` removes only the carriage return at the end of the whole output.
 -- The second `trim` removes the carriage return at the end of the first line.
 local function first_line(cmd)
@@ -184,8 +185,8 @@ local function extra_angular(language)
     -- NOTE: `ngserver` loads the project's language service.
     -- Neovim starts it through a `mise` shim, and the shim resolves its version from the current
     -- directory.
-    -- The advice therefore pins the major version in the project's mise.toml, not in the global
-    -- mise.toml.
+    -- The advice therefore tells the user to pin the major version in the project's mise.toml,
+    -- not in the global mise.toml.
     local manifest = vim.fs.joinpath(root, 'package.json')
     local ok, blob = pcall(vim.fn.readblob, manifest)
     local deps = ok and (vim.json.decode(blob) or {}).dependencies or {}

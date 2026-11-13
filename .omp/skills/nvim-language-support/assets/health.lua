@@ -11,7 +11,8 @@
 -- It names each check after its path, so this check is reachable as `config`.
 -- Other modules also live under 'lua/', for example `lua/config/run.lua` and `lua/config/mise.lua`.
 -- Callers require them by name, and `:checkhealth` does not find them by path.
--- The rule in "Where a change goes" in 'AGENTS.md' determines the type of each new module.
+-- The "Where a change goes" rule in 'AGENTS.md' selects path discovery or loading by name
+-- for each new module.
 --
 -- Use one `check_*()` function for each area.
 -- Call these functions from `M.check()` in reading order.

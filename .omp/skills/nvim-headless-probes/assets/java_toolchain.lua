@@ -12,10 +12,10 @@
 ---     than its minimum.
 ---   - No `MISE_JAVA_VERSION`: 'after/lsp/jdtls.lua' found no JDK through `mise`; the server used
 ---     the project JDK.
----   - No runtime for the project release: The required JDK is absent.
----     The server checks against the wrong class library.
----   - No build import: Import failed.
----     The server uses a bare JDK for answers, including the release.
+---   - No runtime for the project release: The installed JDKs lack the release that the project
+---     compiles against. The server checks against the wrong class library.
+---   - No build import: The import failed.
+---     The server answers from a bare JDK instead of the build, including the release.
 ---
 --- Parameters:
 ---   before: Run this snippet first when the buffer needs to open again.
@@ -92,6 +92,7 @@ P.run(function()
   -- An unreachable repository or an unresolved parent POM can prevent import.
   -- jdtls then answers from a bare JDK project at its own release.
   -- Every later check can then pass while nothing in the buffer comes from the build.
+  -- Such a probe would pass anyway.
   --
   -- Measurements on '~/workspace/RGI/assimoco-pass-platform-batch' with the Maven credentials
   -- unset showed an empty project list.
