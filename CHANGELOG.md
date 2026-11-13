@@ -1,6 +1,12 @@
 ## 2026-11-13
 
-- Move “Close review” from `<Leader>rc` to `<Leader>rr`, and “Commit files” from `<Leader>rp` to `<Leader>rc`.
+- Breaking mapping change: move “Close review” from `<Leader>rr` to `<Leader>rq`. `<Leader>rr` now runs “Resume”.
+
+- Resume opens the last review successfully closed with `<Leader>rq` in the current Neovim session.
+  It keeps the file list, label, and diff reference without a new Git query.
+  Resume skips files that no longer exist and asks before opening a large review.
+
+- Move “Commit files” from `<Leader>rp` to `<Leader>rc`.
 
 - Move the menu of `:Obsidian` commands in a vault note from `<Leader>j` to `<Leader>ej`, under the other `<Leader>e` mappings.
 

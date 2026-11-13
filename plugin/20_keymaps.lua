@@ -234,7 +234,8 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',            'Zoom toggle')
 nmap_leader('ra', "<Cmd>lua require('config.review').staged()<CR>",      'Added files')
 nmap_leader('rc', "<Cmd>lua require('config.review').commit_only()<CR>", 'Commit files')
 nmap_leader('rd', "<Cmd>lua require('config.review').unstaged()<CR>",    'Diff files')
-nmap_leader('rr', "<Cmd>lua require('config.review').close()<CR>",       'Close review')
+nmap_leader('rq', "<Cmd>lua require('config.review').close()<CR>",       'Close review')
+nmap_leader('rr', "<Cmd>lua require('config.review').resume()<CR>",      'Resume')
 nmap_leader('rs', "<Cmd>lua require('config.review').git()<CR>",         'Since commit files')
 
 -- s is for 'Session'.

@@ -9,6 +9,14 @@ local core = require('config.git.core')
 
 local M = {}
 
+local reviews = {}
+local last_closed = nil
+
+vim.api.nvim_create_autocmd('TabClosed', {
+  group = vim.api.nvim_create_augroup('config-review', { clear = true }),
+  callback = function(args) reviews[tonumber(args.match)] = nil end,
+})
+
 -- The review asks before loading more files than this limit. Loading half a repository freezes the
 -- editor.
 M.max_files = 50
@@ -61,6 +69,8 @@ local open_arglist = function(paths, label, on_open)
     if not existing[buf_id] then table.insert(opened, buf_id) end
   end
   vim.t.review_bufs = opened
+  reviews[vim.api.nvim_get_current_tabpage()] =
+    { paths = paths, label = label, on_open = on_open }
 
   report(
     'Review ' .. label,
@@ -73,9 +83,12 @@ end
 
 --- Open `paths` for review. Ask first for large reviews. Show `label` after "Review".
 M.open = function(paths, label, on_open)
+  paths = vim.tbl_map(
+    function(path) return vim.fs.normalize(vim.fn.fnamemodify(path, ':p')) end,
+    paths
+  )
   -- Every source can include deleted or renamed paths. These paths have no file to open.
   paths = vim.tbl_filter(function(p) return vim.fn.filereadable(p) == 1 end, paths)
-  paths = vim.tbl_map(vim.fs.normalize, paths)
   if #paths == 0 then
     return vim.notify('No file to review ' .. label, vim.log.levels.WARN)
   end
@@ -85,6 +98,14 @@ M.open = function(paths, label, on_open)
     #paths .. ' files to review. Open them all?',
     function() open_arglist(paths, label, on_open) end
   )
+end
+
+--- Open the last review closed with `M.close()` in this Neovim session.
+M.resume = function()
+  if last_closed == nil then
+    return vim.notify('No closed review to resume', vim.log.levels.WARN)
+  end
+  M.open(last_closed.paths, last_closed.label, last_closed.on_open)
 end
 
 --- Close the current tabpage review. Remove its buffers. Restore the diff reference.
@@ -100,9 +121,11 @@ M.close = function()
     return vim.notify(msg, vim.log.levels.WARN)
   end
 
+  local review = reviews[vim.api.nvim_get_current_tabpage()]
   if not pcall(vim.cmd, 'tabclose') then
     return vim.notify('Could not close the review tabpage', vim.log.levels.ERROR)
   end
+  if review ~= nil then last_closed = review end
 
   -- Schedule deletion after `:tabclose`. Immediate deletion can precede the asynchronous
   -- 'mini.git' status update and raise an error.
