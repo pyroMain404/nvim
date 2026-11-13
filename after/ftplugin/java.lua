@@ -14,9 +14,10 @@ ft.ts_fold()
 -- NOTE: A Surefire failure entry contains the first stack frame, inside JUnit (Neovim 0.12.4).
 -- The test frame is a few entries below.
 --
--- TODO: Add 'compiler/gradle.lua'; Gradle uses `javac` and leaves an empty quickfix list that
--- suggests a successful build.
--- First, make `gradlew.bat compileJava` fail deliberately.
+-- TODO: Add 'compiler/gradle.lua'.
+-- Without a `pom.xml`, this file uses `compiler javac` for a Gradle project.
+-- The quickfix list then stays empty, like a green build.
+-- First, make `gradlew.bat compileJava` fail on purpose.
 -- Then, read the raw output, probably with `--console=plain`.
 local found = vim.fs.find('pom.xml', {
   upward = true,

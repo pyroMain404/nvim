@@ -5,8 +5,8 @@
 -- Install with `mise use -g lua-language-server@latest`.
 -- These settings support edits to this config.
 
--- Read these files for definitions without diagnostics. The full 'runtimepath' slows the server and
--- causes errors.
+-- The server reads these files as a library and reports no diagnostics for them.
+-- The full 'runtimepath' is slow and makes the server fail.
 local library = {
   vim.env.VIMRUNTIME,
   '${3rd}/luv/library',

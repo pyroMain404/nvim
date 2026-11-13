@@ -38,8 +38,8 @@ nmap('\\a', function()
   vim.notify('Autocompletion ' .. (vim.b.minicompletion_disable and 'off' or 'on'))
 end, "Toggle 'mini.completion' (buffer)")
 
--- Swap adjacent arguments with 'mini.ai' `a` and 'mini.operators' `gx`.
--- This replaces `:h (` and `:h )`.
+-- This mapping swaps adjacent arguments with 'mini.ai' `a` and 'mini.operators' `gx`.
+-- This mapping overrides `(` and `)` (`:h (`, `:h )`).
 vim.keymap.set('n', '(', 'gxiagxila', { remap = true, desc = 'Swap arg left' })
 vim.keymap.set('n', ')', 'gxiagxina', { remap = true, desc = 'Swap arg right' })
 
@@ -54,7 +54,8 @@ nmap('#', '#zv' .. map_refresh, 'Hash')
 -- stylua: ignore start
 -- Leader mappings ============================================================
 
--- The first Leader key selects the group; the second selects the action (`:h <Leader>`).
+-- After `<Leader>`, the first key selects the group and the second key selects the action
+-- (`:h <Leader>`).
 
 -- Define Leader group names for 'mini.clue'.
 Config.leader_group_clues = {
@@ -92,7 +93,7 @@ nmap_leader('bw', '<Cmd>lua MiniBufremove.wipeout()<CR>',        'Wipeout')
 nmap_leader('bW', '<Cmd>lua MiniBufremove.wipeout(0, true)<CR>', 'Wipeout!')
 
 -- e is for 'Explore' and 'Edit'; `eg` is in 'lua/config/glance.lua'.
--- NOTE: Resolve the config path (`:h resolve()`). The startup junction hides the root marker.
+-- NOTE: The code resolves the config path (`:h resolve()`). The startup junction hides the root marker.
 -- Without a root marker, `lua_ls` starts in single file mode without diagnostics.
 local config_file = function(relative)
   local path = vim.fn.resolve(vim.fn.stdpath('config') .. '/' .. relative)
@@ -135,8 +136,9 @@ nmap_leader('es', '<Cmd>lua MiniStarter.open()<CR>',                           '
 -- f is for 'Fuzzy Find' (`:h MiniPick-overview`).
 
 -- HACK: `:Pick ... path="%"` fails on Windows because 'mini.pick' reads arguments as Lua.
--- Lua reads path backslashes as escapes. Call the picker directly.
--- Remove this workaround when upstream fixes it (still present in 'mini.nvim' f9ac12d, 2026-11-09).
+-- Lua reads path backslashes as escapes. The code calls the picker directly.
+-- Remove this workaround when upstream fixes it
+-- (mini.nvim f9ac12d, locked 2026-11-09, not retested).
 local pick_buf_path = function(picker, scope)
   return function()
     local path = vim.api.nvim_buf_get_name(0)

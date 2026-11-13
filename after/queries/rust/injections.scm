@@ -10,7 +10,7 @@
 ; The anchors prevent the parser from reading a second string argument as SQL.
 ;
 ; These patterns need the `sql` parser.
-; Only this requirement puts it in `languages` in 'plugin/40_plugins.lua'.
+; Only this requirement puts it in the Rust parser list in 'lua/config/toolchain.lua'.
 
 ((macro_invocation
   macro: [

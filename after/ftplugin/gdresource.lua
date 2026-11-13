@@ -3,11 +3,11 @@
 -- └──────────────────────────┘
 --
 -- `:GodotTree` shows `.tscn`/`.tres` `[node ...]` sections as a tree in a scratch buffer (`:h scratch-buffer`).
--- `<CR>` jumps to the node. 'ftdetect/godot.lua' sets the filetype.
--- 'plugin/40_plugins.lua' supplies the `godot_resource` parser.
+-- `<CR>` jumps to the node. Neovim detects the `gdresource` filetype (`:h filetype`).
+-- 'lua/config/toolchain.lua' lists the `godot_resource` parser, and 'plugin/40_plugins.lua' installs it.
 
--- NOTE: Use `named_child(0)`, not `child(0)`, for a `section`/`attribute` identifier.
--- The first child is an anonymous `[`/`=` token.
+-- NOTE: The identifier of a `section`/`attribute` is `named_child(0)`, not `child(0)`,
+-- because the first child is an anonymous `[`/`=` token.
 local query = vim.treesitter.query.parse(
   'godot_resource',
   [[

@@ -2,7 +2,8 @@
 -- │ Neovim 0.12 │
 -- └─────────────┘
 --
--- This file loads 'plugin/NN_*.lua' in order: options, keymaps, MINI, other plugins, then features.
+-- Entry point. Neovim sources 'plugin/NN_*.lua' in order:
+-- options, keymaps, MINI, other plugins, then features.
 -- 'lua/config/' contains feature modules; 'after/' contains filetype and LSP overrides.
 -- 'compiler/' contains the `:compiler` definitions.
 
@@ -29,7 +30,7 @@ end
 vim.pack.add({ 'https://github.com/nvim-mini/mini.nvim' })
 
 -- `now` runs the work before the first draw.
--- `now_if_args` runs it before the first draw only when Neovim opens a file.
+-- `now_if_args` acts as `now` when Neovim starts with file arguments. Otherwise it acts as `later`.
 -- `later` runs the remaining work after the first draw.
 local misc = require('mini.misc')
 Config.now = function(f) misc.safely('now', f) end

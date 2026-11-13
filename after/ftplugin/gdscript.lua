@@ -6,19 +6,20 @@
 
 local ft = require('config.ft')
 
--- Read the root once. `:Run` can resolve after `:vertical new` makes an unnamed buffer current.
+-- The code reads the root once. `:Run` can resolve after `:vertical new` makes an unnamed buffer current.
 local root = vim.fs.root(0, { 'project.godot' })
 
 if root ~= nil then
   -- NOTE: Godot prints file names relative to the project.
-  -- Neovim resolves quickfix names against its own directory, so use the `make_root()` marker.
+  -- Neovim resolves quickfix names against its own directory.
+  -- Thus, the code passes the `project.godot` marker to `make_root()`.
   ft.build('godot', { 'project.godot' })
 
   vim.bo.include = [[\v^\s*%(const\s+\w+\s*\=\s*)?%(pre)?load\(]]
 end
 
--- NOTE: Detach the game because a captured game draws on Neovim's screen.
--- The detached game continues after `:qa`.
+-- NOTE: The game runs detached because a captured game draws on Neovim's screen.
+-- Thus, the game continues after `:qa`.
 require('config.run').command(function(args)
   if root == nil then
     return nil, 'no project.godot above this file: there is no game to run'

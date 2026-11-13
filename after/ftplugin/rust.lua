@@ -4,8 +4,8 @@
 --
 -- This file adds a `'` mapping that does not break lifetimes, and `:Run`, to '$VIMRUNTIME/ftplugin/rust.vim'.
 
--- 'mini.pairs' pairs `'`, which causes errors with lifetimes.
--- Map the key to itself to disable pairing in this buffer (`:h MiniPairs.unmap_buf()`).
+-- 'mini.pairs' pairs `'`, and this pairing is wrong for lifetimes.
+-- This mapping inserts the key as itself, so pairing stops in this buffer (`:h MiniPairs.unmap_buf()`).
 vim.keymap.set('i', "'", "'", { buf = 0, desc = 'Insert a plain quote' })
 
 -- `:Run` follows 'lua/config/run.lua'; cargo reports an error if it cannot select a binary.

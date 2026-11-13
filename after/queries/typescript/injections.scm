@@ -6,15 +6,16 @@
 ; positions inside the backticks.
 ; The TypeScript parser sees one long string and shows it in one colour.
 ;
-; `languages` in 'plugin/40_plugins.lua' includes the `angular`, `css`, and `scss` parsers.
+; 'lua/config/toolchain.lua' lists the `angular`, `css`, and `scss` parsers.
 ; Without them, these patterns match but silently render nothing.
 ;
-; `#offset!` removes one character from each end of `template_string` to use the full string as
-; content.
-; The backticks stay with TypeScript instead of becoming markup for the other parser.
-; Do not capture the inner `(string_fragment)`.
-; A template with `${}` contains multiple fragments, which the parser would read separately.
-; A tag that opens before the substitution and closes after it would not match.
+; `#offset!` trims one character from each end of `template_string`.
+; Thus, the whole string is the content, and the backticks stay with TypeScript
+; instead of reaching the other parser as markup.
+; The pattern does not capture the inner `(string_fragment)`.
+; That capture would look simpler but be wrong.
+; A template with `${}` has several fragments, and the parser would read each one alone.
+; Thus, a tag that opens before the substitution and closes after it would never match.
 
 ((pair
   key: (property_identifier) @_key

@@ -3,10 +3,10 @@
 -- └───────┘
 --
 -- For installation, see `check_java()` in 'lua/config/health.lua'.
--- Call 'bin/jdtls' by name because it needs `java` and `python` from the `mise` shim.
+-- The server starts 'bin/jdtls' by name, because it needs `java` and `python` from the `mise` shim.
 
 -- The inherited `cmd` function creates a `-data` directory for each project.
--- Keep `cmd` absent; see the `tbl_deep_extend` NOTE in 'after/lsp/ts_ls.lua'.
+-- This file leaves `cmd` out; see the `tbl_deep_extend` NOTE in 'after/lsp/ts_ls.lua'.
 --
 -- NOTE: 'nvim-jdtls' replaces this file instead of extending it.
 -- It supplies the test runner, debug adapter, and refactorings.
@@ -59,9 +59,9 @@ end
 -- `MISE_JAVA_VERSION` selects the newest installed release for this process only; the health check
 -- reports an unmet minimum.
 --
--- NOTE: Use this variable, not `JAVA_HOME`.
+-- NOTE: The code sets this variable, not `JAVA_HOME`.
 -- The `mise` shim recalculates `JAVA_HOME` from the working directory.
--- Use the exact installed version, not an alias that a project's 'mise.toml' can override.
+-- The code uses the exact installed version, not an alias that a project's 'mise.toml' can override.
 local server_entry = mise.newest(
   'java',
   function(entry) return entry.path ~= nil and major_of(entry.version) ~= nil end
@@ -92,7 +92,7 @@ end
 -- Warn if no installed JDK supplies the target release, or if jdtls did not import the build.
 -- Without an imported build, jdtls reports its own JDK release; trusting this compliance value
 -- would silently accept the wrong release.
--- Ask the server for compliance instead of parsing the build file.
+-- The code asks the server for the compliance level and does not parse the build file.
 --
 -- NOTE: `java.project.getAll` and `java.project.getSettings` are jdtls delegate commands, not LSP
 -- (verified against jdtls 1.61).

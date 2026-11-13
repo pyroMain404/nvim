@@ -15,7 +15,8 @@ vim.cmd('runtime compiler/go.vim')
 -- `go vet` adds the tool name before each line (`vet.exe: file:1:2: msg`).
 -- A failed test indents `    file_test.go:7: msg`.
 -- A panic ends with stack frames (`\tfile.go:13 +0x28`), mostly from the standard library.
--- NOTE: `^=` adds entries at the start, so the last line takes priority. Put the filters last.
+-- NOTE: `^=` adds entries at the start, so the last line takes priority.
+-- The filters therefore come last.
 vim.cmd([[CompilerSet errorformat^=%Avet%.%#:\ %f:%l:%c:\ %m]])
 vim.cmd([[CompilerSet errorformat^=%*\\s%f:%l:\ %m]])
 vim.cmd([[CompilerSet errorformat^=%*\\s%f:%l\ +0x%*\\x]])

@@ -7,7 +7,7 @@ local mise = require('config.mise')
 -- A project can pin a Node version that is too old for the server.
 -- The `mise` shim then stops the server silently.
 -- `MISE_NODE_VERSION` selects the newest Node for this process only.
--- NOTE: Do not use `PATH`; the shim recalculates its environment from the working directory.
+-- NOTE: The code sets no `PATH`, because the shim recalculates its environment from the working directory.
 local node_entry = mise.newest(
   'node',
   function(entry) return tonumber(tostring(entry.version):match('^(%d+)')) ~= nil end
@@ -25,7 +25,8 @@ if node == nil then
 end
 
 -- This supplies a `typescript` fallback for a plain `.ts` outside a Node project.
--- NOTE: TypeScript 7 removes `tsserver.js`, so require that file to exclude these installations.
+-- NOTE: TypeScript 7 removes `tsserver.js`, so the code checks that this file exists
+-- and skips such an installation.
 local function lib_of(entry)
   return vim.fs.joinpath(entry.path, 'node_modules', 'typescript', 'lib')
 end
@@ -38,12 +39,15 @@ local ts_entry = mise.newest(
 local tsserver_fallback = ts_entry and lib_of(ts_entry) or nil
 
 return {
-  -- HACK: Copy `cmd` from 'nvim-lspconfig' and add `env`.
+  -- HACK: This is a copy of the `cmd` of 'nvim-lspconfig' with `env` added.
   -- `vim.lsp.start()` reads `cmd_env` only when `cmd` is a list.
   -- The plugin's `cmd` function passes no `extra_spawn_params`.
   -- Thus, the variable appears in `:=vim.lsp.config['ts_ls']` but never reaches the process.
-  -- This still applies to 'nvim-lspconfig' 993d048 (2026-11-09) on Neovim v0.12.6.
-  -- Delete this copy when the plugin forwards `cmd_env` or `cmd` stops being a function.
+  -- The problem exists on Neovim v0.12.6.
+  --
+  -- Delete this copy when the plugin forwards `cmd_env`.
+  -- Delete it too when `cmd` stops being a function
+  -- (nvim-lspconfig 993d048, locked 2026-11-09, not retested).
   --
   -- NOTE: `vim.tbl_deep_extend('force')` merges tables but replaces functions.
   -- Thus, this `cmd` replaces the function from 'nvim-lspconfig'.

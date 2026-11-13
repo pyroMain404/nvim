@@ -60,9 +60,10 @@ now_if_args(function()
   vim.lsp.enable(require('config.toolchain').servers())
 
   -- NOTE: `gf` on `preload('res://...')` opens a buffer that Neovim never reads from disk.
-  -- Register `BufReadCmd` before any such buffer opens.
+  -- A `BufReadCmd` must exist before any such buffer opens.
   -- 'includeexpr' cannot help because `findfile()` returns `scheme://` names unchanged.
-  -- The handler needs `nested` for filetype detection, LSP attachment and ftplugin commands (`:h autocmd-nested`).
+  -- Without `nested`, the buffer gets no filetype, no LSP attachment and no ftplugin commands
+  -- (`:h autocmd-nested`).
   vim.api.nvim_create_autocmd('BufReadCmd', {
     pattern = 'res://*',
     group = vim.api.nvim_create_augroup('config-godot-res', { clear = true }),
@@ -119,8 +120,8 @@ end)
 
 -- Markdown rendering =========================================================
 
--- Set up 'render-markdown.nvim' (`:h render-markdown-setup`).
--- The ftplugin holds the state machine.
+-- This block sets up 'render-markdown.nvim' (`:h render-markdown-setup`).
+-- 'lua/config/markdown.lua' holds the state machine.
 now_if_args(function()
   add({ 'https://github.com/MeanderingProgrammer/render-markdown.nvim' })
 
@@ -135,7 +136,7 @@ now_if_args(function()
     anti_conceal = { enabled = true, ignore = { table_border = true } },
     -- NOTE: Footnotes show as `(†name)` in plain letters.
     -- `prefix` keeps the dagger inside the parentheses; `icon` would put it outside.
-    -- `[[#Heading]]` has no icon; 'after/ftplugin/markdown.lua' draws its `§`.
+    -- `[[#Heading]]` has no icon; 'lua/config/markdown.lua' draws its `§`.
     link = {
       custom = { same_note = { pattern = '^#', icon = '' } },
       footnote = { superscript = false, icon = '', prefix = '(†', suffix = ')' },
@@ -184,7 +185,7 @@ now_if_args(
 
 -- Formatting =================================================================
 
--- Set formatters (`:h conform-options`, `:h conform-formatters`).
+-- This block sets formatters (`:h conform-options`, `:h conform-formatters`).
 later(function()
   add({ 'https://github.com/stevearc/conform.nvim' })
 
@@ -199,7 +200,8 @@ end)
 
 -- Snippets ===================================================================
 
--- Load the snippet collection for 'mini.snippets' (`:h MiniSnippets.gen_loader.from_lang()`).
+-- This block loads the snippet collection for 'mini.snippets'
+-- (`:h MiniSnippets.gen_loader.from_lang()`).
 later(function() add({ 'https://github.com/rafamadriz/friendly-snippets' }) end)
 
 -- NOTE: See `:h terminal-debug` to enable Termdebug.
@@ -224,7 +226,7 @@ Config.now(function()
   vim.api.nvim_set_hl(0, '@markup.link.markdown_inline', { underline = false })
   vim.api.nvim_set_hl(0, '@markup.link.underlined', { link = 'Underlined' })
 
-  -- Use a straight underline instead of undercurl (`:h highlight-undercurl`).
+  -- This block uses a straight underline instead of undercurl (`:h highlight-undercurl`).
   for _, name in ipairs({
     'SpellBad',
     'SpellCap',

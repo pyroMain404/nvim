@@ -14,7 +14,7 @@ local now, now_if_args, later = Config.now, Config.now_if_args, Config.later
 -- now(function() vim.cmd('colorscheme miniautumn') end)
 -- now(function() vim.cmd('colorscheme randomhue') end)
 
--- Set common options, mappings and autocommands (`:h MiniBasics.config`).
+-- This block sets common options, mappings and autocommands (`:h MiniBasics.config`).
 now(
   function()
     require('mini.basics').setup({
@@ -26,7 +26,7 @@ now(
   end
 )
 
--- Set the icon provider (`:h MiniIcons`).
+-- This block sets the icon provider (`:h MiniIcons`).
 now(function()
   local blocklist = { scm = true, txt = true, yml = true, json = true, yaml = true }
   require('mini.icons').setup({
@@ -76,7 +76,7 @@ now(function() require('mini.tabline').setup() end)
 
 -- Step one or two ============================================================
 
--- Set completion and signature help (`:h MiniCompletion`).
+-- This block sets completion and signature help (`:h MiniCompletion`).
 now_if_args(function()
   local process_items_opts = { kind_priority = { Text = -1, Snippet = 99 } }
   local process_items = function(items, base)
@@ -98,7 +98,7 @@ now_if_args(function()
   vim.lsp.config('*', { capabilities = MiniCompletion.get_lsp_capabilities() })
 end)
 
--- Set the file explorer (`:h MiniFiles-navigation`).
+-- This block sets the file explorer (`:h MiniFiles-navigation`).
 now_if_args(function()
   local filter_show = function(fs_entry)
     return not vim.endswith(fs_entry.name, '.gd.uid')
@@ -108,7 +108,8 @@ now_if_args(function()
     windows = { preview = true },
   })
 
-  -- NOTE: Bookmark the resolved path; the startup junction hides the root marker above a file.
+  -- NOTE: The code bookmarks the resolved path;
+  -- the startup junction hides the root marker above a file.
   -- Without a root marker, `lua_ls` uses single file mode without diagnostics.
   -- See `config_file()` in 'plugin/20_keymaps.lua'.
   local add_marks = function()
@@ -121,7 +122,7 @@ now_if_args(function()
   Config.new_autocmd('User', 'MiniFilesExplorerOpen', add_marks, 'Add bookmarks')
 end)
 
--- Set miscellaneous helpers (`:h MiniMisc`).
+-- This block sets miscellaneous helpers (`:h MiniMisc`).
 now_if_args(function()
   require('mini.misc').setup()
 
@@ -133,18 +134,19 @@ now_if_args(function()
   MiniMisc.setup_restore_cursor()
 
   -- HACK: ConPTY never forwards the OSC 11 background query.
-  -- Thus, `setup_termbg_sync()` waits a second and warns.
-  -- Delete the guard when ConPTY forwards OSC queries (still absent
-  -- in Windows 11 26200, Windows Terminal 1.24).
+  -- `setup_termbg_sync()` therefore waits a second and warns.
+  -- Delete the guard when ConPTY forwards OSC queries.
+  -- Windows 11 26200 still lacks this forwarding
+  -- (Windows Terminal 1.24, locked 2026-11-11, not retested).
   if vim.fn.has('win32') == 0 then MiniMisc.setup_termbg_sync() end
 end)
 
 -- Step two ===================================================================
 
--- Add extra pickers, textobjects and highlighters (`:h MiniExtra.pickers`).
+-- This block adds extra pickers, textobjects and highlighters (`:h MiniExtra.pickers`).
 later(function() require('mini.extra').setup() end)
 
--- Extend a/i textobjects (`:h MiniAi-builtin-textobjects`).
+-- This block extends a/i textobjects (`:h MiniAi-builtin-textobjects`).
 later(function()
   local ai = require('mini.ai')
   ai.setup({
@@ -160,9 +162,9 @@ end)
 -- Align text (`:h MiniAlign-example`).
 later(function() require('mini.align').setup() end)
 
--- Add square-bracket motions (`:h MiniBracketed`).
--- NOTE: An empty suffix disables the `indent` target because 'mini.indentscope' uses `[i`.
--- Neovim defaults use `[d` (`:h lsp-defaults`).
+-- This block adds square-bracket motions (`:h MiniBracketed`).
+-- NOTE: An empty suffix disables the `indent` target because 'mini.indentscope' uses `[i`
+-- and Neovim defaults use `[d` (`:h lsp-defaults`).
 later(
   function()
     require('mini.bracketed').setup({
@@ -207,7 +209,7 @@ later(function()
   })
 end)
 
--- Adjust the command line (`:h MiniCmdline`).
+-- This block adjusts the command line (`:h MiniCmdline`).
 later(function() require('mini.cmdline').setup() end)
 
 -- Comment lines (`:h MiniComment`).
@@ -226,7 +228,7 @@ end)
 -- 'lua/config/git/diffref.lua' attaches its own source for diff hunks (`:h MiniDiff-overview`).
 later(function() require('mini.diff').setup() end)
 
--- Add Git integration (`:h MiniGit-examples`).
+-- This block adds Git integration (`:h MiniGit-examples`).
 later(function() require('mini.git').setup() end)
 
 -- Highlight patterns with markers from 'lua/config/markers.lua' (`:h MiniHipatterns-examples`).
@@ -246,19 +248,19 @@ later(function()
   })
 end)
 
--- Show the indentation scope (`:h MiniIndentscope`).
+-- This block shows the indentation scope (`:h MiniIndentscope`).
 later(function() require('mini.indentscope').setup() end)
 
--- Set input prompts (`:h MiniInput-examples`).
+-- This block sets input prompts (`:h MiniInput-examples`).
 later(function() require('mini.input').setup() end)
 
--- Improve `fFtT` navigation (`:h MiniJump`).
+-- This block improves `fFtT` navigation (`:h MiniJump`).
 later(function() require('mini.jump').setup() end)
 
 -- Jump to labelled spots (`:h MiniJump2d`).
 later(function() require('mini.jump2d').setup() end)
 
--- Set multistep and combo mappings (`:h MiniKeymap-examples`).
+-- This block sets multistep and combo mappings (`:h MiniKeymap-examples`).
 later(function()
   require('mini.keymap').setup()
   -- NOTE: In a snippet session, <Tab> jumps instead of inserting a tab.
@@ -268,7 +270,7 @@ later(function()
   MiniKeymap.map_multistep('i', '<CR>', { 'pmenu_accept', 'minipairs_cr' })
 end)
 
--- Show the text overview window (`:h MiniMap`).
+-- This block shows the text overview window (`:h MiniMap`).
 later(function()
   local map = require('mini.map')
   map.setup({
@@ -284,7 +286,7 @@ end)
 -- Move lines and selections (`:h MiniMove`).
 later(function() require('mini.move').setup() end)
 
--- Set text edit operators (`:h MiniOperators-overview`).
+-- This block sets text edit operators (`:h MiniOperators-overview`).
 later(function()
   require('mini.operators').setup()
 
@@ -311,11 +313,11 @@ later(function()
   )
 end)
 
--- Add autopairs in Insert mode only (`:h MiniPairs`).
--- 'after/ftplugin/markdown.lua' skips prose.
+-- This block adds autopairs in Insert mode only (`:h MiniPairs`).
+-- 'lua/config/markdown.lua' skips prose.
 later(function() require('mini.pairs').setup() end)
 
--- Set the picker (`:h MiniPick-overview`).
+-- This block sets the picker (`:h MiniPick-overview`).
 -- 'plugin/20_keymaps.lua' defines its mappings.
 later(
   function()
@@ -346,11 +348,11 @@ end)
 -- Split and join arguments (`:h MiniSplitjoin`).
 later(function() require('mini.splitjoin').setup() end)
 
--- Set surround actions (`:h MiniSurround-builtin-surroundings`).
+-- This block sets surround actions (`:h MiniSurround-builtin-surroundings`).
 later(function() require('mini.surround').setup() end)
 
--- Highlight trailing whitespace (`:h MiniTrailspace`).
+-- This block highlights trailing whitespace (`:h MiniTrailspace`).
 later(function() require('mini.trailspace').setup() end)
 
--- Track file visits and labels (`:h MiniVisits-overview`).
+-- This block tracks file visits and labels (`:h MiniVisits-overview`).
 later(function() require('mini.visits').setup() end)
