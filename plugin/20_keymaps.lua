@@ -232,9 +232,9 @@ nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',            'Zoom toggle')
 -- r is for 'Review'; functions live in 'lua/config/review.lua'.
 
 nmap_leader('ra', "<Cmd>lua require('config.review').staged()<CR>",      'Added files')
-nmap_leader('rc', "<Cmd>lua require('config.review').close()<CR>",       'Close review')
+nmap_leader('rc', "<Cmd>lua require('config.review').commit_only()<CR>", 'Commit files')
 nmap_leader('rd', "<Cmd>lua require('config.review').unstaged()<CR>",    'Diff files')
-nmap_leader('rp', "<Cmd>lua require('config.review').commit_only()<CR>", 'Commit files')
+nmap_leader('rr', "<Cmd>lua require('config.review').close()<CR>",       'Close review')
 nmap_leader('rs', "<Cmd>lua require('config.review').git()<CR>",         'Since commit files')
 
 -- s is for 'Session'.
