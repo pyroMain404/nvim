@@ -11,8 +11,8 @@ local health = vim.health
 local toolchain = require('config.toolchain')
 
 -- NOTE: Windows console tools can print carriage returns (`java --version`).
--- The first `trim` removes only the carriage return at the end of the output.
--- The second `trim` removes the one on the first line.
+-- The first `trim` reaches only the end of the whole output.
+-- The second `trim` removes the carriage return at the end of the first line.
 local function first_line(cmd)
   local ok, out = pcall(function() return vim.system(cmd):wait() end)
   if not ok or out.code ~= 0 then return nil end
@@ -92,7 +92,8 @@ end
 
 -- Language toolchains ========================================================
 -- `check_language()` handles the common checks; `sections` below supplies language-specific checks.
--- `gate` returns before `start()` if the check does not apply.
+-- `gate` returns a context value, or `nil` when the check does not apply.
+-- `check_language()` then returns before `start()`.
 -- `begin` starts the section.
 -- `hooks` replaces program checks by `exe`; returning `false` ends the section.
 -- `extra` runs after the program checks and before the parser checks.
@@ -178,8 +179,9 @@ local function extra_angular(language)
     })
   else
     health.ok('project dependencies: installed in ' .. root)
-    -- NOTE: A `mise` shim starts `ngserver` and resolves its version from the current directory.
-    -- The project's mise.toml therefore pins the major version, not the global mise.toml.
+    -- NOTE: `ngserver` loads the project's language service.
+    -- Neovim starts it through a `mise` shim, and the shim resolves its version from the current directory.
+    -- Pin the major version in the project's mise.toml, not in the global mise.toml.
     local manifest = vim.fs.joinpath(root, 'package.json')
     local ok, blob = pcall(vim.fn.readblob, manifest)
     local deps = ok and (vim.json.decode(blob) or {}).dependencies or {}
@@ -197,12 +199,13 @@ local function extra_angular(language)
   end
 end
 
--- The project's JDK (`java`) can differ from the JDK for jdtls.
--- 'after/lsp/jdtls.lua' supplies the newest JDK from `mise` through `MISE_JAVA_VERSION`.
--- Read the resolved config to check that this JDK exists and meets the minimum version.
+-- The JDK of the project (`java`) is not the JDK that jdtls runs on.
+-- 'after/lsp/jdtls.lua' gives the server the newest JDK that `mise` has, through `MISE_JAVA_VERSION`.
+-- This check must show only that such a JDK exists and meets the minimum version.
+-- It therefore reads the resolved config and names no version.
 --
--- NOTE: jdtls reports an older JDK only in its own log, so it looks like a server attachment
--- failure.
+-- NOTE: Below the minimum version, jdtls reports the problem only in its own log.
+-- An unmet requirement therefore looks like a server that does not attach.
 local function hook_java(tool, language)
   local minimum = language.minimum
   local version = first_line({ 'java', '--version' })
@@ -306,8 +309,8 @@ local function extra_cpp(language)
   --
   -- First, check a real project's root for 'SConstruct' and 'CMakeLists.txt' before changing this
   -- branch.
-  -- Keep CMake advice if 'CMakeLists.txt' exists; use `scons compiledb=yes` only if 'SConstruct'
-  -- exists alone.
+  -- Both files or only 'CMakeLists.txt': no change is necessary.
+  -- Only 'SConstruct': add a case to this branch that names `scons compiledb=yes`.
   if database == nil then
     health.warn(("no compilation database for '%s'"):format(root), {
       'Generate one with `cmake -S . -B build -G Ninja '

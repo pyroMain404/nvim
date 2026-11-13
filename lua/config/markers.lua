@@ -26,9 +26,10 @@ local variants = function()
   return all
 end
 
--- `MiniHipatterns.get_matches()` reads extmarks that a debounced timer sets.
--- Its results can be stale or empty when this operation immediately follows a buffer change.
--- Scan the same words synchronously for an immediate result.
+-- This function does not use `MiniHipatterns.get_matches()`.
+-- That function reads extmarks that a debounced timer sets, so its results can be stale or empty
+-- right after a buffer change.
+-- A synchronous scan of the same words returns an immediate result.
 -- Unlike the picker, a location list persists and supports navigation with `]q`/`[q`.
 local buffer_markers = function()
   local bufnr = vim.api.nvim_get_current_buf()

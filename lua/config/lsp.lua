@@ -10,7 +10,7 @@ local M = {}
 -- The buffer keeps its old name, so writes use the old path.
 -- Rename with `:saveas!` without autocommands to prevent the 'obsidian.nvim' front matter hook from
 -- running during rename.
--- Neovim 0.12.5 still has this defect.
+-- The defect still exists (Neovim 0.12.5, locked 2026-11-11, not retested).
 local patch_rename = function()
   local lsp_rename = vim.lsp.util.rename
   vim.lsp.util.rename = function(old_fname, new_fname, opts)
@@ -38,7 +38,7 @@ end
 
 -- HACK: 'nvim-lspconfig' announces `rust-analyzer.showReferences` but registers only `runSingle`.
 -- Reference lenses report "does not support command". Show the locations on the client.
--- 'nvim-lspconfig' 993d048 (2026-11-09) still lacks this command.
+-- The command is still missing (nvim-lspconfig 993d048, locked 2026-11-09, not retested).
 local add_show_references = function()
   vim.lsp.commands['rust-analyzer.showReferences'] = function(command, ctx)
     local locations = command.arguments and command.arguments[3] or {}
@@ -141,11 +141,12 @@ local find_word = function(lines, root, word, qual)
   end
 end
 
--- `open_floating_preview()` uses free rows around the current cursor; a one-line hover window has
--- none.
--- Open the new hover from the source window to replace the old hover at the same position.
+-- `open_floating_preview()` sizes a window from the free rows around the current cursor.
+-- A one-line hover window leaves none, so the code opens the new hover from the source window,
+-- where the old hover was.
+-- The new hover takes the place of the old hover.
 -- `index` identifies the `ctx.chain` entry for `<C-o>` or `<C-i>`.
--- Without `index`, add the hover after the current entry.
+-- Without `index`, the hover is a new entry after the current one.
 local show_hover = function(ctx, uri, position, buf, index)
   ctx.client:request(
     'textDocument/hover',

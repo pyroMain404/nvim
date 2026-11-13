@@ -51,8 +51,8 @@ end
 -- HACK: 'mini.git' resolves repository-relative patch paths against the cwd
 -- (`:h MiniGit.show_diff_source()`).
 -- This causes E484 below the root. Run from the root. Restore the cwd afterwards.
--- Remove this when 'mini.git' resolves paths itself (still needed in 'mini.nvim' f9ac12d,
--- 2026-11-09).
+-- Remove this when 'mini.git' resolves paths itself (mini.nvim f9ac12d, locked 2026-11-09,
+-- not retested).
 M.at_repo_root = function(f, opts)
   local root = M.repo_root()
   if root == nil then return f(opts) end

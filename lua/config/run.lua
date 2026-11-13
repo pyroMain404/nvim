@@ -19,9 +19,8 @@ local M = {}
 
 -- Define `:Run` for the current buffer.
 -- `resolve(args)` returns a command and optional project root, or `nil` and a reason to report.
--- NOTE: `resolve` runs before the split opens, even with an override, which needs the original
--- root.
--- `:new` makes an unnamed buffer current.
+-- NOTE: `resolve` runs before the split opens, even when an override wins.
+-- `:new` makes an unnamed buffer current, and the override needs the original root.
 -- NOTE: Copy the override list before adding arguments so each `:Run` does not retain previous
 -- arguments.
 local function project_command(args)

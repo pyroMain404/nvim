@@ -6,7 +6,9 @@
 
 -- 'path' commands (`gf`, `gF`, `<C-w>f`, `[f`, `:find`) first use the name under the cursor.
 -- If no file matches, they ask 'includeexpr' for another name.
--- In `[label](target)`, that name can be a label word or a target with `#anchor`.
+-- In `[label](target)`, that name is wrong in both cases.
+-- On the label it is a word of the label. On the target it can carry a `#anchor`.
+--
 -- This module returns the link target without its anchor.
 -- The cursor uses source byte columns, so concealed `<Leader>om` states do not affect the result.
 
@@ -81,7 +83,8 @@ M.anchor_footnotes = function(buf)
         },
         virt_text_pos = 'inline',
         right_gravity = false,
-        -- Rebuild on every render. Undo restores marks by id, but ids restart after each clear.
+        -- The renderer rebuilds marks on every render.
+        -- Undo restores marks by id, but ids restart after each clear.
         -- A restored mark could therefore move another mark.
         undo_restore = false,
       })

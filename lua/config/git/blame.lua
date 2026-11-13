@@ -4,8 +4,8 @@
 -- This module shows the last author at the end of the cursor line.
 -- Blame is off until `toggle()` turns it on. This avoids a `git` run on every cursor pause.
 
--- NOTE: `git blame` reads the disk file. Hide annotations in modified buffers because line numbers
--- could identify the wrong commit.
+-- NOTE: `git blame` reads the disk file, so the module shows nothing in a modified buffer.
+-- Line numbers could credit lines to the wrong commit.
 
 local core = require('config.git.core')
 

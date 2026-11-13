@@ -124,7 +124,8 @@ M.setup = function()
     'Drop the cached winbar breadcrumb'
   )
 
-  -- Use only normal file buffers. `vim.wo[0][0]` keeps writes window-local (`:h vim.wo`).
+  -- This applies only to normal file buffers.
+  -- `vim.wo[0][0]` keeps writes window-local (`:h vim.wo`).
   -- `%{%...%}` supplies the stateful form that `v:lua` requires.
   Config.new_autocmd({ 'BufWinEnter', 'FileType' }, nil, function(args)
     if vim.bo[args.buf].buftype ~= '' then return end

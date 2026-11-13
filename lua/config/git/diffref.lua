@@ -8,7 +8,8 @@ local core = require('config.git.core')
 
 local M = {}
 
--- `nil` selects the Git index globally. Each buffer can set its own revision in `vim.b.diff_ref`.
+-- `diff_ref` holds the global revision. `nil` selects the Git index.
+-- Each buffer can set its own revision in `vim.b.diff_ref`.
 local diff_ref = nil
 
 -- Locate a disk file or a commit file that 'mini.git' opens with its path in the buffer name.
@@ -54,8 +55,9 @@ local diff_source_at = function(rev)
     if loc == nil then return false end
     local files = ls_tree(rev, loc.cwd)
     if not files[loc.path] then
-      -- Let the Git source handle paths that the revision lacks.
-      -- A buffer that shows a commit state is not a file. Treat its content as fully added.
+      -- The Git source handles a path that the revision lacks.
+      -- Exception: a buffer that shows a commit state is not a file, so the code reads its content
+      -- as fully added.
       if not loc.at_commit then return false end
       return MiniDiff.set_ref_text(buf_id, '')
     end

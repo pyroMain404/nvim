@@ -7,8 +7,9 @@
 
 local M = {}
 
--- NOTE: Use a real end column on an existing line. `math.huge` is not an integer.
--- 'conform.nvim' silently formats nothing with it or an empty range, so skip missing lines.
+-- NOTE: The end column must be a real column of an existing line.
+-- `math.huge` is not an integer, so 'conform.nvim' silently formats nothing.
+-- An empty range has the same result. The code skips a line that no longer exists.
 local format_range = function(from, to)
   local last = vim.api.nvim_buf_get_lines(0, to - 1, to, false)[1]
   if last == nil then
@@ -24,7 +25,8 @@ local format_range = function(from, to)
   return err, did_edit
 end
 
--- Require a CLI formatter or LSP fallback. Warn once (`:h conform.list_formatters_to_run()`).
+-- A CLI formatter or the LSP fallback must exist.
+-- The function warns once if neither exists (`:h conform.list_formatters_to_run()`).
 local has_formatter = function(conform)
   local formatters, lsp = conform.list_formatters_to_run(0)
   if #formatters > 0 or lsp then return true end

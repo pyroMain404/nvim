@@ -31,7 +31,8 @@ end
 -- It does not identify which feature conceals them.
 -- Reading requires `j`/`k` to skip concealed fence delimiters but visit every pipe-table source
 -- row.
--- Delete this when the plugin offers a visible-line motion.
+-- Delete this when the plugin offers a visible-line motion (render-markdown.nvim 9c235be,
+-- locked 2026-11-11, not retested).
 local function line_is_pipe_table(line)
   local ok, node = pcall(vim.treesitter.get_node, {
     bufnr = 0,
@@ -96,7 +97,8 @@ local function renderer_set(enabled) require('render-markdown').set_buf(enabled)
 -- override.
 -- Only reading must keep extmarks on the cursor line. Change the cache before the renderer
 -- refreshes.
--- Delete this when the plugin exposes a per-buffer anti-conceal API.
+-- Delete this when the plugin exposes a per-buffer anti-conceal API (render-markdown.nvim 9c235be,
+-- locked 2026-11-11, not retested).
 local function set_anti_conceal(enabled)
   require('render-markdown.state').get(vim.api.nvim_get_current_buf()).anti_conceal.enabled =
     enabled
@@ -201,7 +203,7 @@ function M.attach(buf)
         windows = {},
       }
       for _, win in ipairs(vim.fn.getbufinfo(buf)[1].windows or {}) do
-        -- Use string keys. Window id keys would make storage use a sparse list.
+        -- The code uses string keys. Window id keys would make storage use a sparse list.
         original.windows[tostring(win)] = {
           conceallevel = vim.wo[win][0].conceallevel,
           concealcursor = vim.wo[win][0].concealcursor,

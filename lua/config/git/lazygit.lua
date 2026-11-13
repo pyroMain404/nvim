@@ -34,7 +34,7 @@ M.open = function()
     vim.cmd('checktime')
   end)
 
-  -- Run in the current directory, which 'mini.misc' keeps at the project root.
+  -- This job runs in the current directory, which 'mini.misc' keeps at the project root.
   local job_id = vim.fn.jobstart({ 'lazygit' }, { term = true, on_exit = on_exit })
   if job_id <= 0 then
     pcall(vim.api.nvim_win_close, win_id, true)

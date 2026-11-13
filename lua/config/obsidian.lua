@@ -40,7 +40,8 @@ end
 -- For ambiguous links, `text` contains each note's first line, so all picker rows show frontmatter
 -- `---`.
 -- Show the path. For entries at file start, also show the first line after frontmatter.
--- Delete this when `make_display()` shows the path itself.
+-- Delete this when `make_display()` shows the path itself (obsidian.nvim 9af605a,
+-- locked 2026-11-11, not retested).
 local patch_make_display = function()
   local first_body_line = function(path)
     local ok, lines = pcall(vim.fn.readfile, path, '', 200)
@@ -120,7 +121,7 @@ local load_vault = function(spec, root)
     -- Upstream has it since obsidian-nvim/obsidian.nvim#1009, merged into this branch at 9af605a
     -- (2026-11-09).
     -- Return to 'https://github.com/obsidian-nvim/obsidian.nvim' when upstream merges the sync
-    -- options.
+    -- options (obsidian.nvim 9af605a, locked 2026-11-09, not retested).
     vim.pack.add({ spec })
     if #vim.api.nvim_get_runtime_file('lua/obsidian/init.lua', false) == 0 then
       vim.notify_once(

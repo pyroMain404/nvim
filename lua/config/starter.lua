@@ -1,8 +1,9 @@
 -- ┌─────────┐
 -- │ Starter │
 -- └─────────┘
--- Select the first context menu in `menus`. Apply the project's `start` contract over it.
--- Use the default menu if neither applies.
+-- This module picks the 'mini.starter' menu. It takes the first context menu in `menus`.
+-- It applies the project's `start` contract over that menu.
+-- It uses the default screen if neither a context menu nor a project contract exists.
 
 local M = {}
 
@@ -61,9 +62,9 @@ end
 -- Apply the project's `start` contract from 'lua/config/project.lua' to `base`, the context menu or
 -- `nil`.
 -- With `merge` and a base, use the project header if present and merge items.
--- Otherwise, use only the project menu without builtin items after it. The project owns the menu.
---
--- This includes `substitute` and `merge` without a base. The default screen never serves as a base.
+-- Otherwise (`substitute`, or `merge` without a base), the function uses only the project menu,
+-- with no builtin items after it.
+-- The project owns the menu. The default screen never serves as a base.
 local function project_menu(base)
   local start, root = require('config.project').contract('start')
   if not start then return base end

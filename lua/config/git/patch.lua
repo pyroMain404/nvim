@@ -132,7 +132,7 @@ M.setup_buf = function()
   vim.wo[0][0].foldexpr = 'v:lua.MiniGit.diff_foldexpr()'
   vim.wo[0][0].foldlevel = 3
 
-  -- Map only in 'mini.nvim' scratch buffers ("minigit://", "miniextra://").
+  -- These mappings apply only in 'mini.nvim' scratch buffers ("minigit://", "miniextra://").
   -- These mappings would hide useful defaults in regular patch or commit files.
   if not vim.api.nvim_buf_get_name(0):find('^mini%a+://') then return end
   local bmap = function(lhs, rhs, desc)

@@ -41,7 +41,7 @@ end
 -- NOTE: A tabpage variable records buffers that the review creates.
 -- This record distinguishes them from existing buffers, which closing must keep.
 --
--- NOTE: `on_open` sets the diff reference before the files load against it.
+-- NOTE: `on_open` runs before the files load, so any diff reference that it sets applies when they load.
 local open_arglist = function(paths, label, on_open)
   local existing = {}
   for _, buf_id in ipairs(vim.api.nvim_list_bufs()) do
