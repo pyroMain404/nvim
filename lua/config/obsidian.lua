@@ -74,11 +74,11 @@ local patch_make_display = function()
 end
 
 local enter_note = function(note)
-  -- `<Leader>j` opens the `:Obsidian` command picker, with selection commands in Visual mode.
+  -- `<Leader>ej` opens the `:Obsidian` command picker, with selection commands in Visual mode.
   for mode, rhs in pairs({ n = '<Cmd>Obsidian<CR>', x = ':Obsidian<CR>' }) do
     vim.keymap.set(
       mode,
-      '<Leader>j',
+      '<Leader>ej',
       rhs,
       { buf = note.bufnr, desc = 'Obsidian commands' }
     )

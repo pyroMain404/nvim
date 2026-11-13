@@ -1,5 +1,7 @@
 ## 2026-11-13
 
+- Move the menu of `:Obsidian` commands in a vault note from `<Leader>j` to `<Leader>ej`, under the other `<Leader>e` mappings.
+
 - Rewrite the comments of the whole config, 'compiler/', 'ftdetect/', 'after/' and the skill assets in `.omp/skills/` in ASD-STE100 Issue 9 English, with shorter sentences and paragraphs. Only comments change, no code. Three review passes against the original text restored reasons and conditions that the first rewrite dropped. They also corrected claims that were false against the code (for example which file draws the `§` icon, which file holds the Markdown state machine, and the order in which `vim.filetype.add()` tries patterns and extensions), and gave every `HACK` the closing `(<name> <rev>, locked <date>, not retested)`. Where the original `HACK` had no lock date, the date of the original commit (2026-11-11) stands in.
 
 ## 2026-11-10
