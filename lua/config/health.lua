@@ -11,7 +11,7 @@ local health = vim.health
 local toolchain = require('config.toolchain')
 
 -- NOTE: Windows console tools can print carriage returns (`java --version`).
--- The first `trim` reaches only the end of the whole output.
+-- The first `trim` removes only the carriage return at the end of the whole output.
 -- The second `trim` removes the carriage return at the end of the first line.
 local function first_line(cmd)
   local ok, out = pcall(function() return vim.system(cmd):wait() end)
@@ -91,10 +91,12 @@ local function check_external_tools()
 end
 
 -- Language toolchains ========================================================
--- `check_language()` handles the common checks; `sections` below supplies language-specific checks.
+-- `check_language()` handles the common checks.
+-- `sections` below supplies the language-specific checks.
 -- `gate` returns a context value, or `nil` when the check does not apply.
 -- `check_language()` then returns before `start()`.
--- `begin` starts the section.
+-- `begin` runs right after `start()`.
+--
 -- `hooks` replaces program checks by `exe`; returning `false` ends the section.
 -- `extra` runs after the program checks and before the parser checks.
 
@@ -180,8 +182,10 @@ local function extra_angular(language)
   else
     health.ok('project dependencies: installed in ' .. root)
     -- NOTE: `ngserver` loads the project's language service.
-    -- Neovim starts it through a `mise` shim, and the shim resolves its version from the current directory.
-    -- Pin the major version in the project's mise.toml, not in the global mise.toml.
+    -- Neovim starts it through a `mise` shim, and the shim resolves its version from the current
+    -- directory.
+    -- The advice therefore pins the major version in the project's mise.toml, not in the global
+    -- mise.toml.
     local manifest = vim.fs.joinpath(root, 'package.json')
     local ok, blob = pcall(vim.fn.readblob, manifest)
     local deps = ok and (vim.json.decode(blob) or {}).dependencies or {}

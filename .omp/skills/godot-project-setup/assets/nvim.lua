@@ -27,8 +27,8 @@
 -- NOTE: The port uses TCP, not a named pipe.
 --    Windows needs the form `//./pipe/<name>`, which other systems write differently.
 --    The common recipe `--listen {project}/server.pipe` creates a file inside the repository.
---    Exclude that file from version control.
---    Hide it in every picker.
+--    That file then needs an exclusion from version control.
+--    Every picker must also hide it.
 local ok, err = pcall(vim.fn.serverstart, '127.0.0.1:55432')
 if not ok then
   vim.notify('Godot editor port: ' .. tostring(err), vim.log.levels.WARN)

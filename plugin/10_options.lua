@@ -8,7 +8,7 @@
 vim.g.mapleader = ' ' -- `<Space>` is the <Leader> key.
 
 vim.o.mousescroll = 'ver:25,hor:6' -- These values set mouse scroll distances.
-vim.o.switchbuf   = 'usetab'       -- Use open buffers when switching.
+vim.o.switchbuf   = 'usetab'       -- This value reuses open buffers when switching.
 
 vim.o.path = require('config.path').default
 
@@ -65,10 +65,10 @@ vim.o.cursorlineopt  = 'screenline,number' -- This shows the cursor line per scr
 vim.o.fillchars = 'eob: ,fold:╌'
 vim.o.listchars = 'extends:…,nbsp:␣,precedes:…,tab:> '
 
-vim.o.foldlevel   = 10       -- Folds stay open by default. A `foldlevel` of 0 or 1 closes folds.
-vim.o.foldmethod  = 'indent' -- Fold by indentation level.
-vim.o.foldnestmax = 10       -- Limit the number of fold levels.
-vim.o.foldtext    = ''       -- Show the fold text with its highlighting.
+vim.o.foldlevel   = 10       -- Folds stay open by default; a lower value closes more folds.
+vim.o.foldmethod  = 'indent' -- This folds by indentation level.
+vim.o.foldnestmax = 10       -- This limits the number of fold levels.
+vim.o.foldtext    = ''       -- This shows the fold text with its highlighting.
 
 -- Editing ====================================================================
 vim.o.expandtab     = true    -- This converts tabs to spaces.

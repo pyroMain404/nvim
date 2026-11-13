@@ -314,7 +314,7 @@ later(function()
 end)
 
 -- This block adds autopairs in Insert mode only (`:h MiniPairs`).
--- 'lua/config/markdown.lua' skips prose.
+-- 'lua/config/markdown.lua' disables 'mini.pairs' in the buffers where it attaches.
 later(function() require('mini.pairs').setup() end)
 
 -- This block sets the picker (`:h MiniPick-overview`).

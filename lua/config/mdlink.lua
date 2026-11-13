@@ -9,8 +9,9 @@
 -- In `[label](target)`, that name is wrong in both cases.
 -- On the label it is a word of the label. On the target it can carry a `#anchor`.
 --
--- This module returns the link target without its anchor.
--- The cursor uses source byte columns, so concealed `<Leader>om` states do not affect the result.
+-- This module returns the target of the link that contains the cursor, without its anchor.
+-- The cursor column is a byte column of the source text.
+-- Concealed (rendered) `<Leader>om` states therefore do not change the result.
 
 local M = {}
 

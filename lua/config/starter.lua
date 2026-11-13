@@ -59,12 +59,13 @@ local function merge_items(base_items, project_items)
   return items
 end
 
--- Apply the project's `start` contract from 'lua/config/project.lua' to `base`, the context menu or
--- `nil`.
--- With `merge` and a base, use the project header if present and merge items.
--- Otherwise (`substitute`, or `merge` without a base), the function uses only the project menu,
--- with no builtin items after it.
--- The project owns the menu. The default screen never serves as a base.
+-- This function applies the project's `start` contract from 'lua/config/project.lua' to `base`,
+-- the context menu or `nil`.
+-- With `merge` and a base, it uses the project header if present and merges the items.
+-- Otherwise (`substitute`, or `merge` without a base), it returns only the project menu, with no
+-- builtin items after it.
+-- The project owns the menu.
+-- The default screen never serves as a base.
 local function project_menu(base)
   local start, root = require('config.project').contract('start')
   if not start then return base end

@@ -43,7 +43,7 @@ return {
   -- `vim.lsp.start()` reads `cmd_env` only when `cmd` is a list.
   -- The plugin's `cmd` function passes no `extra_spawn_params`.
   -- Thus, the variable appears in `:=vim.lsp.config['ts_ls']` but never reaches the process.
-  -- The problem exists on Neovim v0.12.6.
+  -- The problem still exists on Neovim v0.12.6.
   --
   -- Delete this copy when the plugin forwards `cmd_env`.
   -- Delete it too when `cmd` stops being a function

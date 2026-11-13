@@ -9,7 +9,8 @@ local M = {}
 
 -- NOTE: The end column must be a real column of an existing line.
 -- `math.huge` is not an integer, so 'conform.nvim' silently formats nothing.
--- An empty range has the same result. The code skips a line that no longer exists.
+-- An empty range also formats nothing silently.
+-- The code therefore skips a line that no longer exists.
 local format_range = function(from, to)
   local last = vim.api.nvim_buf_get_lines(0, to - 1, to, false)[1]
   if last == nil then

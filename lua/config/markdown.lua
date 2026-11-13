@@ -203,7 +203,7 @@ function M.attach(buf)
         windows = {},
       }
       for _, win in ipairs(vim.fn.getbufinfo(buf)[1].windows or {}) do
-        -- The code uses string keys. Window id keys would make storage use a sparse list.
+        -- The code uses string keys. A table keyed by window id would become a sparse list.
         original.windows[tostring(win)] = {
           conceallevel = vim.wo[win][0].conceallevel,
           concealcursor = vim.wo[win][0].concealcursor,

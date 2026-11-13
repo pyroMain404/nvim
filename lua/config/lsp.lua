@@ -6,10 +6,11 @@
 
 local M = {}
 
--- HACK: On Windows, `vim.lsp.util.rename()` splits `fs_realpath()` on `/`, despite its backslashes.
+-- HACK: On Windows, `fs_realpath()` returns backslashed paths, but `vim.lsp.util.rename()` splits
+-- them on `/`.
 -- The buffer keeps its old name, so writes use the old path.
--- Rename with `:saveas!` without autocommands to prevent the 'obsidian.nvim' front matter hook from
--- running during rename.
+-- The code renames with `:saveas!` without autocommands, because the write would run the
+-- 'obsidian.nvim' front matter hook during the rename.
 -- The defect still exists (Neovim 0.12.5, locked 2026-11-11, not retested).
 local patch_rename = function()
   local lsp_rename = vim.lsp.util.rename
@@ -37,7 +38,8 @@ local patch_rename = function()
 end
 
 -- HACK: 'nvim-lspconfig' announces `rust-analyzer.showReferences` but registers only `runSingle`.
--- Reference lenses report "does not support command". Show the locations on the client.
+-- Reference lenses then report "does not support command".
+-- The code shows the locations on the client.
 -- The command is still missing (nvim-lspconfig 993d048, locked 2026-11-09, not retested).
 local add_show_references = function()
   vim.lsp.commands['rust-analyzer.showReferences'] = function(command, ctx)

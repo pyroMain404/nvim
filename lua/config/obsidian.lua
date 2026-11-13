@@ -37,9 +37,10 @@ local vault_overrides = function(root)
 end
 
 -- HACK: obsidian.nvim 9af605a shows only `entry.text` when it exists.
--- For ambiguous links, `text` contains each note's first line, so all picker rows show frontmatter
--- `---`.
--- Show the path. For entries at file start, also show the first line after frontmatter.
+-- For ambiguous links, `text` contains the first line of each note, so all picker rows show the
+-- frontmatter `---`.
+-- The code shows the path.
+-- For entries at the start of a file, it also shows the first nonempty line after the frontmatter.
 -- Delete this when `make_display()` shows the path itself (obsidian.nvim 9af605a,
 -- locked 2026-11-11, not retested).
 local patch_make_display = function()

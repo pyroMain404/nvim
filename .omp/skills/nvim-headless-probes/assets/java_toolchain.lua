@@ -8,11 +8,14 @@
 --- session.
 ---
 --- Failure meanings:
----   - No client attached: The server refused to start, usually because its JDK is too old.
----   - No `MISE_JAVA_VERSION`: 'after/lsp/jdtls.lua' found no JDK through `mise`. The server used the project JDK.
----
----   - No runtime for the project release: The required JDK is absent. The server checks against the wrong class library.
----   - No build import: Import failed. The server uses a bare JDK for answers, including the release.
+---   - No client attached: The server refused to start, almost always because its JDK is older
+---     than its minimum.
+---   - No `MISE_JAVA_VERSION`: 'after/lsp/jdtls.lua' found no JDK through `mise`; the server used
+---     the project JDK.
+---   - No runtime for the project release: The required JDK is absent.
+---     The server checks against the wrong class library.
+---   - No build import: Import failed.
+---     The server uses a bare JDK for answers, including the release.
 ---
 --- Parameters:
 ---   before: Run this snippet first when the buffer needs to open again.
@@ -85,12 +88,13 @@ P.run(function()
     return (answer or {}).result
   end
 
-  -- Check build import before trusting the answers below.
+  -- The check below confirms build import, which is not a formality.
   -- An unreachable repository or an unresolved parent POM can prevent import.
-  -- jdtls then answers from a bare JDK project at its own release, so all later checks can pass
-  -- incorrectly.
-  -- Measured on '~/workspace/RGI/assimoco-pass-platform-batch' with the Maven credentials unset:
-  -- the project list was empty.
+  -- jdtls then answers from a bare JDK project at its own release.
+  -- Every later check can then pass while nothing in the buffer comes from the build.
+  --
+  -- Measurements on '~/workspace/RGI/assimoco-pass-platform-batch' with the Maven credentials
+  -- unset showed an empty project list.
   -- The server reported compliance 21, and 'pom.xml' specified 11.
   local projects = execute('java.project.getAll', {}) or {}
   P.check(

@@ -89,7 +89,8 @@ for _, jdk in ipairs(jdks) do
   }
 end
 
--- Warn if no installed JDK supplies the target release, or if jdtls did not import the build.
+-- This function warns when no installed JDK supplies the target release, or when jdtls did not
+-- import the build.
 -- Without an imported build, jdtls reports its own JDK release; trusting this compliance value
 -- would silently accept the wrong release.
 -- The code asks the server for the compliance level and does not parse the build file.

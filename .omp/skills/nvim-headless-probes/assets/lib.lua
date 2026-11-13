@@ -175,8 +175,9 @@ end
 --- `:h vim.lsp.status()` gives the current progress message and is empty when no work runs.
 ---
 --- An empty status does not prove completion.
---- Servers create successive progress tokens; `lua_ls` uses one per scope.
---- Short empty gaps occur between tokens.
+--- Servers create successive progress tokens.
+--- `lua_ls` uses one token for each scope it loads.
+--- Short empty gaps occur between tokens and look like the end.
 --- This function waits for `quiet` milliseconds of continuous silence, not for the first gap.
 ---
 --- Return `ok, ms, note`. Report `ms` to distinguish "slow" from "stuck", which a fixed wait
