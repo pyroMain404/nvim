@@ -37,4 +37,7 @@ Config.now = function(f) misc.safely('now', f) end
 Config.later = function(f) misc.safely('later', f) end
 Config.now_if_args = vim.fn.argc(-1) > 0 and Config.now or Config.later
 
+-- 'exrc' runs after this file, from the current directory upward (`:h startup`).
+-- 'lua/config/project.lua' reads this directory to know which files 'exrc' ran.
 vim.o.exrc = true
+Config.exrc_dir = vim.fs.normalize(vim.fn.getcwd())

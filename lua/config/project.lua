@@ -23,10 +23,28 @@
 --
 --     set('run', { 'npm', 'run', 'dev' })
 --
+--   `obsidian` sets obsidian.nvim options for the vault in the directory of this '.nvim.lua'.
+--   See 'lua/config/obsidian.lua'. The table takes the workspace `overrides` of the plugin, so
+--   any of its options is valid ('docs/' of the plugin). Functions are allowed.
+--
+--     set('obsidian', {
+--       notes_subdir = 'notes',
+--       new_notes_location = 'notes_subdir',
+--       daily_notes = { folder = 'daily', template = 'daily.md' },
+--       attachments = { folder = 'attachments' },
+--       templates = {
+--         folder = 'templates',
+--         date_format = 'YYYY-MM-DD',
+--         substitutions = { vault = function() return 'journal' end },
+--       },
+--     })
+--
 -- NOTE: 'exrc' sources files from every parent directory, nearest first; the first valid `set()`
 -- wins.
--- NOTE: The config reads `start` at startup and `run` when `:Run` starts.
--- Restart Neovim to apply a change.
+-- NOTE: The config reads `start` at startup, `run` when `:Run` starts, and `obsidian` on the
+-- first visit of the vault. Restart Neovim to apply a change.
+-- NOTE: 'exrc' runs only the files above the startup directory. On the first visit of another
+-- vault, `source()` runs the '.nvim.lua' of that vault.
 
 local M = {}
 
@@ -92,11 +110,20 @@ local function parse_run(spec)
   return nil, { '"run" needs a non-empty list of strings or a function' }
 end
 
--- This closed set maps `name -> parse(spec)`. Each new contract needs one function and one entry.
-local contracts = { start = parse_start, run = parse_run }
+-- Accept a table of obsidian.nvim options. obsidian.nvim validates the content when it loads.
+local function parse_obsidian(spec)
+  if type(spec) == 'table' and not vim.islist(spec) then return spec, {} end
+  return nil, { '"obsidian" needs a table of obsidian.nvim options' }
+end
 
--- `set()` fills the `name -> { value, root }` map.
-local declared = {}
+-- This closed set maps `name -> parse(spec)`. Each new contract needs one function and one entry.
+local contracts = { start = parse_start, run = parse_run, obsidian = parse_obsidian }
+
+-- `set()` fills the `name -> root -> value` map. `first[name]` is the root of the first `set()`.
+local declared, first = {}, {}
+
+-- Each '.nvim.lua' that `source()` ran or skipped.
+local sourced = {}
 
 -- 'exrc' runs before 'mini.notify' takes over `vim.notify`. Wait until startup ends so the warning
 -- appears.
@@ -121,28 +148,48 @@ function M.set(name, spec)
   end
   if not value then return end
   local root = file and vim.fs.dirname(file) or vim.fn.getcwd()
-  local previous = declared[name]
-  if not previous then
-    declared[name] = { value = value, root = root }
-  elseif previous.root == root then
-    -- A nearer file shadowing a parent's is by design; the same file twice is a leftover.
+  declared[name] = declared[name] or {}
+  if declared[name][root] ~= nil then
     warn(
       ('%s: "%s" is already declared in this file, the first one wins'):format(
         where,
         name
       )
     )
+    return
   end
+  declared[name][root] = value
+  first[name] = first[name] or root
 end
 
---- Return the project's value for contract `name` and its declaring directory, or `nil`.
-function M.contract(name)
+--- Run '<root>/.nvim.lua' once if 'exrc' did not run it at startup. It asks for `:trust`.
+function M.source(root)
+  local file = root .. '/.nvim.lua'
+  if sourced[file] then return end
+  sourced[file] = true
+  if vim.fs.relpath(root, Config.exrc_dir) or vim.fn.filereadable(file) == 0 then
+    return
+  end
+  local code = vim.secure.read(file)
+  if not code then return end
+  local chunk, err = loadstring(code, '@' .. file)
+  local ok = chunk ~= nil
+  if ok then
+    ok, err = pcall(chunk)
+  end
+  if not ok then vim.notify(file .. ': ' .. tostring(err), vim.log.levels.WARN) end
+end
+
+--- Return the value for contract `name` and its declaring directory, or `nil`.
+--- Without `root`, return the first `set()`, which is the nearest '.nvim.lua'.
+function M.contract(name, root)
   if contracts[name] == nil then
     vim.notify_once('Unknown project contract: ' .. name, vim.log.levels.WARN)
     return nil
   end
-  local found = declared[name]
-  if found then return found.value, found.root end
+  root = root or first[name]
+  local value = root and declared[name] and declared[name][root]
+  if value ~= nil then return value, root end
 end
 
 return M

@@ -1,5 +1,7 @@
 ## 2026-11-13
 
+- Breaking change: replace '.obsidian/nvim.json' with the `obsidian` contract of 'lua/config/project.lua'. The '.nvim.lua' at the vault root calls `require('config.project').set('obsidian', { templates = ..., daily_notes = ..., ... })` with any obsidian.nvim option, functions included (for example template `substitutions`). When the vault is outside the startup directory, the config runs that '.nvim.lua' on the first visit, after `:trust`. An invalid table gives a warning and the vault uses no overrides.
+
 - Breaking mapping change: move “Close review” from `<Leader>rr` to `<Leader>rq`. `<Leader>rr` now runs “Resume”.
 
 - Resume opens the last review successfully closed with `<Leader>rq` in the current Neovim session.

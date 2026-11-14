@@ -22,18 +22,22 @@ local find_vault_root = function(buf_id)
   return path ~= '' and find_root(vim.fs.dirname(path)) or nil
 end
 
--- Merge per-vault settings from '.obsidian/nvim.json' over `setup()` settings.
--- NOTE: Read settings only on the first vault visit. Restart Neovim to apply changes.
+-- Return the `obsidian` contract of the vault '.nvim.lua' ('lua/config/project.lua').
+-- Call this after `vim.pack.add()`: the plugin validator is in obsidian.nvim.
 local vault_overrides = function(root)
-  local path = root .. '/.obsidian/nvim.json'
-  if vim.fn.filereadable(path) == 0 then return nil end
-  local ok, overrides = pcall(
-    vim.json.decode,
-    table.concat(vim.fn.readfile(path), '\n'),
-    { luanil = { object = true, array = true } }
+  local project = require('config.project')
+  project.source(root)
+  local overrides = project.contract('obsidian', root)
+  if not overrides then return nil end
+  -- The plugin raises an error for invalid `overrides`. Report the problems and use no overrides.
+  local errors = require('obsidian.config').validate(overrides, true)
+  if #errors == 0 then return overrides end
+  vim.notify(
+    root
+      .. '/.nvim.lua: "obsidian" is not valid, it is ignored:\n'
+      .. table.concat(errors, '\n'),
+    vim.log.levels.WARN
   )
-  if ok and type(overrides) == 'table' then return overrides end
-  vim.notify(path .. ' is not a JSON object', vim.log.levels.WARN)
 end
 
 -- HACK: obsidian.nvim 9af605a shows only `entry.text` when it exists.
