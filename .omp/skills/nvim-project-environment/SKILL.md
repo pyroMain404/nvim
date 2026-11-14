@@ -95,7 +95,7 @@ progetto sovrascrive**. Cambia solo *chi lo legge*, e da quello dipende il mecca
   lascerebbe fuori i `:compiler` chiamati dai ftplugin del runtime (`python.vim` →
   `pytest`, `rust.vim` → `cargo`/`rustc`, `sh.vim` → `shellcheck`, misurato con grep su
   `$VIMRUNTIME/ftplugin`). Resta da scegliere il **momento** della scrittura.
-- **La legge questa config, con una forma sua** — `run`, `start`: è un **contratto**,
+- **La legge questa config, con una forma sua** — `run`, `start`, `obsidian`: è un **contratto**,
   dichiarato con `require('config.project').set(nome, spec)` (`lua/config/project.lua`
   ne elenca la forma). Il `set()` dà ciò che un'assegnazione non dà: validazione, il
   `.nvim.lua` più vicino che vince, la forma a funzione, e nessun problema di momento.
@@ -122,6 +122,7 @@ Se lo legge Neovim, la forma c'è già e la tabella dice dove vive il default.
 | Un'altra opzione che un ftplugin della config imposta anche | il ftplugin | Neovim | `vim.api.nvim_create_autocmd('FileType', …)`: l'assegnazione diretta viene oscurata o sovrascritta |
 | Il comando che `:Run` esegue | il resolver del linguaggio (`after/ftplugin/<ft>.lua`) | `:Run`, al momento della chiamata | `require('config.project').set('run', { ... })` (lista) o `set('run', function(args) ... end)` (per dipendere dal buffer; `nil` = lascia al linguaggio): nessun autocomando |
 | La schermata iniziale di un progetto | il menu di base di `lua/config/starter.lua` | `config.starter`, una volta all'avvio, dopo il `.nvim.lua` | `require('config.project').set('start', { strategy, header, items })`, forma in 'lua/config/project.lua': nessun autocomando |
+| Le opzioni di obsidian.nvim di un vault (template, daily notes, allegati, `notes_subdir`) | `require('obsidian').setup()` in `lua/config/obsidian.lua` | `config.obsidian`, alla prima visita del vault | `require('config.project').set('obsidian', { ... })` nel `.nvim.lua` **alla radice del vault**: gli `overrides` del workspace, funzioni ammesse. Fuori dalla catena di `exrc`, `config.obsidian` sorgenta quel file alla prima visita (chiede `:trust`) |
 | Una versione di tool o un task di build | `mise.toml` | `mise`, la shell, la CI | **non qui** — `mise.toml` del progetto: un `.nvim.lua` la nasconderebbe a tutti loro |
 
 Il file si scrive con lo stile della config (`AGENTS.md`): intestazione a box che
